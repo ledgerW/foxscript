@@ -28,7 +28,7 @@ resources:
       Value:
         Ref: ApiGW
       Export:
-        Name: llmwriter-${self:custom.stage}-ApiGateway-restApiId
+        Name: foxscript-${self:custom.stage}-ApiGateway-restApiId
  
     apiGatewayRestApiRootResourceId:
       Value:
@@ -36,4 +36,4 @@ resources:
           - ApiGW
           - RootResourceId
       Export:
-        Name: llmwriter-${self:custom.stage}-ApiGateway-rootResourceId
+        Name: foxscript-${self:custom.stage}-ApiGateway-rootResourceId
