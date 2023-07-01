@@ -10,7 +10,7 @@ plugins:
 custom:
   stage: ${opt:stage, self:provider.stage}
 
-  bucket_name: llmwriter-content-${self:custom.stage}
+  bucket_name: foxscript-content-${self:custom.stage}
 
   serverless-offline:
     httpPort: 3005
@@ -21,7 +21,7 @@ package:
     - '!node_modules/**'
     - '!package-lock.json'
     - '!package.json'
-    - load_data.py
+    - data.py
     - researcher.py
     - ../utils/**
 
@@ -33,14 +33,14 @@ provider:
   lambdaHashingVersion: 20201221
   apiGateway:
     restApiId:
-      'Fn::ImportValue': llmwriter-${self:custom.stage}-ApiGateway-restApiId
+      'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-restApiId
     restApiRootResourceId:
-      'Fn::ImportValue': llmwriter-${self:custom.stage}-ApiGateway-rootResourceId
+      'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-rootResourceId
   ecr:
     images:
-      load_data_image:
+      data_image:
         path: ..
-        file: load_data.Dockerfile
+        file: data.Dockerfile
 
   environment:
     STAGE: ${self:custom.stage}
@@ -76,7 +76,7 @@ provider:
 functions:
   load_data:
     image:
-      name: load_data_image
+      name: data_image
       command:
         - load_data.handler
       entryPoint:
@@ -95,7 +95,7 @@ functions:
 
   scraper:
     image:
-      name: load_data_image
+      name: data_image
       command:
         - researcher.scrape
       entryPoint:
@@ -111,7 +111,7 @@ functions:
 
   researcher:
     image:
-      name: load_data_image
+      name: data_image
       command:
         - researcher.research
       entryPoint:

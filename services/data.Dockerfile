@@ -14,7 +14,7 @@ RUN yum install atk cups-libs gtk3 libXcomposite alsa-lib \
   xorg-x11-xauth dbus-glib dbus-glib-devel -y
 
 # Copy the requirements.txt file to the container
-COPY load_data/requirements.txt ./
+COPY data/requirements.txt ./
 
 # Install the python requirements from requirements.txt
 RUN python3.10 -m pip install -r requirements.txt
@@ -26,9 +26,9 @@ COPY --from=build /opt/chromedriver /opt/
 RUN mkdir utils
 COPY utils ./utils
 
-COPY load_data/load_data.py ./
-COPY load_data/scrape_data.py ./
-COPY load_data/researcher.py ./
+COPY data/load_data.py ./
+COPY data/scrape_data.py ./
+COPY data/researcher.py ./
 
 # Set the CMD to your handler
-CMD ["load_data.master"]
+CMD ["data.master"]
