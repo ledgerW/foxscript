@@ -3,12 +3,18 @@ sys.path.append('..')
 
 import os
 import json
+import requests
+import boto3
 import weaviate as wv
+from datetime import datetime
 
 from utils.response_lib import *
 
+BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
+BUCKET = os.getenv('BUCKET')
 
-lambda_data_dir = '/tmp'
+
+LAMBDA_DATA_DIR = '/tmp'
 
 auth_config = wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
 
@@ -37,7 +43,7 @@ def create_library(name):
     }
 
     # make new source content class
-    with open('Content.json', 'r', encoding='utf-8') as f:
+    with open('weaviate/schema/Content.json', 'r', encoding='utf-8') as f:
       content_cls = json.loads(f.read())
 
     content_cls['class'] = content_cls_name
@@ -46,7 +52,7 @@ def create_library(name):
 
 
     # make new source chunk class
-    with open('Chunk.json', 'r', encoding='utf-8') as f:
+    with open('weaviate/schema/Chunk.json', 'r', encoding='utf-8') as f:
       chunk_cls = json.loads(f.read())
 
     chunk_cls['class'] = chunk_cls_name
@@ -88,7 +94,19 @@ def get_wv_class_name(email, name):
     account = f"{username}{domain}"
     name = name.capitalize()
 
-    return f"{account}{name}"
+    cls_name = f"{account}{name}"
+
+    return cls_name, account
+
+
+def get_bubble_doc(url, local_doc_path):
+    response = requests.get(url, headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'})
+    if response.status_code != 200:
+        print('problem')
+
+    # Save the file to /tmp/ directory
+    with open(local_doc_path, 'wb', encoding="utf-8") as f:
+        f.write(response.content)
 
 
 
@@ -102,7 +120,7 @@ def data_class(event, context):
         email = json.loads(event['body'])['email']
         name = json.loads(event['body'])['name']
        
-    cls_name = get_wv_class_name(email, name)
+    cls_name, account_name = get_wv_class_name(email, name)
 
     if action == 'create_library':
        create_library(cls_name)
@@ -111,3 +129,52 @@ def data_class(event, context):
     if action == 'delete_library':
        delete_library(cls_name)
        return success({'class_name': cls_name})
+    
+
+def upload_to_s3(event, context):
+  try:
+      email = event['body']['email']
+      name = event['body']['name']
+      doc_url = event['body']['doc_url']
+  except:
+      email = json.loads(event['body'])['email']
+      name = json.loads(event['body'])['name']
+      doc_url = json.loads(event['body'])['doc_url']
+
+  doc_file_name = doc_url.split('/')[-1]
+  doc_name = doc_url.split('/')[-1].replace('.txt','').replace('.pdf','')
+
+  # download new document from bubble
+  bubble_doc_path = f'{LAMBDA_DATA_DIR}/{doc_file_name}'
+  get_bubble_doc(doc_url, bubble_doc_path)
+  
+  cls_name, account_name = get_wv_class_name(email, name)
+
+  # Prep for upload to S3 (and convert to JSON)
+  if doc_file_name.endswith('.txt'):
+    with open(bubble_doc_path, 'r', encoding="utf-8") as f:
+      bubble_doc = f.read()
+
+    doc_json = {
+      'title': doc_name,
+      'content': bubble_doc,
+      'date': datetime.now().astimezone().isoformat(),
+      'author': "",
+      'source': "",
+      'url': ""
+    }
+
+    local_doc_path = f'{LAMBDA_DATA_DIR}/{doc_name}.json'
+    upload_suffix = 'json'
+    with open(local_doc_path, 'w', encoding="utf-8") as file:
+      json.dump(doc_json, file)
+  
+  if doc_file_name.endswith('.pdf'):
+     local_doc_path = bubble_doc_path
+     upload_suffix = 'pdf'
+
+
+  print(os.listdir(LAMBDA_DATA_DIR))
+
+  s3_client = boto3.client('s3')
+  _ = s3_client.upload_file(local_doc_path, BUCKET, f'{account_name}/{cls_name}/{doc_name}.{upload_suffix}')

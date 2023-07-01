@@ -94,8 +94,6 @@ def scrape_content(report_source, url=None, wv_client=None):
     return result
 
 
-
-
 def text_splitter(text, n, tokenizer):
     chunks = []
     chunk = ''
@@ -240,21 +238,18 @@ def load_openai_embedding(data_props, class_name, uuid, wv_client):
         pass
 
 
-def load_content(path, source=None, chunk_size=100, wv_client=None):
+def load_content(path, data_class=None, source=None, chunk_size=100, wv_client=None):
     tokenizer = tiktoken.get_encoding("cl100k_base")
     report_path = pathlib.Path(path)
 
+    content_cls = f'{data_class}Content'
+    chunk_cls = f'{data_class}Chunk'
+
     if report_path.name.endswith('.pdf'):
         chunks, pages, meta = handle_pdf(report_path, chunk_size, tokenizer)
-
-        # source NotImplemented Yet for PDF
-        content_cls = f'{source}Content'
-        chunk_cls = f'{source}Chunk'
     elif report_path.name.endswith('.json'):
         chunks, pages, meta = handle_json(report_path, chunk_size, tokenizer)
         source = meta['source']
-        content_cls = f'{source}Content'
-        chunk_cls = f'{source}Chunk'
 
     print('Getting embeddings for {} chunks'.format(len(chunks)))
 

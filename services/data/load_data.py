@@ -26,15 +26,17 @@ wv_client = wv.Client(
 
 def handler(event, context):
     bucket = urllib.parse.unquote_plus(event['Records'][0]['s3']['bucket']['name'], encoding='utf-8')
-    report_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
-    print(report_name)
+    doc_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+    print(doc_name)
 
-    report_path = lambda_data_dir + '/{}'.format(report_name.split('/')[-1])
-    s3_client.download_file(bucket, report_name, report_path)
+    data_class = doc_name.split('/')[-2]
+    report_path = lambda_data_dir + '/{}'.format(doc_name.split('/')[-1])
+    s3_client.download_file(bucket, doc_name, report_path)
     
-    if report_name.endswith('.pdf') or report_name.endswith('.json'):
+    if doc_name.endswith('.pdf') or doc_name.endswith('.json'):
         content.load_content(
             report_path,
+            data_class=data_class,
             chunk_size=100,
             wv_client=wv_client
         )

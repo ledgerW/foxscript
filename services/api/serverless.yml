@@ -11,6 +11,8 @@ plugins:
 custom:
   stage: ${opt:stage, self:provider.stage}
 
+  bucket_name: foxscript-content-${self:custom.stage}
+
   serverless-offline:
     httpPort: 3005
 
@@ -46,6 +48,7 @@ provider:
 
   environment:
     STAGE: ${self:custom.stage}
+    BUCKET: ${self:custom.bucket_name}
     WEAVIATE_URL: ${env:WEAVIATE_URL}
     WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
