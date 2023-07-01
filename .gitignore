@@ -145,7 +145,6 @@ dmypy.json
 cython_debug/
 
 # Data
-data/
 
 # Weaviate
 weaviate/backup/

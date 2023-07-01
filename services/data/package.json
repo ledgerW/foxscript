@@ -1,5 +1,5 @@
 {
-  "name": "foxscript-load-data",
+  "name": "foxscript-data",
   "description": "Load Content to Weaviate",
   "version": "0.1.1",
   "devDependencies": {

@@ -1,5 +1,5 @@
 frameworkVersion: "3.32.2"
-service: foxscript-load-data
+service: foxscript-data
 
 useDotenv: true
 
