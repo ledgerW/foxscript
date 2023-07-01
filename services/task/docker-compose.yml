@@ -1,0 +1,14 @@
+# docker compose up
+---
+version: '3.4'
+services:
+  auto:
+    command:
+      - python
+      - auto.py
+    image: auto
+    build:
+      context: ../
+      dockerfile: ./auto.Dockerfile
+    env_file:
+      - .env.local

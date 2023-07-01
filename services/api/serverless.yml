@@ -1,0 +1,97 @@
+frameworkVersion: "3.32.2"
+service: foxscript-api
+
+useDotenv: true
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-offline
+  - serverless-python-requirements
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+
+  serverless-offline:
+    httpPort: 3005
+
+  # Lambda Layers
+  pythonRequirements:
+    pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
+    layer:
+      name: ${self:service}
+      
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!package-lock.json'
+    - '!package.json'
+    - weaviate_api.py
+    - ../utils/**
+    - ../../weaviate/schema/Chunk.json
+    - ../../weaviate/schema/Content.json
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: dev
+  region: us-east-1
+  lambdaHashingVersion: 20201221
+  apiGateway:
+    restApiId:
+      'Fn::ImportValue': ${self:custom.stage}-ApiGateway-restApiId
+    restApiRootResourceId:
+      'Fn::ImportValue': ${self:custom.stage}-ApiGateway-rootResourceId
+ 
+
+  environment:
+    STAGE: ${self:custom.stage}
+    WEAVIATE_URL: ${env:WEAVIATE_URL}
+    WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
+    SERPER_API_KEY: ${env:SERPER_API_KEY}
+    BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            # Lambda Actions
+            - 'lambda:InvokeFunction'
+            - 'lambda:InvokeAsync'
+            # S3 Actions
+            - 's3:PutObject'
+            - 's3:GetObject'
+            - 's3:DeleteObject'
+            - 's3:ListBucket'
+            # ECS Actions
+            - 'ecs:*'
+            # ECR Actions
+            - 'ecr:*'
+            # IAM Actions
+            - 'iam:*'
+            # SQS Actions
+            - 'sqs:*'
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+
+functions:
+  data_class:
+    handler: weaviate_api.data_class
+    memorySize: 512
+    timeout: 120
+    maximumRetryAttempts: 0
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    events:
+      - http:
+          path: data_class
+          method: post
+          cors: true
+      

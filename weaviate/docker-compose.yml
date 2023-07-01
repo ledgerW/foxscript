@@ -1,0 +1,33 @@
+---
+version: '3.4'
+services:
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    image: semitechnologies/weaviate:1.18.2
+    ports:
+      - 8080:8080
+    volumes:
+      - ./backup:/tmp/backup
+    restart: on-failure:0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_APIKEY_ENABLED: 'true'
+      AUTHENTICATION_APIKEY_ALLOWED_KEYS: 'local-dev-wv-key'
+      AUTHENTICATION_APIKEY_USERS: 'local-dev'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      BACKUP_FILESYSTEM_PATH: '/tmp/backup'
+      BACKUP_S3_BUCKET: 'oxpecker.data.dev'
+      BACKUP_S3_PATH: 'weaviate/backup'
+      BACKUP_S3_ENDPOINT: 's3.us-east-1.amazonaws.com'
+      AWS_ACCESS_KEY_ID: '${AWS_ACCESS_KEY_ID}'
+      AWS_SECRET_ACCESS_KEY: '${AWS_SECRET_ACCESS_KEY}'
+      AWS_REGION: 'us-east-1'
+      DEFAULT_VECTORIZER_MODULE: 'text2vec-openai'
+      ENABLE_MODULES: 'backup-filesystem,backup-s3,ref2vec-centroid,text2vec-openai,generative-openai'
+      CLUSTER_HOSTNAME: 'node1'

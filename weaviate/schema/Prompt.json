@@ -1,0 +1,57 @@
+{
+  "class": "Prompt",
+  "description": "A Prompt",
+  "vectorIndexType": "hnsw",
+  "vectorizer": "none",
+  "properties": [
+    {
+      "name": "name",
+      "dataType": [
+        "string"
+      ],
+      "description": "Name of prompt"
+    },
+    {
+      "name": "description",
+      "dataType": [
+        "string"
+      ],
+      "description": "Description of prompt"
+    },
+    {
+      "name": "content",
+      "dataType": [
+        "string"
+      ],
+      "description": "Prompt content"
+    },
+    {
+      "name": "model",
+      "dataType": [
+        "string"
+      ],
+      "description": "Model prompt applies to"
+    },
+    {
+      "name": "folderId",
+      "dataType": [
+        "string"
+      ],
+      "description": "Folder prompt belongs to"
+    },
+    {
+      "name": "date",
+      "dataType": [
+        "date"
+      ],
+      "description": "Date (and time) folder was created"
+    },
+    {
+      "name": "fromUser",
+      "dataType": [
+        "User"
+      ],
+      "description": "The user of this prompt"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "class": "Conversation",
+  "description": "A conversation session for a user",
+  "vectorIndexType": "hnsw",
+  "vectorizer": "none",
+  "properties": [
+    {
+      "name": "name",
+      "dataType": [
+        "string"
+      ],
+      "description": "Name of conversation"
+    },
+    {
+      "name": "model",
+      "dataType": [
+        "string"
+      ],
+      "description": "Model metadata for this conversation"
+    },
+    {
+      "name": "messages",
+      "dataType": [
+        "string"
+      ],
+      "description": "User conversation content"
+    },
+    {
+      "name": "prompt",
+      "dataType": [
+        "string"
+      ],
+      "description": "Initial system prompt"
+    },
+    {
+      "name": "folderId",
+      "dataType": [
+        "string"
+      ],
+      "description": "folder ID"
+    },
+    {
+      "name": "date",
+      "dataType": [
+        "date"
+      ],
+      "description": "Date (and time) conversation was created"
+    },
+    {
+      "name": "fromUser",
+      "dataType": [
+        "User"
+      ],
+      "description": "The user of this conversation"
+    }
+  ]
+}

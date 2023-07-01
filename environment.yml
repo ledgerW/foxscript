@@ -1,0 +1,25 @@
+name: foxscript
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+    - openai
+    - weaviate-client
+    - langchain
+    - tiktoken
+    - faiss-cpu
+    - selenium
+    - beautifulsoup4
+    - lxml
+    - PyPDF2
+    - boto3
+    - python-dotenv
+    - tenacity
+    - pyyaml
+    - pandas
+    - tabulate
+    - webdriver-manager
+    

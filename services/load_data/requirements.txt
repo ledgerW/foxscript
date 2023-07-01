@@ -1,0 +1,12 @@
+weaviate-client
+openai
+langchain
+selenium
+PyPDF2
+beautifulsoup4
+lxml
+tiktoken
+pycryptodome
+boto3
+tenacity
+pyyaml

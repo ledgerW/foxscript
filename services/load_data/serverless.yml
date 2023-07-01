@@ -1,0 +1,160 @@
+frameworkVersion: "3.32.2"
+service: foxscript-load-data
+
+useDotenv: true
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+
+  bucket_name: llmwriter-content-${self:custom.stage}
+
+  serverless-offline:
+    httpPort: 3005
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!package-lock.json'
+    - '!package.json'
+    - load_data.py
+    - researcher.py
+    - ../utils/**
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: dev
+  region: us-east-1
+  lambdaHashingVersion: 20201221
+  apiGateway:
+    restApiId:
+      'Fn::ImportValue': llmwriter-${self:custom.stage}-ApiGateway-restApiId
+    restApiRootResourceId:
+      'Fn::ImportValue': llmwriter-${self:custom.stage}-ApiGateway-rootResourceId
+  ecr:
+    images:
+      load_data_image:
+        path: ..
+        file: load_data.Dockerfile
+
+  environment:
+    STAGE: ${self:custom.stage}
+    BUCKET: ${self:custom.bucket_name}
+    WEAVIATE_URL: ${env:WEAVIATE_URL}
+    WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
+    SERPER_API_KEY: ${env:SERPER_API_KEY}
+
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            # Lambda Actions
+            - 'lambda:InvokeFunction'
+            - 'lambda:InvokeAsync'
+            # S3 Actions
+            - 's3:PutObject'
+            - 's3:GetObject'
+            - 's3:DeleteObject'
+            - 's3:ListBucket'
+            # SQS Actions
+            - 'sqs:*'
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+
+functions:
+  load_data:
+    image:
+      name: load_data_image
+      command:
+        - load_data.handler
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 512
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: load_data
+          method: post
+          cors: true
+      - s3:
+          bucket: ${self:custom.bucket_name}
+          event: s3:ObjectCreated:*
+
+  scraper:
+    image:
+      name: load_data_image
+      command:
+        - researcher.scrape
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 1024
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: scraper
+          method: post
+          cors: true
+
+  researcher:
+    image:
+      name: load_data_image
+      command:
+        - researcher.research
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 2048
+    timeout: 300
+    maximumRetryAttempts: 1
+    events:
+      - http:
+          path: researcher
+          method: post
+          cors: true
+  
+  #scrape_data_master:
+  #  image:
+  #    name: load_data_image
+  #    command:
+  #      - scrape_data.master
+  #    entryPoint:
+  #      - '/lambda-entrypoint.sh'
+  #  memorySize: 256
+  #  timeout: 300
+  #  maximumRetryAttempts: 0
+  #  events:
+  #    - http:
+  #        path: scrape_data_master
+  #        method: post
+  #        cors: true
+  #    - schedule: rate(24 hours)
+  
+  #scrape_data_worker:
+  #  image:
+  #    name: load_data_image
+  #    command:
+  #      - scrape_data.worker
+  #    entryPoint:
+  #      - '/lambda-entrypoint.sh'
+  #  memorySize: 1024
+  #  timeout: 300
+  #  maximumRetryAttempts: 0
+  #  events:
+  #    - http:
+  #        path: scrape_data_worker
+  #        method: post
+  #        cors: true
+

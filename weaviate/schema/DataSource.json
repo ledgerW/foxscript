@@ -1,0 +1,29 @@
+{
+  "class": "DataSource",
+  "description": "A data source that we collect",
+  "vectorIndexType": "hnsw",
+  "vectorizer": "none",
+  "properties": [
+    {
+      "name": "source",
+      "dataType": [
+        "string"
+      ],
+      "description": "Name of source"
+    },
+    {
+      "name": "scraper",
+      "dataType": [
+        "string"
+      ],
+      "description": "Name of scraper class used"
+    },
+    {
+      "name": "lastPostDate",
+      "dataType": [
+        "date"
+      ],
+      "description": "Date (and time) folder was created"
+    }
+  ]
+}

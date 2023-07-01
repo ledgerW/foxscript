@@ -1,0 +1,50 @@
+{
+  "class": "User",
+  "description": "An Oxpecker User",
+  "vectorIndexType": "hnsw",
+  "vectorizer": "none",
+  "properties": [
+    {
+      "name": "name",
+      "dataType": [
+        "string"
+      ],
+      "description": "Name of user"
+    },
+    {
+      "name": "email",
+      "dataType": [
+        "string"
+      ],
+      "description": "Email of user"
+    },
+    {
+      "name": "prompts",
+      "dataType": [
+        "string[]"
+      ],
+      "description": "Saved, reusable prompts"
+    },
+    {
+      "name": "hasConversations",
+      "dataType": [
+        "Conversation"
+      ],
+      "description": "Conversation history"
+    },
+    {
+      "name": "hasFolders",
+      "dataType": [
+        "Folder"
+      ],
+      "description": "The user's folders"
+    },
+    {
+      "name": "hasPrompts",
+      "dataType": [
+        "Prompt"
+      ],
+      "description": "The user's prompts"
+    }
+  ]
+}

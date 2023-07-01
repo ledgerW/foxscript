@@ -1,0 +1,56 @@
+{
+  "class": "Content",
+  "description": "Content",
+  "vectorIndexType": "hnsw",
+  "properties": [
+    {
+      "name": "summary",
+      "dataType": [
+        "text"
+      ],
+      "description": "Summary of content"
+    },
+    {
+      "name": "date",
+      "dataType": [
+        "date"
+      ],
+      "description": "Date (and time) of the content"
+    },
+    {
+      "name": "url",
+      "dataType": [
+        "string"
+      ],
+      "description": "The URL of the content"
+    },
+    {
+      "name": "title",
+      "dataType": [
+        "string"
+      ],
+      "description": "title of the content"
+    },
+    {
+      "name": "author",
+      "dataType": [
+        "string"
+      ],
+      "description": "author of the content"
+    },
+    {
+      "name": "source",
+      "dataType": [
+        "string"
+      ],
+      "description": "source of the content"
+    },
+    {
+      "name": "hasChunks",
+      "dataType": [
+        "ContentChunk"
+      ],
+      "description": "Chunks of content"
+    }
+  ]
+}

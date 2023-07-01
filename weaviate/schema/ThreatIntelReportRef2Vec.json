@@ -1,0 +1,58 @@
+{
+  "class": "ThreatIntelReport",
+  "description": "A Threat Intel Report",
+  "vectorIndexType": "hnsw",
+  "vectorizer": "ref2vec-centroid",
+  "moduleConfig": {
+    "ref2vec-centroid": {
+      "referenceProperties": [
+        "hasChunks"
+      ],
+      "method": "mean"
+    }
+  },
+  "properties": [
+    {
+      "name": "report",
+      "dataType": [
+        "text"
+      ],
+      "description": "The original raw report"
+    },
+    {
+      "name": "summary",
+      "dataType": [
+        "text"
+      ],
+      "description": "Summary of report"
+    },
+    {
+      "name": "date",
+      "dataType": [
+        "date"
+      ],
+      "description": "Date (and time) of the report"
+    },
+    {
+      "name": "hasChunks",
+      "dataType": [
+        "ThreatIntelChunk"
+      ],
+      "description": "Chunks of content from report"
+    },
+    {
+      "name": "uri",
+      "dataType": [
+        "string"
+      ],
+      "description": "The URI of the report"
+    },
+    {
+      "name": "fileName",
+      "dataType": [
+        "string"
+      ],
+      "description": "file name of the report"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "class": "Folder",
+  "description": "A folder that holds conversations or prompts",
+  "vectorIndexType": "hnsw",
+  "vectorizer": "none",
+  "properties": [
+    {
+      "name": "name",
+      "dataType": [
+        "string"
+      ],
+      "description": "Name of folder"
+    },
+    {
+      "name": "type",
+      "dataType": [
+        "string"
+      ],
+      "description": "Type of folder"
+    },
+    {
+      "name": "date",
+      "dataType": [
+        "date"
+      ],
+      "description": "Date (and time) folder was created"
+    },
+    {
+      "name": "fromUser",
+      "dataType": [
+        "User"
+      ],
+      "description": "The user of this folder"
+    }
+  ]
+}

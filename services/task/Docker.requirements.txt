@@ -1,0 +1,16 @@
+weaviate-client
+langchain
+openai
+tiktoken
+pycryptodome
+faiss-cpu
+boto3
+youtube-search-python
+beautifulsoup4
+selenium
+PyPDF2
+tenacity
+pydantic
+python-dotenv
+lxml
+webdriver-manager

@@ -1,0 +1,39 @@
+frameworkVersion: "3.32.2"
+service: foxscript-api-gateway
+
+useDotenv: true
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+ 
+provider:
+  name: aws
+  runtime: python3.9
+  stage: dev
+  region: us-east-1
+  lambdaHashingVersion: 20201221
+  tracing:
+    apiGateway: true
+    lambda: true
+ 
+resources:
+  Resources:
+    ApiGW:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${self:custom.stage}-MyApiGW
+ 
+  Outputs:
+    apiGatewayRestApiId:
+      Value:
+        Ref: ApiGW
+      Export:
+        Name: llmwriter-${self:custom.stage}-ApiGateway-restApiId
+ 
+    apiGatewayRestApiRootResourceId:
+      Value:
+        Fn::GetAtt:
+          - ApiGW
+          - RootResourceId
+      Export:
+        Name: llmwriter-${self:custom.stage}-ApiGateway-rootResourceId
