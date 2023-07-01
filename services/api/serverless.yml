@@ -39,9 +39,9 @@ provider:
   lambdaHashingVersion: 20201221
   apiGateway:
     restApiId:
-      'Fn::ImportValue': ${self:custom.stage}-ApiGateway-restApiId
+      'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-restApiId
     restApiRootResourceId:
-      'Fn::ImportValue': ${self:custom.stage}-ApiGateway-rootResourceId
+      'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-rootResourceId
  
 
   environment:

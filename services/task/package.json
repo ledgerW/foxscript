@@ -3,7 +3,7 @@
   "description": "Autonomous agent tasks service",
   "version": "0.1.1",
   "devDependencies": {
-    "serverless": "^3.32.2",
+    "serverless": "3.32.2",
     "serverless-dotenv-plugin": "^3.9.0",
     "serverless-offline": "^8.2.0",
     "serverless-python-requirements": "^5.1.1",
