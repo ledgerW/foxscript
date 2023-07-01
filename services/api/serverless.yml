@@ -97,4 +97,17 @@ functions:
           path: data_class
           method: post
           cors: true
+
+  upload_to_s3:
+    handler: weaviate_api.upload_to_s3
+    memorySize: 2048
+    timeout: 300
+    maximumRetryAttempts: 0
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    events:
+      - http:
+          path: upload_to_s3
+          method: post
+          cors: true
       
