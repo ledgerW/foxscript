@@ -105,7 +105,7 @@ def get_bubble_doc(url, local_doc_path):
         print('problem')
 
     # Save the file to /tmp/ directory
-    with open(local_doc_path, 'wb', encoding="utf-8") as f:
+    with open(local_doc_path, 'wb') as f:
         f.write(response.content)
 
 
@@ -177,4 +177,8 @@ def upload_to_s3(event, context):
   print(os.listdir(LAMBDA_DATA_DIR))
 
   s3_client = boto3.client('s3')
-  _ = s3_client.upload_file(local_doc_path, BUCKET, f'{account_name}/{cls_name}/{doc_name}.{upload_suffix}')
+  
+  doc_s3_key = f'{account_name}/{cls_name}/{doc_name}.{upload_suffix}'
+  _ = s3_client.upload_file(local_doc_path, BUCKET, doc_s3_key)
+  
+  return success({'s3_key': doc_s3_key})

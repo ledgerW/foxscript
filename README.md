@@ -1,8 +1,7 @@
-# LLMWriter  
-
+# foxscript.  
+[![Seed Status](https://api.seed.run/foxscript/foxscript/stages/prod/build_badge)](https://console.seed.run/foxscript/foxscript)
 
 ***  
-
 
 # Getting Started  
 
@@ -10,14 +9,14 @@
   
 
 ### Pull Repo  
-`git clone https://github.com/ledgerW/llmwriter.git`
+`git clone https://github.com/ledgerW/foxscript.git`
 
 ### Python  
 1. Install Anaconda  
 
 2. Create a virtual conda environment for this project:  
 From project root: `conda env create -f environment.yml`  
-Activate env: `activate llmwriter`
+Activate env: `activate foxscript`
 
 ### Docker  
 1. Install Docker  
@@ -28,10 +27,6 @@ Activate env: `activate llmwriter`
 
 ### NodeJS / NPM  
 1. Install NodeJS  
-2. Install TS/JS dependencies  
-
-**NextJS Frontend**
-  - From `frontend`: `npm install`  
 
 **Serverless Services**  
 Install for each service individually.  
