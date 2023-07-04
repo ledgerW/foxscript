@@ -109,7 +109,7 @@ def get_bubble_doc(url, local_doc_path):
         f.write(response.content)
 
 
-
+# Lambda Handler
 def data_class(event, context):
     try:
         action = event['body']['action']
@@ -131,6 +131,7 @@ def data_class(event, context):
        return success({'class_name': cls_name})
     
 
+# Lambda Handler
 def upload_to_s3(event, context):
   try:
       email = event['body']['email']

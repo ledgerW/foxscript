@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 STAGE = os.getenv('STAGE')
+
 WP_API_KEY = os.getenv('WP_API_KEY')
 BUCKET = os.getenv('BUCKET')
 
@@ -128,7 +129,7 @@ def scrape_and_chunk(url, token_size, tokenizer):
 
 def cloud_scrape(url, sqs=None, query=None):
   _ = lambda_client.invoke(
-    FunctionName=f'llmwriter-load-data-{STAGE}-scraper',
+    FunctionName=f'foxscript-data-{STAGE}-scraper',
     InvocationType='Event',
     Payload=json.dumps({"body": {
         'url': url,
@@ -140,7 +141,7 @@ def cloud_scrape(url, sqs=None, query=None):
 
 def cloud_research(url, sqs=None, query=None):
   _ = lambda_client.invoke(
-    FunctionName=f'llmwriter-load-data-{STAGE}-researcher',
+    FunctionName=f'foxscript-data-{STAGE}-researcher',
     InvocationType='Event',
     Payload=json.dumps({"body": {
         'url': url,
