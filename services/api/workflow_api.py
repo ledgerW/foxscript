@@ -49,15 +49,15 @@ BUCKET = os.getenv('BUCKET')
 LAMBDA_DATA_DIR = '/tmp'
 
 
-auth_config = wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
+#auth_config = wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
 
-wv_client = wv.Client(
-    url=os.environ['WEAVIATE_URL'],
-    additional_headers={
-        "X-OpenAI-Api-Key": os.environ['OPENAI_API_KEY']
-    },
-    auth_client_secret=auth_config
-)
+#wv_client = wv.Client(
+#    url=os.environ['WEAVIATE_URL'],
+#    additional_headers={
+#        "X-OpenAI-Api-Key": os.environ['OPENAI_API_KEY']
+#    },
+#    auth_client_secret=auth_config
+#)
 
 
 llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=0.8)

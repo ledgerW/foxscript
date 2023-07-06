@@ -5,17 +5,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-
-STAGE = os.getenv('STAGE')
-WP_API_KEY = os.getenv('WP_API_KEY')
-
-
 import json
-import time
 import requests
-import pathlib
 import boto3
-from bs4 import BeautifulSoup
 
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -27,39 +19,19 @@ from langchain.experimental.plan_and_execute.schema import (
     Step,
 )
 
-from utils.scrapers.base import Scraper
-from utils.content import handle_pdf
-
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
 lambda_client = boto3.client('lambda')
+
+STAGE = os.getenv('STAGE')
+WP_API_KEY = os.getenv('WP_API_KEY')
 
 
 class ArticleParser(PlanOutputParser):
   def parse(self, text: str) -> Plan:
     steps = [Step(value=v) for v in text.split('ARTICLE:\n')[1:]]
     return Plan(steps=steps)
-
-
-class GeneralScraper(Scraper):
-  blog_url = None
-  source = None
-  base_url = None
-
-  def __init__(self):
-    self.driver = self.get_selenium()
-
-
-  def scrape_post(self, url=None):
-    self.driver.get(url)
-    time.sleep(5)
-    html = self.driver.execute_script("return document.getElementsByTagName('html')[0].innerHTML")
-    self.driver.quit()
-
-    soup = BeautifulSoup(html, 'lxml')
-
-    return soup
   
 
 def get_top_n_search(query, n):
@@ -89,34 +61,6 @@ def text_splitter(text, n, tokenizer):
     chunks.append(chunk)
   
   return chunks
-
-
-def scrape_and_chunk_pdf(url, n, tokenizer):
-  r = requests.get(url)
-  with open('tmp.pdf', 'wb') as pdf:
-    pdf.write(r.content)
-
-  return handle_pdf(pathlib.Path('tmp.pdf'), n, tokenizer)
-
-
-def scrape_and_chunk(url, token_size, tokenizer):
-  if url.endswith('.pdf'):
-    chunks, pages, meta = scrape_and_chunk_pdf(url, 100, tokenizer)
-    
-    return chunks
-  else:
-    scraper = GeneralScraper()
-    soup = scraper.scrape_post(url)
-
-    for script in soup(["script", "style"]):
-      script.extract()
-
-    text = soup.get_text()
-    lines = (line.strip() for line in text.splitlines())
-    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-    results = "\n".join(chunk for chunk in chunks if chunk)
-
-    return text_splitter(results, token_size, tokenizer)
   
 
 def cloud_scrape(url, sqs=None, query=None):

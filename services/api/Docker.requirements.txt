@@ -10,5 +10,4 @@ PyPDF2
 tenacity
 pydantic
 python-dotenv
-beautifulsoup4
 requests
