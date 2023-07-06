@@ -79,11 +79,11 @@ def scrape_and_chunk_pdf(url, n, tokenizer):
 
 
 def scrape_and_chunk(url, token_size, tokenizer):
-  if url.endswith('.pdf'):
+  try:
     chunks, pages, meta = scrape_and_chunk_pdf(url, 100, tokenizer)
     
     return chunks
-  else:
+  except:
     scraper = GeneralScraper()
     soup = scraper.scrape_post(url)
 

@@ -124,8 +124,8 @@ functions:
         - workflow_api.workflow
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 2048
-    timeout: 300
+    memorySize: 1024
+    timeout: 600
     maximumRetryAttempts: 0
     events:
       - http:
