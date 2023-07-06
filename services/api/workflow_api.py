@@ -5,17 +5,6 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-STAGE = os.getenv('STAGE')
-BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
-
-# !!!!!!!!!
-BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
-BUBBLE_API_ROOT = "https://foxscript.bubbleapps.io/version-test/api/1.1/obj"
-# !!!!!!!!!
-
-WP_API_KEY = os.getenv('WP_API_KEY')
-BUCKET = os.getenv('BUCKET')
-
 import json
 import time
 import re
@@ -29,6 +18,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains.llm import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
+from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 
 
 from pydantic import BaseModel, Field, create_model
@@ -43,21 +33,28 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 
 lambda_client = boto3.client('lambda')
 
-
+STAGE = os.getenv('STAGE')
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
+
+# !!!!!!!!!
+BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
+BUBBLE_API_ROOT = "https://foxscript.bubbleapps.io/version-test/api/1.1/obj"
+# !!!!!!!!!
+
+WP_API_KEY = os.getenv('WP_API_KEY')
 BUCKET = os.getenv('BUCKET')
 LAMBDA_DATA_DIR = '/tmp'
 
 
-#auth_config = wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
+auth_config = wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
 
-#wv_client = wv.Client(
-#    url=os.environ['WEAVIATE_URL'],
-#    additional_headers={
-#        "X-OpenAI-Api-Key": os.environ['OPENAI_API_KEY']
-#    },
-#    auth_client_secret=auth_config
-#)
+wv_client = wv.Client(
+    url=os.environ['WEAVIATE_URL'],
+    additional_headers={
+        "X-OpenAI-Api-Key": os.environ['OPENAI_API_KEY']
+    },
+    auth_client_secret=auth_config
+)
 
 
 llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=0.8)
@@ -184,6 +181,39 @@ class do_research():
     return '\n'.join(research_context)
   
 
+class get_library_retriever():
+  def __init__(self, wv_client, class_name, k=3):
+    self.retriever = self.get_weaviate_retriever(wv_client, class_name, k)
+
+
+  def get_weaviate_retriever(self, wv_client, class_name, k=3):
+    retriever = WeaviateHybridSearchRetriever(
+        wv_client,
+        index_name=f"{class_name}Chunk",
+        text_key="chunk",
+        k=k,
+        attributes=['page', "fromContent {{... on {}Content {{ title url }}}}".format(class_name)]
+      )
+    
+    return retriever
+
+
+  def get_library_chunks(self, query):
+    chunks = self.retriever.get_relevant_documents(query)
+
+    return chunks
+  
+  
+  def __call__(self, input):
+    """
+    Input: {'input': "query?"}
+    """
+    query = input['input']
+    chunks = self.get_library_chunks(self, query)
+
+    return '\n'.join([c.page_content for c in chunks])
+  
+
 # Step Actions.
 # A Step Action is a function that returns (func, [inputs_names])
 ACTIONS = {
@@ -201,6 +231,10 @@ ACTIONS = {
     },
     'do_research': {
         'func': do_research,
+        'returns': 'string'
+    },
+    'get_library_retriever': {
+        'func': get_library_retriever,
         'returns': 'string'
     }
 }
@@ -308,6 +342,39 @@ def workflow(event, context):
     body = {
         'user_email': email,
         'text': workflow.output[len(workflow.steps)]
+    }
+
+    res = write_to_bubble(table, body)
+       
+    return success(res.json())
+
+
+# Lambda Handler
+def step(event, context):
+    print(event)
+
+    try:
+        email = event['body']['email']
+        config = event['body']['config']
+        input = event['body']['input']
+    except:
+        email = json.loads(event['body'])['email']
+        config = json.loads(event['body'])['config']
+        input = json.loads(event['body'])['input']
+
+    print(config)
+
+    # load and run step
+    step = Step(config)
+
+    # execute this step and save to workflow output
+    output = step.run_step(input)
+
+    # send result to Bubble frontend db
+    table = 'document'
+    body = {
+        'user_email': email,
+        'text': output
     }
 
     res = write_to_bubble(table, body)

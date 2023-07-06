@@ -107,15 +107,6 @@ def get_context(query, llm, retriever):
   return res['result']
 
 
-def get_library_retriever():
-  embeddings = OpenAIEmbeddings()
-
-  # Load from Local
-  db = FAISS.load_local("vecstore_backup", embeddings)
-  
-  return db.as_retriever(search_kwargs={"k": 4})
-
-
 def get_article_img(article):
   key_fig_1 = article.split('### Who')[1].split('\n')[1]
 
