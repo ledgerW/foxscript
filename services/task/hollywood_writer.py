@@ -5,10 +5,11 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-STAGE = os.getenv('STAGE')
 
+STAGE = os.getenv('STAGE')
 WP_API_KEY = os.getenv('WP_API_KEY')
 BUCKET = os.getenv('BUCKET')
+
 
 import json
 import argparse

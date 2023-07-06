@@ -18,6 +18,7 @@ custom:
 
   # Lambda Layers
   pythonRequirements:
+    dockerizePip: true
     pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
     layer:
       name: ${self:service}
@@ -35,7 +36,6 @@ package:
 
 provider:
   name: aws
-  runtime: python3.9
   stage: dev
   region: us-east-1
   lambdaHashingVersion: 20201221
@@ -44,8 +44,12 @@ provider:
       'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-restApiId
     restApiRootResourceId:
       'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-rootResourceId
+  ecr:
+    images:
+      api_image:
+        path: ..
+        file: api.Dockerfile
  
-
   environment:
     STAGE: ${self:custom.stage}
     BUCKET: ${self:custom.bucket_name}
@@ -86,6 +90,7 @@ provider:
 
 functions:
   data_class:
+    runtime: python3.9
     handler: weaviate_api.data_class
     memorySize: 512
     timeout: 120
@@ -99,6 +104,7 @@ functions:
           cors: true
 
   upload_to_s3:
+    runtime: python3.9
     handler: weaviate_api.upload_to_s3
     memorySize: 2048
     timeout: 300
@@ -108,6 +114,22 @@ functions:
     events:
       - http:
           path: upload_to_s3
+          method: post
+          cors: true
+
+  workflow:
+    image:
+      name: api_image
+      command:
+        - workflow_api.workflow
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 2048
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: workflow
           method: post
           cors: true
       

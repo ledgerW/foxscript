@@ -1,0 +1,14 @@
+weaviate-client
+langchain
+openai
+tiktoken
+pycryptodome
+faiss-cpu
+boto3
+youtube-search-python
+PyPDF2
+tenacity
+pydantic
+python-dotenv
+beautifulsoup4
+requests
