@@ -38,6 +38,7 @@ provider:
   name: aws
   stage: dev
   region: us-east-1
+  runtime: python3.9
   lambdaHashingVersion: 20201221
   apiGateway:
     restApiId:
@@ -58,6 +59,7 @@ provider:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
     SERPER_API_KEY: ${env:SERPER_API_KEY}
+    BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
     BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
 
   iam:
@@ -90,7 +92,6 @@ provider:
 
 functions:
   data_class:
-    runtime: python3.9
     handler: weaviate_api.data_class
     memorySize: 512
     timeout: 120
@@ -104,7 +105,6 @@ functions:
           cors: true
 
   upload_to_s3:
-    runtime: python3.9
     handler: weaviate_api.upload_to_s3
     memorySize: 2048
     timeout: 300

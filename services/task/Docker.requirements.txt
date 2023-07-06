@@ -12,5 +12,4 @@ PyPDF2
 tenacity
 pydantic
 python-dotenv
-lxml
-webdriver-manager
+lxml==4.9.2

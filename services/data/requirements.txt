@@ -5,7 +5,7 @@ langchain
 selenium
 PyPDF2
 beautifulsoup4
-lxml
+lxml==4.9.2
 tiktoken
 pycryptodome
 boto3

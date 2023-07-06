@@ -7,6 +7,12 @@ load_dotenv()
 
 STAGE = os.getenv('STAGE')
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
+
+# !!!!!!!!!
+BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
+BUBBLE_API_ROOT = "https://foxscript.bubbleapps.io/version-test/api/1.1/obj"
+# !!!!!!!!!
+
 WP_API_KEY = os.getenv('WP_API_KEY')
 BUCKET = os.getenv('BUCKET')
 
@@ -265,7 +271,6 @@ class Step():
     
 
 def write_to_bubble(table, body):
-    BUBBLE_API_ROOT = "https://foxscript.bubbleapps.io/version-test/api/1.1/obj"
     endpoint = BUBBLE_API_ROOT + f'/{table}'
 
     res = requests.post(
