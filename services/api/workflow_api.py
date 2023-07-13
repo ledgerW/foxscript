@@ -363,11 +363,11 @@ def step(event, context):
 
     try:
         email = event['body']['email']
-        inputs = event['body']['inputs']
+        input_vals = event['body']['input_vals']
         body = event['body']
     except:
         email = json.loads(event['body'])['email']
-        inputs = json.loads(event['body'])['inputs']
+        input_vals = json.loads(event['body'])['input_vals']
         body = json.loads(event['body'])
 
     print(body)
@@ -406,14 +406,14 @@ def step(event, context):
     config['step'] = body['step_number']
     config['action'] = body['type']
     config['init'] = get_init(body, email)
-    config['inputs'] = {k: v for k, v in zip(body['input_vars'], inputs) }
     config['output_type'] = body['output_type']
 
     # load and run step
     step = Step(config)
 
     # execute this step and save to workflow output
-    output = step.run_step(input)
+    inputs = {k: v for k, v in zip(body['input_vars'], input_vals)}
+    output = step.run_step(inputs)
 
     # send result to Bubble frontend db
     table = 'step'
