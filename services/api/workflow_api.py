@@ -363,10 +363,12 @@ def step(event, context):
 
     try:
         email = event['body']['email']
+        workflow = event['body']['workflow']
         input_vals = event['body']['input_vals']
         body = event['body']
     except:
         email = json.loads(event['body'])['email']
+        workflow = json.loads(event['body'])['workflow']
         input_vals = json.loads(event['body'])['input_vals']
         body = json.loads(event['body'])
 
@@ -400,7 +402,7 @@ def step(event, context):
         return init
     
 
-
+    # load and run step
     config = {}
     config['name'] = body['name']
     config['step'] = body['step_number']
@@ -408,7 +410,6 @@ def step(event, context):
     config['init'] = get_init(body, email)
     config['output_type'] = body['output_type']
 
-    # load and run step
     step = Step(config)
 
     # execute this step and save to workflow output
@@ -419,6 +420,7 @@ def step(event, context):
     table = 'step'
     body = {
         'user_email': email,
+        'workflow': workflow,
         'name': body['name'],
         'output': output
     }
