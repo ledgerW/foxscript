@@ -28,6 +28,8 @@ from utils.workflow import get_top_n_search, cloud_research
 from utils.general import SQS
 from utils.response_lib import *
 
+from weaviate_api import get_wv_class_name
+
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
@@ -57,7 +59,7 @@ wv_client = wv.Client(
 )
 
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=0.8)
+llm = ChatOpenAI(model_name="gpt-4", temperature=0.8)
 
 
 
@@ -206,34 +208,40 @@ class get_library_retriever():
   
   def __call__(self, input):
     """
-    Input: {'input': "query?"}
+    Input: {'input': ["questions"]}
     """
-    query = input['input']
-    chunks = self.get_library_chunks(self, query)
+    questions = input['input']
+    
+    all_results = ''
+    for question in questions:
+        all_results = all_results + question + '\n'
+        chunks = self.get_library_chunks(self, questions)
+        results = '\n'.join([c.page_content for c in chunks])
+        all_results = all_results + results + '\n\n'
 
-    return '\n'.join([c.page_content for c in chunks])
+    return all_results
   
 
 # Step Actions.
 # A Step Action is a function that returns (func, [inputs_names])
 ACTIONS = {
-    'get_chain': {
+    'LLM Prompt': {
         'func': get_chain,
         'returns': 'string'
     },
-    'get_yt_url': {
+    'Get YouTube URL': {
         'func': get_yt_url,
         'returns': 'string'
     },
-    'extract_from_text': {
+    'Extract From Text': {
         'func': extract_from_text,
         'returns': 'list'
     },
-    'do_research': {
+    'Web Research': {
         'func': do_research,
         'returns': 'string'
     },
-    'get_library_retriever': {
+    'Library Research': {
         'func': get_library_retriever,
         'returns': 'string'
     }
@@ -264,8 +272,8 @@ class Workflow():
 
     def dump_config(self):
         return {
-            'name': self.name,
-            'steps': [s.config for s in self.steps]
+            "name": self.name,
+            "steps": [s.config for s in self.steps]
         }
             
     def run_step(self, step_number, input=None):
@@ -355,14 +363,51 @@ def step(event, context):
 
     try:
         email = event['body']['email']
-        config = event['body']['config']
-        input = event['body']['input']
+        inputs = event['body']['inputs']
+        body = event['body']
     except:
         email = json.loads(event['body'])['email']
-        config = json.loads(event['body'])['config']
-        input = json.loads(event['body'])['input']
+        inputs = json.loads(event['body'])['inputs']
+        body = json.loads(event['body'])
 
-    print(config)
+    print(body)
+
+    # build config
+    def get_init(body, email):
+        if body['type'] == 'LLM Prompt':
+           init = {'prompt': body['init_text']}
+    
+        if body['type'] == 'Web Research':
+           init = {'top_n': int(body['init_number'])}
+
+        if body['type'] == 'Library Research':
+           class_name = get_wv_class_name(email, body['init_text'])
+           init = {
+              'class_name': class_name,
+              'k': int(body['init_number'])
+           }
+
+        if body['type'] == 'Extract From Text':
+           init = {
+              'attributes': {
+                 'extraction': body['init_text']
+              }
+           }
+
+        if body['type'] == 'Get YouTube URL':
+           init = {'n': body['init_number']}
+
+        return init
+    
+
+
+    config = {}
+    config['name'] = body['name']
+    config['step'] = body['step_number']
+    config['action'] = body['type']
+    config['init'] = get_init(body, email)
+    config['inputs'] = {k: v for k, v in zip(body['input_vars'], inputs) }
+    config['output_type'] = body['output_type']
 
     # load and run step
     step = Step(config)
@@ -371,10 +416,11 @@ def step(event, context):
     output = step.run_step(input)
 
     # send result to Bubble frontend db
-    table = 'document'
+    table = 'step'
     body = {
         'user_email': email,
-        'text': output
+        'name': body['name'],
+        'output': output
     }
 
     res = write_to_bubble(table, body)
