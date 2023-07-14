@@ -82,6 +82,8 @@ class get_chain():
             'input_var2_name': "input_var2_val",
             ...
         }
+
+        Returns: string
         """
         res = self.chain(input)
 
@@ -116,6 +118,8 @@ class extract_from_text():
   def __call__(self, input):
     """
     Input: {'input': "input"}
+
+    Returns: List[string]
     """
     res = self.chain(input)
     parsed_output = self.parser.parse(res['text']).dict()
@@ -131,6 +135,8 @@ class get_yt_url():
   def __call__(self, input):
     """
     Input: {'input': "query"}
+
+    Returns: string
     """
     query = input['input']
 
@@ -147,6 +153,8 @@ class do_research():
   def __call__(self, input):
     """
     Input: {'input': ["questions"]}
+
+    Returns string
     """
     questions = input['input']
 
@@ -209,6 +217,8 @@ class get_library_retriever():
   def __call__(self, input):
     """
     Input: {'input': ["questions"]}
+
+    Returns: string
     """
     questions = input['input']
     
@@ -366,7 +376,7 @@ def step(event, context):
         workflow = event['body']['workflow']
 
         input_vals = event['body']['input_vals']
-        input_vals = [x.strip() for x in input_vals.split(',') if x]
+        input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
 
         body = event['body']
         body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
@@ -375,13 +385,14 @@ def step(event, context):
         workflow = json.loads(event['body'])['workflow']
         
         input_vals = json.loads(event['body'])['input_vals']
-        input_vals = [x.strip() for x in input_vals.split(',') if x]
+        input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
         
         body = json.loads(event['body'])
         body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
 
     print(body)
 
+    
     # build config
     def get_init(body, email):
         if body['type'] == 'LLM Prompt':
@@ -410,6 +421,16 @@ def step(event, context):
         return init
     
 
+    def prep_input_vals(input_vals, input_type):
+        if input_type == 'Web Research':
+            input_vals = [x.split('\n') for x in input_vals]
+        
+        if input_type == 'Library Research':
+            input_vals = [x.split('\n') for x in input_vals]
+
+        return input_vals
+    
+    
     # load and run step
     config = {}
     config['name'] = body['name']
@@ -418,18 +439,62 @@ def step(event, context):
     config['init'] = get_init(body, email)
     config['output_type'] = body['output_type']
 
+
+    # execute this step and save to workflow output
+    input_vals = prep_input_vals(input_vals, body['type'])
+    inputs = {k: v for k, v in zip(body['input_vars'], input_vals)}
+    
+    # run step as lambda Event so we can return immediately and free frontend
+    res = lambda_client.invoke(
+        FunctionName=f'foxscript-api-{STAGE}-run_step',
+        InvocationType='Event',
+        Payload=json.dumps({"body": {
+            'email': email,
+            'workflow': workflow,
+            'name': body['name'],
+            'inputs': inputs,
+            'config': config
+        }})
+    ) 
+       
+    return success(res.json())
+
+
+def run_step(event, context):
+    print(event)
+
+    try:
+        email = event['body']['email']
+        workflow = event['body']['workflow']
+        name = event['body']['name']
+
+        inputs = event['body']['inputs']
+        config = event['body']['config']
+    except:
+        email = json.loads(event['body'])['email']
+        workflow = json.loads(event['body'])['workflow']
+        name = json.loads(event['body'])['name']
+        
+        inputs = json.loads(event['body'])['inputs']
+        config = json.loads(event['body'])['config']
+
+    # get step
     step = Step(config)
 
     # execute this step and save to workflow output
-    inputs = {k: v for k, v in zip(body['input_vars'], input_vals)}
     output = step.run_step(inputs)
+
+    # output prep
+    if type(output) == list:
+       output = '\n'.join(output)
+
 
     # send result to Bubble frontend db
     table = 'step'
     body = {
         'user_email': email,
         'workflow': workflow,
-        'name': body['name'],
+        'name': name,
         'output': output
     }
 

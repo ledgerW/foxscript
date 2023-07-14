@@ -33,7 +33,7 @@ wv_client = wv.Client(
 def master(event, context):
     for source in Config.keys():
         res = lambda_client.invoke(
-            FunctionName=f'llmwriter-load-data-{STAGE}-scrape_data_worker',
+            FunctionName=f'foxscript-data-{STAGE}-scrape_data_worker',
             InvocationType='Event',
             Payload=json.dumps({'body': {'source': source}})
         )
