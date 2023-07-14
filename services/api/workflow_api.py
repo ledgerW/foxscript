@@ -374,7 +374,7 @@ def step(event, context):
         email = json.loads(event['body'])['email']
         workflow = json.loads(event['body'])['workflow']
         
-        input_vals = json.loads(event['body'])['input_vals'].split(',')
+        input_vals = json.loads(event['body'])['input_vals']
         input_vals = [x.strip() for x in input_vals.split(',') if x]
         
         body = json.loads(event['body'])
