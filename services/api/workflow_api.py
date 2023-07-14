@@ -445,7 +445,7 @@ def step(event, context):
     inputs = {k: v for k, v in zip(body['input_vars'], input_vals)}
     
     # run step as lambda Event so we can return immediately and free frontend
-    res = lambda_client.invoke(
+    _ = lambda_client.invoke(
         FunctionName=f'foxscript-api-{STAGE}-run_step',
         InvocationType='Event',
         Payload=json.dumps({"body": {
@@ -457,7 +457,7 @@ def step(event, context):
         }})
     ) 
        
-    return success(res.json())
+    return success({'SUCCES': success})
 
 
 def run_step(event, context):
