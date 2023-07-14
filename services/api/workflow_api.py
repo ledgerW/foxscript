@@ -364,13 +364,21 @@ def step(event, context):
     try:
         email = event['body']['email']
         workflow = event['body']['workflow']
+
         input_vals = event['body']['input_vals']
+        input_vals = [x.strip() for x in input_vals.split(',') if x]
+
         body = event['body']
+        body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
         workflow = json.loads(event['body'])['workflow']
-        input_vals = json.loads(event['body'])['input_vals']
+        
+        input_vals = json.loads(event['body'])['input_vals'].split(',')
+        input_vals = [x.strip() for x in input_vals.split(',') if x]
+        
         body = json.loads(event['body'])
+        body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
 
     print(body)
 
