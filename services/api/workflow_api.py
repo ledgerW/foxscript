@@ -457,7 +457,7 @@ def step(event, context):
         }})
     ) 
        
-    return success({'SUCCES': success})
+    return success({'SUCCES': True})
 
 
 def run_step(event, context):
