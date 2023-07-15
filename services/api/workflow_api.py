@@ -192,21 +192,17 @@ class do_research():
 
 class get_library_retriever():
   def __init__(self, class_name=None, k=3):
-    print(class_name)
-    print(k)
     self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
 
 
   def get_weaviate_retriever(self, class_name=None, k=3):
-    print('in get wv retriever')
-    print(class_name)
-    print(k)
     retriever = WeaviateHybridSearchRetriever(
         client=wv_client,
         index_name=f"{class_name}Chunk",
         text_key="chunk",
         k=k,
-        attributes=['page', "fromContent {{... on {}Content {{ title url }}}}".format(class_name)]
+        attributes=['page', "fromContent {{... on {}Content {{ source url }}}}".format(class_name)],
+        create_schema_if_missing=False
       )
     
     return retriever
@@ -229,7 +225,7 @@ class get_library_retriever():
     all_results = ''
     for question in questions:
         all_results = all_results + question + '\n'
-        chunks = self.get_library_chunks(self, questions)
+        chunks = self.get_library_chunks(questions)
         results = '\n'.join([c.page_content for c in chunks])
         all_results = all_results + results + '\n\n'
 

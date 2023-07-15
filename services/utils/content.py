@@ -178,7 +178,7 @@ def handle_pdf(report_path, n, tokenizer):
     for idx, chunk in enumerate(chunks):
         use_title = title if title != '' else report_path.name
         
-        chunk_with_meta = f"""Title: {use_title}
+        chunk_with_meta = f"""Source: {use_title}
         Author: {author}
         Date: {short_date}
         {chunk}
