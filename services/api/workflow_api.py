@@ -202,7 +202,7 @@ class get_library_retriever():
     print(class_name)
     print(k)
     retriever = WeaviateHybridSearchRetriever(
-        wv_client,
+        client=wv_client,
         index_name=f"{class_name}Chunk",
         text_key="chunk",
         k=k,
