@@ -24,11 +24,10 @@ from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetr
 from pydantic import BaseModel, Field, create_model
 from typing import List
 
-from utils.workflow import get_top_n_search, cloud_research
+from utils.workflow import get_top_n_search, cloud_research, get_wv_class_name
 from utils.general import SQS
 from utils.response_lib import *
 
-from weaviate_api import get_wv_class_name
 
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")

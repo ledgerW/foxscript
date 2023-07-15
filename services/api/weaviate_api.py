@@ -1,6 +1,9 @@
 import sys
 sys.path.append('..')
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import json
 import requests
@@ -8,6 +11,7 @@ import boto3
 import weaviate as wv
 from datetime import datetime
 
+from utils.workflow import get_wv_class_name
 from utils.response_lib import *
 
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
@@ -86,17 +90,6 @@ def delete_library(name):
 
     schema = wv_client.schema.get()
     print([cl['class'] for cl in schema['classes']])
-
-
-def get_wv_class_name(email, name):
-    domain = email.split('@')[1].split('.')[0]
-    username = email.split('@')[0].replace('.', '').capitalize()
-    account = f"{username}{domain}"
-    name = name.capitalize()
-
-    cls_name = f"{account}{name}"
-
-    return cls_name, account
 
 
 def get_bubble_doc(url, local_doc_path):

@@ -28,6 +28,17 @@ STAGE = os.getenv('STAGE')
 WP_API_KEY = os.getenv('WP_API_KEY')
 
 
+def get_wv_class_name(email, name):
+    domain = email.split('@')[1].split('.')[0]
+    username = email.split('@')[0].replace('.', '').capitalize()
+    account = f"{username}{domain}"
+    name = name.capitalize()
+
+    cls_name = f"{account}{name}"
+
+    return cls_name, account
+
+
 class ArticleParser(PlanOutputParser):
   def parse(self, text: str) -> Plan:
     steps = [Step(value=v) for v in text.split('ARTICLE:\n')[1:]]
