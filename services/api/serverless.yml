@@ -133,6 +133,22 @@ functions:
           method: post
           cors: true
 
+  run_workflow:
+    image:
+      name: api_image
+      command:
+        - workflow_api.run_workflow
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 1024
+    timeout: 600
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: run_workflow
+          method: post
+          cors: true
+
   step:
     image:
       name: api_image

@@ -294,15 +294,26 @@ class Workflow():
         print('{} - {} - {}'.format(step_number, step.config['step'], step.name))
 
         # collect input from previous step outputs according to this step config
-        step_input = {k: self.output[step_number] for k, step_number in step.config['inputs'].items()}
+        if step_number==1 and type(self.output[0]) == list:
+           step_input = {k: v for k, v in zip(step.config['inputs'].keys(), self.output[0])}
+        else:
+           step_input = {k: self.output[step_number] for k, step_number in step.config['inputs'].items()}
 
         # execute this step and save to workflow output
         self.output[step.config['step']] = step.run_step(step_input)
 
-    def run_all(self, input):
+
+    def run_all(self, input, bubble_body=None):
         self.output[0] = input
         for step_number in range(1, len(self.steps)+1):
             self.run_step(step_number)
+
+            if bubble_body:
+                table = 'step'
+                bubble_body['name'] = self.steps[step_number]['name']
+                bubble_body['output'] = self.output[step_number]
+                res = write_to_bubble(table, bubble_body)
+               
 
     def parse(self):
         pass
@@ -332,6 +343,71 @@ def write_to_bubble(table, body):
     )
 
     return res
+
+
+def get_init(body, email):
+    if body['type'] == 'LLM Prompt':
+        init = {'prompt': body['init_text']}
+
+    if body['type'] == 'Web Research':
+        init = {'top_n': int(body['init_number'])}
+
+    if body['type'] == 'Library Research':
+        class_name, account = get_wv_class_name(email, body['init_text'])
+        init = {
+            'class_name': class_name,
+            'k': int(body['init_number'])
+        }
+
+    if body['type'] == 'Extract From Text':
+        init = {
+            'attributes': {
+                'extraction': body['init_text']
+            }
+        }
+
+    if body['type'] == 'Get YouTube URL':
+        init = {'n': body['init_number']}
+
+    return init
+
+
+def prep_input_vals(input_vals, input_type):
+    if input_type == 'Web Research':
+        input_vals = [x.split('\n') for x in input_vals]
+    
+    if input_type == 'Library Research':
+        input_vals = [x.split('\n') for x in input_vals]
+
+    return input_vals
+
+
+def get_step_config(body, email):
+    config = {}
+    config['name'] = body['name']
+    config['step'] = body['step_number']
+    config['action'] = body['type']
+    config['init'] = get_init(body, email)
+    config['output_type'] = body['output_type']
+
+    return config
+
+
+def get_step_inputs(body, steps):
+    inputs = {}
+    for input_var, input_var_source_name in zip(body['input_vars'], body['input_vars_sources']):
+        for step in steps:
+            if 'User Input' in input_var_source_name:
+               input_var_source_idx = 0
+               break
+
+            if step['name'] == input_var_source_name:
+                input_var_source_idx = int(step['step_number'])
+                break
+            
+        inputs[input_var] = input_var_source_idx
+
+    return inputs
     
     
 
@@ -342,23 +418,92 @@ def workflow(event, context):
 
     try:
         email = event['body']['email']
-        config = event['body']['config']
-        input = event['body']['input']
+        workflow = event['body']['workflow']
+        project = event['body']['project']
+
+        input_vals = event['body']['input_vals']
+        input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
+
+        body = event['body']
+        input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
+        workflow = json.loads(event['body'])['workflow']
+        project = json.loads(event['body'])['project']
+        
+        input_vals = json.loads(event['body'])['input_vals']
+        input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
+        
+        body = json.loads(event['body'])
+        input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
+
+    print(body)
+
+    # build config
+    config = {}
+    config['name'] = body['workflow']
+    config['steps'] = []
+    for step_body in body['steps']:
+        step_config = get_step_config(step_body, email)
+        step_config['inputs'] = get_step_inputs(step_body, body['steps'])
+        config['steps'].append(step_config)
+
+    # execute this step and save to workflow output
+    input_vals = prep_input_vals(input_vals, config['steps'][0]['action'])
+    inputs = {k: v for k, v in zip(input_vars, input_vals)}
+    
+    # run step as lambda Event so we can return immediately and free frontend
+    _ = lambda_client.invoke(
+        FunctionName=f'foxscript-api-{STAGE}-run_workflow',
+        InvocationType='Event',
+        Payload=json.dumps({"body": {
+            'email': email,
+            'workflow': workflow,
+            'project': project,
+            'config': config,
+            'inputs': inputs
+        }})
+    ) 
+
+    return success({'SUCCESS': True})
+
+
+def run_workflow(event, context):
+    print(event)
+
+    try:
+        email = event['body']['email']
+        workflow = event['body']['workflow']
+        project = event['body']['project']
+
+        inputs = event['body']['inputs']
+        config = event['body']['config']
+    except:
+        email = json.loads(event['body'])['email']
+        workflow = json.loads(event['body'])['workflow']
+        project = json.loads(event['body'])['project']
+        
+        inputs = json.loads(event['body'])['inputs']
         config = json.loads(event['body'])['config']
-        input = json.loads(event['body'])['input']
-
-    print(config)
-
-    # load and run workflow
+   
+   
+   # load and run workflow
     workflow = Workflow().load_from_config(config)
-    workflow.run_all(input)
+
+    # write individual step results to bubble as they complete
+    bubble_body = {
+        'user_email': email,
+        'workflow': workflow
+    }
+
+    workflow.run_all(inputs, bubble_body=bubble_body)
 
     # send result to Bubble frontend db
     table = 'document'
     body = {
         'user_email': email,
+        'project': project,
+        'name': workflow.output[len(workflow.steps)][:25],
         'text': workflow.output[len(workflow.steps)]
     }
 
@@ -392,53 +537,8 @@ def step(event, context):
 
     print(body)
 
-    
     # build config
-    def get_init(body, email):
-        if body['type'] == 'LLM Prompt':
-           init = {'prompt': body['init_text']}
-    
-        if body['type'] == 'Web Research':
-           init = {'top_n': int(body['init_number'])}
-
-        if body['type'] == 'Library Research':
-           class_name, account = get_wv_class_name(email, body['init_text'])
-           init = {
-              'class_name': class_name,
-              'k': int(body['init_number'])
-           }
-
-        if body['type'] == 'Extract From Text':
-           init = {
-              'attributes': {
-                 'extraction': body['init_text']
-              }
-           }
-
-        if body['type'] == 'Get YouTube URL':
-           init = {'n': body['init_number']}
-
-        return init
-    
-
-    def prep_input_vals(input_vals, input_type):
-        if input_type == 'Web Research':
-            input_vals = [x.split('\n') for x in input_vals]
-        
-        if input_type == 'Library Research':
-            input_vals = [x.split('\n') for x in input_vals]
-
-        return input_vals
-    
-    
-    # load and run step
-    config = {}
-    config['name'] = body['name']
-    config['step'] = body['step_number']
-    config['action'] = body['type']
-    config['init'] = get_init(body, email)
-    config['output_type'] = body['output_type']
-
+    config = get_step_config(body, email)
 
     # execute this step and save to workflow output
     input_vals = prep_input_vals(input_vals, body['type'])
