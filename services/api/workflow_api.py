@@ -225,7 +225,7 @@ class get_library_retriever():
     all_results = ''
     for question in questions:
         all_results = all_results + question + '\n'
-        chunks = self.get_library_chunks(questions)
+        chunks = self.get_library_chunks(question)
         results = '\n'.join([c.page_content for c in chunks])
         all_results = all_results + results + '\n\n'
 
