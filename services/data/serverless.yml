@@ -101,7 +101,7 @@ functions:
       entryPoint:
         - '/lambda-entrypoint.sh'
     memorySize: 1024
-    timeout: 300
+    timeout: 600
     maximumRetryAttempts: 0
     events:
       - http:
@@ -117,7 +117,7 @@ functions:
       entryPoint:
         - '/lambda-entrypoint.sh'
     memorySize: 2048
-    timeout: 300
+    timeout: 600
     maximumRetryAttempts: 1
     events:
       - http:

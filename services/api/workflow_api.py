@@ -402,7 +402,7 @@ def step(event, context):
            init = {'top_n': int(body['init_number'])}
 
         if body['type'] == 'Library Research':
-           class_name = get_wv_class_name(email, body['init_text'])
+           class_name, account = get_wv_class_name(email, body['init_text'])
            init = {
               'class_name': class_name,
               'k': int(body['init_number'])

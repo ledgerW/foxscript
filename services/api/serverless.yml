@@ -140,7 +140,7 @@ functions:
         - workflow_api.step
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 256
+    memorySize: 512
     timeout: 600
     maximumRetryAttempts: 0
     events:
