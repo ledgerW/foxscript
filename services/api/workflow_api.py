@@ -192,11 +192,11 @@ class do_research():
   
 
 class get_library_retriever():
-  def __init__(self, wv_client, class_name, k=3):
-    self.retriever = self.get_weaviate_retriever(wv_client, class_name, k)
+  def __init__(self, class_name=None, k=3):
+    self.retriever = self.get_weaviate_retriever(class_name, k)
 
 
-  def get_weaviate_retriever(self, wv_client, class_name, k=3):
+  def get_weaviate_retriever(self, class_name, k):
     retriever = WeaviateHybridSearchRetriever(
         wv_client,
         index_name=f"{class_name}Chunk",
