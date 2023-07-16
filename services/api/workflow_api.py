@@ -310,7 +310,7 @@ class Workflow():
 
             if bubble_body:
                 table = 'step'
-                bubble_body['name'] = self.steps[step_number-1]['name']
+                bubble_body['name'] = self.steps[step_number-1].name
                 bubble_body['output'] = self.output[step_number]
                 res = write_to_bubble(table, bubble_body)
                
