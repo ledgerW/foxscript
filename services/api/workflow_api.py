@@ -310,7 +310,7 @@ class Workflow():
 
             if bubble_body:
                 table = 'step'
-                bubble_body['name'] = self.steps[step_number]['name']
+                bubble_body['name'] = self.steps[step_number-1]['name']
                 bubble_body['output'] = self.output[step_number]
                 res = write_to_bubble(table, bubble_body)
                
@@ -396,7 +396,7 @@ def get_step_config(body, email):
 def get_step_inputs(body, steps):
     body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
     body['input_vars_sources'] = [x.strip() for x in body['input_vars_sources'].split(',') if x]
-    
+
     inputs = {}
     for input_var, input_var_source_name in zip(body['input_vars'], body['input_vars_sources']):
         for step in steps:
@@ -428,6 +428,7 @@ def workflow(event, context):
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
 
         body = event['body']
+        body['steps'] = body['steps'].split('<SPLIT>')
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
@@ -438,6 +439,7 @@ def workflow(event, context):
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
         
         body = json.loads(event['body'])
+        body['steps'] = body['steps'].split('<SPLIT>')
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
 
     print(body)
