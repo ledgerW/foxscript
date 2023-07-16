@@ -385,7 +385,7 @@ def prep_input_vals(input_vals, input_type):
 def get_step_config(body, email):
     config = {}
     config['name'] = body['name']
-    config['step'] = body['step_number']
+    config['step'] = int(body['step_number'])
     config['action'] = body['type']
     config['init'] = get_init(body, email)
     config['output_type'] = body['output_type']
