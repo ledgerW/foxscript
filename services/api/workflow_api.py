@@ -478,14 +478,14 @@ def run_workflow(event, context):
 
     try:
         email = event['body']['email']
-        workflow = event['body']['workflow']
+        workflow_name = event['body']['workflow']
         project = event['body']['project']
 
         inputs = event['body']['inputs']
         config = event['body']['config']
     except:
         email = json.loads(event['body'])['email']
-        workflow = json.loads(event['body'])['workflow']
+        workflow_name = json.loads(event['body'])['workflow']
         project = json.loads(event['body'])['project']
         
         inputs = json.loads(event['body'])['inputs']
@@ -498,7 +498,7 @@ def run_workflow(event, context):
     # write individual step results to bubble as they complete
     bubble_body = {
         'user_email': email,
-        'workflow': workflow
+        'workflow': workflow_name
     }
 
     workflow.run_all(inputs, bubble_body=bubble_body)
