@@ -307,12 +307,13 @@ class Workflow():
         self.output[0] = input
         for step_number in range(1, len(self.steps)+1):
             self.run_step(step_number)
+            step = self.steps[step_number-1]
 
             if bubble_body:
                 table = 'step'
-                bubble_body['name'] = self.steps[step_number-1].name
+                bubble_id = step.bubble_id
                 bubble_body['output'] = self.output[step_number]
-                res = write_to_bubble(table, bubble_body)
+                res = update_bubble_object(table, bubble_id, bubble_body)
                
 
     def parse(self):
@@ -325,6 +326,7 @@ class Step():
         self.config = config
         self.func = ACTIONS[config['action']]['func'](**config['init'])
         self.output_type = config['output_type']
+        self.bubble_id = config['bubble_id']
 
     def __repr__(self):
         return f'Step - {self.name}'
@@ -337,6 +339,18 @@ def write_to_bubble(table, body):
     endpoint = BUBBLE_API_ROOT + f'/{table}'
 
     res = requests.post(
+        endpoint,
+        headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'},
+        json=body
+    )
+
+    return res
+
+
+def update_bubble_object(table, uid, body):
+    endpoint = BUBBLE_API_ROOT + f'/{table}' + f'/{uid}'
+
+    res = requests.patch(
         endpoint,
         headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'},
         json=body
@@ -384,6 +398,7 @@ def prep_input_vals(input_vals, input_type):
 
 def get_step_config(body, email):
     config = {}
+    config['bubble_id'] = body['bubble_id']
     config['name'] = body['name']
     config['step'] = int(body['step_number'])
     config['action'] = body['type']
@@ -596,13 +611,20 @@ def run_step(event, context):
 
     # send result to Bubble frontend db
     table = 'step'
+    bubble_id = step.bubble_id
     body = {
-        'user_email': email,
-        'workflow': workflow,
-        'name': name,
-        'output': output
+       'output': output
     }
 
-    res = write_to_bubble(table, body)
+    res = update_bubble_object(table, bubble_id, body)
+
+    #body = {
+    #    'user_email': email,
+    #    'workflow': workflow,
+    #    'name': name,
+    #    'output': output
+    #}
+
+    #res = write_to_bubble(table, body)
        
     return success(res.json())
