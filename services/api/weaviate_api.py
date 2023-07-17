@@ -1,8 +1,11 @@
 import sys
 sys.path.append('..')
 
-from dotenv import load_dotenv
-load_dotenv()
+try:
+  from dotenv import load_dotenv
+  load_dotenv()
+except:
+  pass
 
 import os
 import json
