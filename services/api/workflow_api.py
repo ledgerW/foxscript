@@ -58,13 +58,11 @@ wv_client = wv.Client(
 )
 
 
-llm = ChatOpenAI(model_name="gpt-4", temperature=0.8)
-
-
-
 # ACTIONS
 class get_chain():
     def __init__(self, prompt=None):
+        llm = ChatOpenAI(model_name="gpt-4", temperature=1.0)
+
         self.input_vars = re.findall('{(.+?)}', prompt)
 
         _prompt = PromptTemplate(
@@ -100,6 +98,8 @@ class extract_from_text():
   
   
   def __init__(self, attributes=None):
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+
     self.attributes = attributes
     ChainParser = self.create_chain_parser_class(attributes)
 

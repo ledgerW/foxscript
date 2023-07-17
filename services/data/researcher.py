@@ -183,7 +183,7 @@ def research(event, context):
 
     # Scrape and Research
     try:
-      llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=0.8)
+      llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
       chunks = scrape_and_chunk(url, 100, tokenizer)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})
       context = get_context(query, llm, vec_db.as_retriever())
