@@ -36,11 +36,7 @@ lambda_client = boto3.client('lambda')
 
 STAGE = os.getenv('STAGE')
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
-
-# !!!!!!!!!
 BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
-BUBBLE_API_ROOT = "https://foxscript.bubbleapps.io/version-test/api/1.1/obj"
-# !!!!!!!!!
 
 WP_API_KEY = os.getenv('WP_API_KEY')
 BUCKET = os.getenv('BUCKET')
