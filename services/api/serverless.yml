@@ -6,7 +6,7 @@ useDotenv: true
 plugins:
   - serverless-dotenv-plugin
   - serverless-offline
-  #- serverless-python-requirements
+  - serverless-python-requirements
 
 custom:
   stage: ${opt:stage, self:provider.stage}
@@ -92,15 +92,12 @@ provider:
 
 functions:
   data_class:
-    image:
-      name: api_image
-      command:
-        - weaviate_api.data_class
-      entryPoint:
-        - '/lambda-entrypoint.sh'
+    handler: weaviate_api.data_class
     memorySize: 512
     timeout: 120
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: data_class
@@ -108,15 +105,12 @@ functions:
           cors: true
 
   upload_to_s3:
-    image:
-      name: api_image
-      command:
-        - weaviate_api.upload_to_s3
-      entryPoint:
-        - '/lambda-entrypoint.sh'
+    handler: weaviate_api.upload_to_s3
     memorySize: 2048
     timeout: 300
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: upload_to_s3

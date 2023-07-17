@@ -14,7 +14,6 @@ import boto3
 import weaviate as wv
 from datetime import datetime
 
-from utils.workflow import get_wv_class_name
 from utils.response_lib import *
 
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
@@ -32,6 +31,17 @@ wv_client = wv.Client(
     },
     auth_client_secret=auth_config
 )
+
+
+def get_wv_class_name(email, name):
+    domain = email.split('@')[1].split('.')[0]
+    username = email.split('@')[0].replace('.', '').capitalize()
+    account = f"{username}{domain}"
+    name = name.capitalize()
+
+    cls_name = f"{account}{name}"
+
+    return cls_name, account
 
 
 def create_library(name):
