@@ -438,6 +438,7 @@ def workflow(event, context):
         email = event['body']['email']
         workflow = event['body']['workflow']
         project = event['body']['project']
+        doc_id = event['body']['doc_id']
 
         input_vals = event['body']['input_vals']
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
@@ -449,6 +450,7 @@ def workflow(event, context):
         email = json.loads(event['body'])['email']
         workflow = json.loads(event['body'])['workflow']
         project = json.loads(event['body'])['project']
+        doc_id = json.loads(event['body'])['doc_id']
         
         input_vals = json.loads(event['body'])['input_vals']
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
@@ -477,6 +479,7 @@ def workflow(event, context):
         FunctionName=f'foxscript-api-{STAGE}-run_workflow',
         InvocationType='Event',
         Payload=json.dumps({"body": {
+            'doc_id': doc_id,
             'email': email,
             'workflow': workflow,
             'project': project,
@@ -492,16 +495,12 @@ def run_workflow(event, context):
     print(event)
 
     try:
-        email = event['body']['email']
-        workflow_name = event['body']['workflow']
-        project = event['body']['project']
+        doc_id = event['body']['doc_id']
 
         inputs = event['body']['inputs']
         config = event['body']['config']
     except:
-        email = json.loads(event['body'])['email']
-        workflow_name = json.loads(event['body'])['workflow']
-        project = json.loads(event['body'])['project']
+        doc_id = json.loads(event['body'])['doc_id']
         
         inputs = json.loads(event['body'])['inputs']
         config = json.loads(event['body'])['config']
@@ -511,25 +510,19 @@ def run_workflow(event, context):
     workflow = Workflow().load_from_config(config)
 
     # write individual step results to bubble as they complete
-    bubble_body = {
-        'user_email': email,
-        'workflow': workflow_name
-    }
-
-    workflow.run_all(inputs, bubble_body=bubble_body)
+    workflow.run_all(inputs, bubble_body={})
 
     # send result to Bubble frontend db
     table = 'document'
+    uid = doc_id
     body = {
-        'user_email': email,
-        'project': project,
         'name': workflow.output[len(workflow.steps)][:25],
         'text': workflow.output[len(workflow.steps)]
     }
 
-    res = write_to_bubble(table, body)
+    _ = update_bubble_object(table, uid, body)
        
-    return success(res.json())
+    return success({'SUCCESS': True})
 
 
 # Lambda Handler
@@ -617,14 +610,5 @@ def run_step(event, context):
     }
 
     _ = update_bubble_object(table, bubble_id, body)
-
-    #body = {
-    #    'user_email': email,
-    #    'workflow': workflow,
-    #    'name': name,
-    #    'output': output
-    #}
-
-    #res = write_to_bubble(table, body)
        
     return success({'SUCCESS': True})
