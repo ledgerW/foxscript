@@ -97,7 +97,7 @@ def scrape_content(report_source, url=None, wv_client=None):
 def text_splitter(text, n, tokenizer):
     chunks = []
     chunk = ''
-    sentences = [s.strip().replace('\n', ' ') for s in text.split('.')]
+    sentences = [s.strip().replace('\n', ' ') for s in text.split('. ')]
     for s in sentences:
         # start new chunk
         if chunk == '':
@@ -121,7 +121,7 @@ def multi_page_text_splitter(pages, n, tokenizer):
     page_nums = []
     chunk = ''
     for num, page in enumerate(pages):
-        sentences = [s.strip().replace('\n', ' ') for s in page.split('.')]
+        sentences = [s.strip().replace('\n', ' ') for s in page.split('. ')]
         for s in sentences:
             # start new chunk
             if chunk == '':
@@ -178,8 +178,7 @@ def handle_pdf(report_path, n, tokenizer):
     for idx, chunk in enumerate(chunks):
         use_title = title if title != '' else report_path.name
         
-        chunk_with_meta = f"""Source: {use_title}
-        Author: {author}
+        chunk_with_meta = f"""Author: {author}
         Date: {short_date}
         {chunk}
         """

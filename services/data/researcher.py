@@ -12,6 +12,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
 
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
@@ -24,7 +25,11 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
-LAMBDA_DATA_DIR = '/tmp'
+
+if os.getenv('IS_OFFLINE'):
+  LAMBDA_DATA_DIR = '.'
+else:
+  LAMBDA_DATA_DIR = '/tmp'
 
 
 class GeneralScraper(Scraper):
@@ -105,7 +110,20 @@ def get_ephemeral_vecdb(chunks, metadata):
 
 
 def get_context(query, llm, retriever):
-  vec_qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
+  prompt_template = """Use the following pieces of context to answer the question at the end.
+  If the context doesn't directly answer the question, that's OK!  Even additional related information
+  would be helpful! 
+
+  {context}
+
+  Question: {question}
+  Helpful Answer:"""
+  PROMPT = PromptTemplate(
+      template=prompt_template, input_variables=["context", "question"]
+  )
+
+  chain_type_kwargs = {"prompt": PROMPT}
+  vec_qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, chain_type_kwargs=chain_type_kwargs)
   res = vec_qa({'query': query})
 
   return res['result']
@@ -165,7 +183,7 @@ def research(event, context):
 
     # Scrape and Research
     try:
-      llm = ChatOpenAI(model_name="gpt-4", temperature=0.8)
+      llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=0.8)
       chunks = scrape_and_chunk(url, 100, tokenizer)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})
       context = get_context(query, llm, vec_db.as_retriever())
