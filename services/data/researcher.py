@@ -24,8 +24,7 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
-
-lambda_data_dir = '/tmp'
+LAMBDA_DATA_DIR = '/tmp'
 
 
 class GeneralScraper(Scraper):
@@ -35,6 +34,7 @@ class GeneralScraper(Scraper):
 
     def __init__(self):
         self.driver = self.get_selenium()
+        self.driver.set_page_load_timeout(10)
 
 
     def scrape_post(self, url=None):
@@ -71,11 +71,11 @@ def text_splitter(text, n, tokenizer):
 
 
 def scrape_and_chunk_pdf(url, n, tokenizer):
-  r = requests.get(url)
-  with open('tmp.pdf', 'wb') as pdf:
+  r = requests.get(url, timeout=10)
+  with open(LAMBDA_DATA_DIR + '/tmp.pdf', 'wb') as pdf:
     pdf.write(r.content)
 
-  return handle_pdf(pathlib.Path('tmp.pdf'), n, tokenizer)
+  return handle_pdf(pathlib.Path(LAMBDA_DATA_DIR, 'tmp.pdf'), n, tokenizer)
 
 
 def scrape_and_chunk(url, token_size, tokenizer):
@@ -164,13 +164,13 @@ def research(event, context):
        query = None
 
     # Scrape and Research
-    #try:
-    llm = ChatOpenAI(model_name="gpt-4", temperature=0.8)
-    chunks = scrape_and_chunk(url, 100, tokenizer)
-    vec_db = get_ephemeral_vecdb(chunks, {'source': url})
-    context = get_context(query, llm, vec_db.as_retriever())
-    #except:
-    #  context = 'Problem analyzing source.'
+    try:
+      llm = ChatOpenAI(model_name="gpt-4", temperature=0.8)
+      chunks = scrape_and_chunk(url, 100, tokenizer)
+      vec_db = get_ephemeral_vecdb(chunks, {'source': url})
+      context = get_context(query, llm, vec_db.as_retriever())
+    except:
+      context = 'Problem analyzing source.'
 
     result = f"query: {query}\n" + f"source: {url}\n" + context + '\n'
 
