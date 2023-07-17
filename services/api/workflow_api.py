@@ -303,13 +303,14 @@ class Workflow():
         self.output[step.config['step']] = step.run_step(step_input)
 
 
-    def run_all(self, input, bubble_body=None):
+    def run_all(self, input, bubble=False):
         self.output[0] = input
         for step_number in range(1, len(self.steps)+1):
             self.run_step(step_number)
             step = self.steps[step_number-1]
 
-            if bubble_body:
+            if bubble:
+                bubble_body = {}
                 table = 'step'
                 bubble_id = step.bubble_id
                 bubble_body['output'] = self.output[step_number]
@@ -510,7 +511,7 @@ def run_workflow(event, context):
     workflow = Workflow().load_from_config(config)
 
     # write individual step results to bubble as they complete
-    workflow.run_all(inputs, bubble_body={})
+    workflow.run_all(inputs, bubble=True)
 
     # send result to Bubble frontend db
     table = 'document'
