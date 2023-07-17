@@ -616,7 +616,7 @@ def run_step(event, context):
        'output': output
     }
 
-    res = update_bubble_object(table, bubble_id, body)
+    _ = update_bubble_object(table, bubble_id, body)
 
     #body = {
     #    'user_email': email,
@@ -627,4 +627,4 @@ def run_step(event, context):
 
     #res = write_to_bubble(table, body)
        
-    return success(res.json())
+    return success({'SUCCESS': True})
