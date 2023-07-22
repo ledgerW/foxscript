@@ -15,7 +15,6 @@ custom:
 
   serverless-offline:
     httpPort: 3005
-    useDocker: true
 
   # Lambda Layers
   pythonRequirements:
@@ -62,6 +61,8 @@ provider:
     SERPER_API_KEY: ${env:SERPER_API_KEY}
     BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
     BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+    LOCAL_ENDPOINT: ${env:LOCAL_ENDPOINT}
+    LOCAL_INVOKE_ENDPOINT: ${env:LOCAL_INVOKE_ENDPOINT}
 
   iam:
     role:
