@@ -12,7 +12,7 @@ import boto3
 import requests
 import weaviate as wv
 from datetime import datetime
-from youtubesearchpython import VideosSearch
+#from youtubesearchpython import VideosSearch
 
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.llm import LLMChain
@@ -122,22 +122,22 @@ class extract_from_text():
     return parsed_output[list(self.attributes.keys())[0]]
   
 
-class get_yt_url():
-  def __init__(self, n=1):
-    self.n = n
-    self.input_vars = ['query']
+#class get_yt_url():
+#  def __init__(self, n=1):
+#    self.n = n
+#    self.input_vars = ['query']
   
-  def __call__(self, input):
-    """
-    Input: {'input': "query"}
+#  def __call__(self, input):
+#    """
+#    Input: {'input': "query"}
 
-    Returns: string
-    """
-    query = input['input']
+#    Returns: string
+#    """
+#    query = input['input']
 
-    vid_search = VideosSearch(query, limit=self.n)
+#    vid_search = VideosSearch(query, limit=self.n)
 
-    return vid_search.result()['result'][0]['link']
+#    return vid_search.result()['result'][0]['link']
   
 
 class do_research():
@@ -233,10 +233,6 @@ class get_library_retriever():
 ACTIONS = {
     'LLM Prompt': {
         'func': get_chain,
-        'returns': 'string'
-    },
-    'Get YouTube URL': {
-        'func': get_yt_url,
         'returns': 'string'
     },
     'Extract From Text': {

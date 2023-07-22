@@ -15,6 +15,7 @@ custom:
 
   serverless-offline:
     httpPort: 3005
+    useDocker: true
 
   # Lambda Layers
   pythonRequirements:
@@ -118,15 +119,12 @@ functions:
           cors: true
 
   workflow:
-    image:
-      name: api_image
-      command:
-        - workflow_api.workflow
-      entryPoint:
-        - '/lambda-entrypoint.sh'
+    handler: workflow_api.workflow
     memorySize: 1024
     timeout: 600
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: workflow
@@ -134,15 +132,12 @@ functions:
           cors: true
 
   run_workflow:
-    image:
-      name: api_image
-      command:
-        - workflow_api.run_workflow
-      entryPoint:
-        - '/lambda-entrypoint.sh'
+    handler: workflow_api.run_workflow
     memorySize: 1024
     timeout: 600
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: run_workflow
@@ -150,15 +145,12 @@ functions:
           cors: true
 
   step:
-    image:
-      name: api_image
-      command:
-        - workflow_api.step
-      entryPoint:
-        - '/lambda-entrypoint.sh'
+    handler: workflow_api.step
     memorySize: 512
     timeout: 600
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: step
@@ -166,15 +158,12 @@ functions:
           cors: true
 
   run_step:
-    image:
-      name: api_image
-      command:
-        - workflow_api.run_step
-      entryPoint:
-        - '/lambda-entrypoint.sh'
+    handler: workflow_api.run_step
     memorySize: 512
     timeout: 600
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: run_step
