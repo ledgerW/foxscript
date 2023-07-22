@@ -12,7 +12,7 @@ import boto3
 import requests
 import weaviate as wv
 from datetime import datetime
-from youtubesearchpython import VideosSearch
+#from youtubesearchpython import VideosSearch
 
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.llm import LLMChain
@@ -32,7 +32,11 @@ from utils.response_lib import *
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
-lambda_client = boto3.client('lambda')
+if os.getenv('IS_OFFLINE'):
+   boto3.setup_default_session(profile_name='ledger')
+   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
+else:
+   lambda_client = boto3.client('lambda')
 
 STAGE = os.getenv('STAGE')
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
@@ -122,22 +126,22 @@ class extract_from_text():
     return parsed_output[list(self.attributes.keys())[0]]
   
 
-class get_yt_url():
-  def __init__(self, n=1):
-    self.n = n
-    self.input_vars = ['query']
+#class get_yt_url():
+#  def __init__(self, n=1):
+#    self.n = n
+#    self.input_vars = ['query']
   
-  def __call__(self, input):
-    """
-    Input: {'input': "query"}
+#  def __call__(self, input):
+#    """
+#    Input: {'input': "query"}
 
-    Returns: string
-    """
-    query = input['input']
+#    Returns: string
+#    """
+#    query = input['input']
 
-    vid_search = VideosSearch(query, limit=self.n)
+#    vid_search = VideosSearch(query, limit=self.n)
 
-    return vid_search.result()['result'][0]['link']
+#    return vid_search.result()['result'][0]['link']
   
 
 class do_research():
@@ -235,10 +239,6 @@ ACTIONS = {
         'func': get_chain,
         'returns': 'string'
     },
-    'Get YouTube URL': {
-        'func': get_yt_url,
-        'returns': 'string'
-    },
     'Extract From Text': {
         'func': extract_from_text,
         'returns': 'list'
@@ -300,9 +300,13 @@ class Workflow():
 
 
     def run_all(self, input, bubble=False):
-        self.output[0] = input
+        #self.output[0] = input
         for step_number in range(1, len(self.steps)+1):
-            self.run_step(step_number)
+            if step_number == 1:
+               self.run_step(step_number, input=input)
+            else:
+                self.run_step(step_number)
+            
             step = self.steps[step_number-1]
 
             if bubble:
@@ -469,7 +473,6 @@ def workflow(event, context):
 
     # execute this step and save to workflow output
     input_vals = prep_input_vals(input_vals, config['steps'][0]['action'])
-    inputs = {k: v for k, v in zip(input_vars, input_vals)}
     
     # run step as lambda Event so we can return immediately and free frontend
     _ = lambda_client.invoke(
@@ -481,7 +484,7 @@ def workflow(event, context):
             'workflow': workflow,
             'project': project,
             'config': config,
-            'inputs': inputs
+            'inputs': input_vals
         }})
     ) 
 
