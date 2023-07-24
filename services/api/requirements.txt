@@ -1,6 +1,8 @@
 weaviate-client
 langchain
+openai
 tiktoken
+python-dotenv
 pydantic
 requests
 urllib3<2
