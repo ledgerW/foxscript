@@ -446,6 +446,7 @@ def workflow(event, context):
 
         body = event['body']
         body['steps'] = [json.loads(step) for step in body['steps'].split('<SPLIT>')]
+        #body['steps'] = [json.loads(step) for step in json.loads(body['steps']).split('<SPLIT>')]
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
@@ -458,6 +459,7 @@ def workflow(event, context):
         
         body = json.loads(event['body'])
         body['steps'] = [json.loads(step) for step in body['steps'].split('<SPLIT>')]
+        #body['steps'] = [json.loads(step) for step in json.loads(body['steps']).split('<SPLIT>')]
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
 
     print(body)
