@@ -323,11 +323,17 @@ class Workflow():
 
             step.run_step(step_input)
 
+            # Write each step output back to Bubble
             if bubble:
+                if type(step.output) == list:
+                   output = '/n'.join(step.output)
+                else:
+                   output = step.output
+
                 bubble_body = {}
                 table = 'step'
                 bubble_id = step.bubble_id
-                bubble_body['output'] = step.output
+                bubble_body['output'] = output
                 res = update_bubble_object(table, bubble_id, bubble_body)
                
 
@@ -449,7 +455,6 @@ def workflow(event, context):
 
         body = event['body']
         body['steps'] = [json.loads(step) for step in body['steps'].split('<SPLIT>')]
-        #body['steps'] = [json.loads(step) for step in json.loads(body['steps']).split('<SPLIT>')]
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
@@ -462,7 +467,6 @@ def workflow(event, context):
         
         body = json.loads(event['body'])
         body['steps'] = [json.loads(step) for step in body['steps'].split('<SPLIT>')]
-        #body['steps'] = [json.loads(step) for step in json.loads(body['steps']).split('<SPLIT>')]
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
 
     # build config
@@ -519,8 +523,8 @@ def run_workflow(event, context):
     table = 'document'
     uid = doc_id
     body = {
-        'name': workflow.output[len(workflow.steps)][:25],
-        'text': workflow.output[len(workflow.steps)]
+        'name': workflow.steps[-1].output[:25],
+        'text': workflow.steps[-1].output
     }
 
     _ = update_bubble_object(table, uid, body)
@@ -556,9 +560,14 @@ def step(event, context):
 
     # execute this step and save to workflow output
     inputs = prep_input_vals(input_vars, input_vals, body['type'])
+    print('step line 557')
+    print(inputs)
 
     if body['type'] != "LLM Prompt":
-        inputs = {k: v for k, v in zip(body['input_vars'], inputs)}
+        #inputs = {k: v for k, v in zip(body['input_vars'], inputs)}
+        inputs = {'input': inputs}
+    print('step line 562')
+    print(inputs)
     
     # run step as lambda Event so we can return immediately and free frontend
     _ = lambda_client.invoke(
