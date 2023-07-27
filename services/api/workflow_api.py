@@ -120,6 +120,7 @@ class extract_from_text():
 
     Returns: List[string]
     """
+    input['input'] = "Original Text:\n" + input['input']
     res = self.chain(input)
     parsed_output = self.parser.parse(res['text']).dict()
     
@@ -322,6 +323,7 @@ class Workflow():
             }
 
             step.run_step(step_input)
+            print(step.output)
 
             # Write each step output back to Bubble
             if bubble:
@@ -329,6 +331,8 @@ class Workflow():
                    output = '\n'.join(step.output)
                 else:
                    output = step.output
+
+                print(output)
 
                 bubble_body = {}
                 table = 'step'
@@ -417,6 +421,9 @@ def prep_input_vals(input_vars, input_vals, input_type):
     
     if input_type == 'Library Research':
         input_vals = [x.split('\n') for x in input_vals]
+    
+    if input_type == 'Extract From Text':
+        input_vals = input_vals[0]
 
     return input_vals
 
@@ -560,14 +567,10 @@ def step(event, context):
 
     # execute this step and save to workflow output
     inputs = prep_input_vals(input_vars, input_vals, body['type'])
-    print('step line 557')
-    print(inputs)
 
     if body['type'] != "LLM Prompt":
         #inputs = {k: v for k, v in zip(body['input_vars'], inputs)}
         inputs = {'input': inputs}
-    print('step line 562')
-    print(inputs)
     
     # run step as lambda Event so we can return immediately and free frontend
     _ = lambda_client.invoke(
@@ -607,12 +610,17 @@ def run_step(event, context):
     step = Step(config)
 
     # execute this step and save to workflow output
-    output = step.run_step(inputs)
+    step.run_step(inputs)
+
+    print(step.output)
 
     # output prep
-    if type(output) == list:
-       output = '\n'.join(output)
+    if type(step.output) == list:
+       output = '\n'.join(step.output)
+    else:
+       output = step.output
 
+    print(output)
 
     # send result to Bubble frontend db
     table = 'step'
