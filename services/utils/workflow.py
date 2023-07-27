@@ -22,7 +22,11 @@ from langchain.experimental.plan_and_execute.schema import (
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
-lambda_client = boto3.client('lambda')
+if os.getenv('IS_OFFLINE'):
+   boto3.setup_default_session(profile_name='ledger')
+   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
+else:
+   lambda_client = boto3.client('lambda')
 
 STAGE = os.getenv('STAGE')
 WP_API_KEY = os.getenv('WP_API_KEY')

@@ -260,6 +260,7 @@ class Workflow():
         self.name = name
         self.steps = []
         self.output = {}
+        self.user_inputs = {}
 
     def __repr__(self):
         step_repr = ["  Step {}. {}".format(i+1, s.name) for i, s in enumerate(self.steps)]
@@ -281,39 +282,52 @@ class Workflow():
             "name": self.name,
             "steps": [s.config for s in self.steps]
         }
-            
-    def run_step(self, step_number, input=None):
-        if input and step_number==1:
-            self.output[0] = input
+    
+    def get_input_from_source(self, input_source):
+        if "User Input" in input_source:
+            return self.user_inputs[input_source]
+        else:
+            step = [s for s in self.steps if s.name == input_source][0]
+            return step.output
 
+            
+    def run_step(self, step_number, user_inputs={}):
+        """
+        input (str or list(str)): the input to the step (not in dictionary form) 
+        """
+        self.user_inputs = user_inputs
+        
+        # Get Step
         step = self.steps[step_number-1]
         print('{} - {} - {}'.format(step_number, step.config['step'], step.name))
 
-        # collect input from previous step outputs according to this step config
-        if step_number==1 and type(self.output[0]) == list:
-           step_input = {k: v for k, v in zip(step.config['inputs'].keys(), self.output[0])}
-        else:
-           step_input = {k: self.output[step_number] for k, step_number in step.config['inputs'].items()}
+        step_input = {
+            input_var: self.get_input_from_source(input_source) for input_var, input_source in step.config['inputs'].items()
+        }
 
-        # execute this step and save to workflow output
-        self.output[step.config['step']] = step.run_step(step_input)
+        step.run_step(step_input)
 
 
-    def run_all(self, input, bubble=False):
-        #self.output[0] = input
-        for step_number in range(1, len(self.steps)+1):
-            if step_number == 1:
-               self.run_step(step_number, input=input)
-            else:
-                self.run_step(step_number)
-            
-            step = self.steps[step_number-1]
+    def run_all(self, user_inputs, bubble=False):
+        """
+        user_inputs (dict)
+        """
+        self.user_inputs = user_inputs
+        
+        for step in self.steps:
+            print('{} - {}'.format(step.config['step'], step.name))
+
+            step_input = {
+                input_var: self.get_input_from_source(input_source) for input_var, input_source in step.config['inputs'].items()
+            }
+
+            step.run_step(step_input)
 
             if bubble:
                 bubble_body = {}
                 table = 'step'
                 bubble_id = step.bubble_id
-                bubble_body['output'] = self.output[step_number]
+                bubble_body['output'] = step.output
                 res = update_bubble_object(table, bubble_id, bubble_body)
                
 
@@ -328,12 +342,13 @@ class Step():
         self.func = ACTIONS[config['action']]['func'](**config['init'])
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
+        self.output = None
 
     def __repr__(self):
         return f'Step - {self.name}'
 
     def run_step(self, inputs):
-        return self.func(inputs)
+        self.output = self.func(inputs)
     
 
 def write_to_bubble(table, body):
@@ -387,7 +402,10 @@ def get_init(body, email):
     return init
 
 
-def prep_input_vals(input_vals, input_type):
+def prep_input_vals(input_vars, input_vals, input_type):
+    if input_type == 'LLM Prompt':
+        input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
+
     if input_type == 'Web Research':
         input_vals = [x.split('\n') for x in input_vals]
     
@@ -410,25 +428,10 @@ def get_step_config(body, email):
 
 
 def get_step_inputs(body, steps):
-    body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
-    body['input_vars_sources'] = [x.strip() for x in body['input_vars_sources'].split(',') if x]
+    input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
+    input_vars_sources = [x.strip() for x in body['input_vars_sources'].split(',') if x]
 
-    inputs = {}
-    for input_var, input_var_source_name in zip(body['input_vars'], body['input_vars_sources']):
-        for step in steps:
-            if 'User Input' in input_var_source_name:
-               input_var_source_idx = 0
-               break
-
-            if step['name'] == input_var_source_name:
-                input_var_source_idx = int(step['step_number'])
-                break
-            
-        inputs[input_var] = input_var_source_idx
-
-    return inputs
-    
-    
+    return {var: source for var, source in zip(input_vars, input_vars_sources)}    
 
 
 # Lambda Handler
@@ -446,6 +449,7 @@ def workflow(event, context):
 
         body = event['body']
         body['steps'] = [json.loads(step) for step in body['steps'].split('<SPLIT>')]
+        #body['steps'] = [json.loads(step) for step in json.loads(body['steps']).split('<SPLIT>')]
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
@@ -458,9 +462,8 @@ def workflow(event, context):
         
         body = json.loads(event['body'])
         body['steps'] = [json.loads(step) for step in body['steps'].split('<SPLIT>')]
+        #body['steps'] = [json.loads(step) for step in json.loads(body['steps']).split('<SPLIT>')]
         input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
-
-    print(body)
 
     # build config
     config = {}
@@ -472,7 +475,7 @@ def workflow(event, context):
         config['steps'].append(step_config)
 
     # execute this step and save to workflow output
-    input_vals = prep_input_vals(input_vals, config['steps'][0]['action'])
+    input_vals = prep_input_vals(input_vars, input_vals, config['steps'][0]['action'])
     
     # run step as lambda Event so we can return immediately and free frontend
     _ = lambda_client.invoke(
@@ -537,7 +540,7 @@ def step(event, context):
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
 
         body = event['body']
-        body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
+        input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
     except:
         email = json.loads(event['body'])['email']
         workflow = json.loads(event['body'])['workflow']
@@ -546,16 +549,16 @@ def step(event, context):
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
         
         body = json.loads(event['body'])
-        body['input_vars'] = [x.strip() for x in body['input_vars'].split(',') if x]
-
-    print(body)
+        input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
 
     # build config
     config = get_step_config(body, email)
 
     # execute this step and save to workflow output
-    input_vals = prep_input_vals(input_vals, body['type'])
-    inputs = {k: v for k, v in zip(body['input_vars'], input_vals)}
+    inputs = prep_input_vals(input_vars, input_vals, body['type'])
+
+    if body['type'] != "LLM Prompt":
+        inputs = {k: v for k, v in zip(body['input_vars'], inputs)}
     
     # run step as lambda Event so we can return immediately and free frontend
     _ = lambda_client.invoke(
