@@ -326,7 +326,7 @@ class Workflow():
             # Write each step output back to Bubble
             if bubble:
                 if type(step.output) == list:
-                   output = '/n'.join(step.output)
+                   output = '\n'.join(step.output)
                 else:
                    output = step.output
 
