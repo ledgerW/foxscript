@@ -13,7 +13,7 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
-from langchain.experimental.plan_and_execute.schema import (
+from langchain_experimental.plan_and_execute.schema import (
     Plan,
     PlanOutputParser,
     Step,
