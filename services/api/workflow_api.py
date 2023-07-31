@@ -590,6 +590,8 @@ def workflow(event, context):
 
         input_vals = event['body']['input_vals']
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
+
+        body = event['body']
     except:
         workflow_id = json.loads(event['body'])['workflow_id']
         email = json.loads(event['body'])['email']
@@ -600,18 +602,33 @@ def workflow(event, context):
         
         input_vals = json.loads(event['body'])['input_vals']
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
-    
-    # run step as lambda Event so we can return immediately and free frontend
-    _ = lambda_client.invoke(
-        FunctionName=f'foxscript-api-{STAGE}-run_workflow',
-        InvocationType='Event',
-        Payload=json.dumps({"body": {
+
+        body = json.loads(event['body'])
+
+    if 'sqs' in body:
+       # this is a Workflow as Step running distributed
+       out_body = {
+            'workflow_id': workflow_id,
+            'email': email,
+            'doc_id': doc_id,
+            'input_vars': input_vars,
+            'input_vals': input_vals,
+            'sqs': body['sqs']
+        }
+    else:
+       out_body = {
             'workflow_id': workflow_id,
             'email': email,
             'doc_id': doc_id,
             'input_vars': input_vars,
             'input_vals': input_vals
-        }})
+        }
+    
+    # run step as lambda Event so we can return immediately and free frontend
+    _ = lambda_client.invoke(
+        FunctionName=f'foxscript-api-{STAGE}-run_workflow',
+        InvocationType='Event',
+        Payload=json.dumps({"body": out_body})
     ) 
 
     return success({'SUCCESS': True})
