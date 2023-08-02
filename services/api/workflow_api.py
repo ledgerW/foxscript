@@ -378,17 +378,12 @@ class Workflow():
                step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
                step_workflow_input_val = self.get_input_from_source(input_source)
                step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
-               print("Workflow Step Input")
-               print(step_input)
             else:
                 step_input = {
                     input_var: self.get_input_from_source(input_source) for input_var, input_source in step.config['inputs'].items()
                 }
-                print('Step input')
-                print(step_input)
 
             step.run_step(step_input)
-            print(step.output)
 
             # Write each step output back to Bubble
             if bubble:
@@ -396,8 +391,6 @@ class Workflow():
                    output = '\n'.join(step.output)
                 else:
                    output = step.output
-
-                print(output)
 
                 bubble_body = {}
                 table = 'step'
@@ -473,7 +466,6 @@ def get_init(body, email):
 
     if body['type'] == 'Workflow':
         init = {'workflow': get_workflow_from_bubble(body['init_text'], email=email)}
-        #init = {'workflow': body['init_text']}
         
     if body['type'] == 'Get YouTube URL':
         init = {'n': body['init_number']}
@@ -481,7 +473,6 @@ def get_init(body, email):
     return init
 
 
-# MIGHT NOT NEED ANYMORE
 def prep_input_vals(input_vars, input_vals, input):
     # prep for a Workflow
     if hasattr(input, 'steps'):
@@ -500,6 +491,7 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {input_vars[0]: input_vals[0]}
     # prep for Step
     else:
+        input_type = input.config['action']
         if input_type == 'LLM Prompt':
             input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
 
@@ -512,14 +504,7 @@ def prep_input_vals(input_vars, input_vals, input):
         if input_type == 'Extract From Text':
             input_vals = {'input': input_vals[0]}
 
-    return input_vals
-
-
-def get_step_inputs(body, steps):
-    input_vars = [x.strip() for x in body['input_vars'].split(',') if x]
-    input_vars_sources = [x.strip() for x in body['input_vars_sources'].split(',') if x]
-
-    return {var: source for var, source in zip(input_vars, input_vars_sources)}    
+    return input_vals  
 
 
 def step_config_from_bubble(bubble_step, email):
@@ -528,7 +513,7 @@ def step_config_from_bubble(bubble_step, email):
         "step": bubble_step['step_number'],
         "action": bubble_step['type'],
         "init": get_init(bubble_step, email),
-        "inputs": {var: src for var, src in zip(bubble_step['input_vars'], bubble_step['input_vars_sources'])},
+        "inputs": {var: src for var, src in zip(bubble_step['input_vars'], bubble_step['input_vars_sources']) if var},
         "bubble_id": bubble_step['_id'],
         "output_type": "string" if bubble_step['type'] != 'Extract From Text' else 'list'
     }
@@ -661,6 +646,7 @@ def run_workflow(event, context):
 
     if 'sqs' in body:
         # running as a distributed step, send output back to master
+        # there is no doc_id because output returns to the calling step
         queue = SQS(body['sqs'])
         workflow.run_all(input_vals, bubble=False)
         queue.send(workflow.steps[-1].output)
@@ -738,29 +724,24 @@ def run_step(event, context):
     # get step
     step = get_step_from_bubble(step_id, email=email)
 
-    inputs = prep_input_vals(input_vars, input_vals, step)
-
-    #if step.config['action'] != "LLM Prompt":
-    #    inputs = {'input': inputs}
-
-    # execute this step and save to workflow output
-    step.run_step(inputs)
-
-    print(step.output)
+    if step.config['action'] == 'Workflow':
+        input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
+        inputs = prep_input_vals([input_var], input_vals, step.func.workflow)
+        step.func.workflow.run_all(inputs, bubble=False)
+        output = step.func.workflow.steps[-1].output
+    else:
+        inputs = prep_input_vals(input_vars, input_vals, step)
+        step.run_step(inputs)
+        output = step.output
 
     # output prep
-    if type(step.output) == list:
-       output = '\n'.join(step.output)
-    else:
-       output = step.output
+    if type(output) == list:
+        output = '\n'.join(output)
 
-    # send result to Bubble frontend db
-    table = 'step'
-    bubble_id = step.bubble_id
     body = {
-       'output': output
+        'output': output
     }
 
-    _ = update_bubble_object(table, bubble_id, body)
+    _ = update_bubble_object('step', step.bubble_id, body)
        
     return success({'SUCCESS': True})
