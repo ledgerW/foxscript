@@ -187,8 +187,8 @@ def research(event, context):
       chunks = scrape_and_chunk(url, 100, tokenizer)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})
       context = get_context(query, llm, vec_db.as_retriever())
-    except:
-      context = 'Problem analyzing source.'
+    except Exception as error:
+      print("Problem analyzing source: ", error)
 
     result = f"query: {query}\n" + f"source: {url}\n" + context + '\n'
 

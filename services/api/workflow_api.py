@@ -185,6 +185,7 @@ class do_research():
     queue = SQS(sqs)
     for url, query in zip(urls_to_scrape, queries):
       cloud_research(url, sqs, query)
+      time.sleep(3)
     
     # wait for and collect scrape results from SQS
     research_context = queue.collect(len(urls_to_scrape), max_wait=600)
