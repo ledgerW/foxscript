@@ -254,28 +254,40 @@ class get_workflow():
         input_key = list(inputs.keys())[0]
         input_vals = list(inputs.values())[0]
         if type(input_vals) == list:
-          sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-          queue = SQS(sqs)
-          for input in input_vals:
-            _ = lambda_client.invoke(
-              FunctionName=f'foxscript-api-{STAGE}-workflow',
-              InvocationType='Event',
-              Payload=json.dumps({"body": {
-                  'workflow_id': self.workflow.bubble_id,
-                  'email': self.workflow.email,
-                  'doc_id': '',
-                  'input_vars': input_key,
-                  'input_vals': input,
-                  'sqs': sqs
-                }})
-            )
-            time.sleep(5)
+            sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+            queue = SQS(sqs)
+            for input in input_vals:
+                payload = {
+                    "body": {
+                    'workflow_id': self.workflow.bubble_id,
+                    'email': self.workflow.email,
+                    'doc_id': '',
+                    'input_vars': input_key,
+                    'input_vals': input,
+                    'sqs': sqs
+                    }
+                }
+
+                if os.getenv('IS_OFFLINE'):
+                    print('\nWorkflow payload would be:')
+                    print(payload)
+                    print('\n')
+                else:
+                    _ = lambda_client.invoke(
+                        FunctionName=f'foxscript-api-{STAGE}-workflow',
+                        InvocationType='Event',
+                        Payload=json.dumps(payload)
+                    )
+                    time.sleep(5)
           
-          workflow_outputs = queue.collect(len(input_vals), max_wait=600)
-          return '\n\n'.join(workflow_outputs)
+            if os.getenv('IS_OFFLINE'):
+                return 'Dummy OFFLINE Output'
+            else:
+                workflow_outputs = queue.collect(len(input_vals), max_wait=600)
+                return '\n\n'.join(workflow_outputs)
         else:
-          self.workflow.run_all(inputs)
-          return self.workflow.steps[-1].output
+            self.workflow.run_all(inputs)
+            return self.workflow.steps[-1].output
   
 
 # Step Actions.
@@ -369,21 +381,29 @@ class Workflow():
         user_inputs (dict)
         """
         self.user_inputs = user_inputs
+
+        print('user_inputs')
+        print(self.user_inputs)
         
         for step in self.steps:
             print('{} - {}'.format(step.config['step'], step.name))
 
             if step.config['action'] == 'Workflow':
+               print('doing Workflow Step')
                input_var, input_source = list(step.config['inputs'].items())[0]
                step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
                step_workflow_input_val = self.get_input_from_source(input_source)
                step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
             else:
+                print('doing Normal Step')
                 step_input = {
                     input_var: self.get_input_from_source(input_source) for input_var, input_source in step.config['inputs'].items()
                 }
+                print('input_var and source: {}'.format(step.config['inputs'].items()))
+                print('step_input: {}'.format(step_input))
 
             step.run_step(step_input)
+            print(step.output)
 
             # Write each step output back to Bubble
             if bubble:
