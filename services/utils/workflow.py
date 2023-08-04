@@ -13,11 +13,6 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
-from langchain.experimental.plan_and_execute.schema import (
-    Plan,
-    PlanOutputParser,
-    Step,
-)
 
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -41,12 +36,6 @@ def get_wv_class_name(email, name):
     cls_name = f"{account}{name}"
 
     return cls_name, account
-
-
-class ArticleParser(PlanOutputParser):
-  def parse(self, text: str) -> Plan:
-    steps = [Step(value=v) for v in text.split('ARTICLE:\n')[1:]]
-    return Plan(steps=steps)
   
 
 def get_top_n_search(query, n):
