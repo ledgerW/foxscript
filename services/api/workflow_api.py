@@ -528,10 +528,10 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
 
         if input_type == 'Web Research':
-            input_vals = {'input': [x.split('\n') for x in input_vals]}
+            input_vals = {'input': input_vals[0].split('\n')}
         
         if input_type == 'Library Research':
-            input_vals = {'input': [x.split('\n') for x in input_vals]}
+            input_vals = {'input': input_vals[0].split('\n')}
         
         if input_type == 'Extract From Text':
             input_vals = {'input': input_vals[0]}
@@ -763,6 +763,9 @@ def run_step(event, context):
         output = step.func.workflow.steps[-1].output
     else:
         inputs = prep_input_vals(input_vars, input_vals, step)
+
+        print(inputs)
+
         step.run_step(inputs)
         output = step.output
 
