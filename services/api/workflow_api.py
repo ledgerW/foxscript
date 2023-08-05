@@ -352,9 +352,17 @@ class Workflow():
             "steps": [s.config for s in self.steps]
         }
     
-    def get_input_from_source(self, input_source):
+    def get_input_from_source(self, input_source, input_type):
         if "User Input" in input_source:
-            return self.user_inputs[input_source]
+            input = self.user_inputs[input_source]
+
+            if input_type == "Web Research":
+                input = input[0]
+
+            if input_type == "Library Research":
+                input = input[0]
+
+            return input
         else:
             step = [s for s in self.steps if s.name == input_source][0]
             return step.output
@@ -371,7 +379,7 @@ class Workflow():
         print('{} - {} - {}'.format(step_number, step.config['step'], step.name))
 
         step_input = {
-            input_var: self.get_input_from_source(input_source) for input_var, input_source in step.config['inputs'].items()
+            input_var: self.get_input_from_source(input_source, step.config['action']) for input_var, input_source in step.config['inputs'].items()
         }
 
         step.run_step(step_input)
@@ -393,12 +401,12 @@ class Workflow():
                print('doing Workflow Step')
                input_var, input_source = list(step.config['inputs'].items())[0]
                step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
-               step_workflow_input_val = self.get_input_from_source(input_source)
+               step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
                step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
             else:
                 print('doing Normal Step')
                 step_input = {
-                    input_var: self.get_input_from_source(input_source) for input_var, input_source in step.config['inputs'].items()
+                    input_var: self.get_input_from_source(input_source, step.config['action']) for input_var, input_source in step.config['inputs'].items()
                 }
                 print('input_var and source: {}'.format(step.config['inputs'].items()))
                 print('step_input: {}'.format(step_input))
@@ -509,6 +517,9 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
         
         if input_type == 'Extract From Text':
+            input_vals = {input_vars[0]: input_vals[0]}
+
+        if input_type == 'Workflow':
             input_vals = {input_vars[0]: input_vals[0]}
     # prep for Step
     else:
