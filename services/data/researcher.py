@@ -16,7 +16,18 @@ from langchain.prompts import PromptTemplate
 
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
-from utils.general import SQS
+
+try:
+  from utils.general import SQS
+except:
+  pass
+
+try:
+  from dotenv import load_dotenv
+  load_dotenv()
+except:
+  pass
+
 from utils.content import handle_pdf
 
 import tiktoken
@@ -39,7 +50,7 @@ class GeneralScraper(Scraper):
 
     def __init__(self):
         self.driver = self.get_selenium()
-        self.driver.set_page_load_timeout(10)
+        self.driver.set_page_load_timeout(120)
 
 
     def scrape_post(self, url=None):
@@ -186,11 +197,12 @@ def research(event, context):
       llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
       chunks = scrape_and_chunk(url, 100, tokenizer)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})
-      context = get_context(query, llm, vec_db.as_retriever())
+      research_results = get_context(query, llm, vec_db.as_retriever())
     except Exception as error:
       print("Problem analyzing source: ", error)
+      research_results = "Problem analyzing source."
 
-    result = f"query: {query}\n" + f"source: {url}\n" + context + '\n'
+    result = f"query: {query}\n" + f"source: {url}\n" + research_results + '\n'
 
     if sqs:
        queue = SQS(sqs)
@@ -204,9 +216,14 @@ if __name__ == "__main__":
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('--url', default=None, type=str)
+  parser.add_argument('--query', default=None, type=str)
   args, _ = parser.parse_known_args()
 
-  chunks = scrape_and_chunk(args.url, 100, tokenizer)
+  print(args)
 
-  print(len(chunks))
-  print(chunks[:3])
+  llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+  chunks = scrape_and_chunk(args.url, 100, tokenizer)
+  vec_db = get_ephemeral_vecdb(chunks, {'source': args.url})
+  research_results = get_context(args.query, llm, vec_db.as_retriever())
+
+  print(research_results)
