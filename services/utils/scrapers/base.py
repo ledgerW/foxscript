@@ -26,6 +26,7 @@ class Scraper():
       options.add_argument("--disable-dev-tools")
       options.add_argument('--disable-extensions')
       options.add_argument('--disable-default-apps')
+      options.add_argument('--disable-browser-side-navigation')
       options.add_argument('--ignore-certificate-errors')
       options.add_argument('--ignore-unknown-auth-factors')
       options.add_argument('--ignore-urlfetcher-cert-requests')
@@ -44,6 +45,7 @@ class Scraper():
       options.add_argument("--disable-dev-tools")
       options.add_argument('--disable-extensions')
       options.add_argument('--disable-default-apps')
+      options.add_argument('--disable-browser-side-navigation')
       options.add_argument('--ignore-certificate-errors')
       options.add_argument("--no-zygote")
 
