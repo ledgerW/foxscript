@@ -167,7 +167,7 @@ def upload_to_s3(event, context):
       'content': bubble_doc,
       'date': datetime.now().astimezone().isoformat(),
       'author': "",
-      'source': "",
+      'source': doc_name,
       'url': ""
     }
 

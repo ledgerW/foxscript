@@ -160,7 +160,7 @@ class do_research():
 
     urls_to_scrape = []
     queries = []
-    for _query in questions:
+    for _query in questions[:5]:
       query = _query.strip()
       print(query)
 
@@ -225,7 +225,7 @@ class get_library_retriever():
     questions = input['input']
     
     all_results = ''
-    for question in questions:
+    for question in questions[:5]:
         all_results = all_results + question + '\n'
         chunks = self.get_library_chunks(question)
         results = '\n'.join([c.page_content for c in chunks])
