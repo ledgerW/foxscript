@@ -353,6 +353,8 @@ class Workflow():
         }
     
     def get_input_from_source(self, input_source, input_type):
+        print(input_type)
+        print(input_source)
         if "User Input" in input_source:
             input = self.user_inputs[input_source]
 
@@ -405,14 +407,17 @@ class Workflow():
                step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
             else:
                 print('doing Normal Step')
+                print('input_var and source: {}'.format(step.config['inputs'].items()))
                 step_input = {
                     input_var: self.get_input_from_source(input_source, step.config['action']) for input_var, input_source in step.config['inputs'].items()
                 }
-                print('input_var and source: {}'.format(step.config['inputs'].items()))
                 print('step_input: {}'.format(step_input))
 
             step.run_step(step_input)
-            print(step.output)
+            try:
+                print(step.output)
+            except:
+                pass
 
             # Write each step output back to Bubble
             if bubble:
