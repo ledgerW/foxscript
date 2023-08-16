@@ -24,7 +24,7 @@ from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetr
 from pydantic import BaseModel, Field, create_model
 from typing import List
 
-from utils.workflow import get_top_n_search, cloud_research, get_wv_class_name
+from utils.workflow import get_top_n_search, cloud_research, get_wv_class_name, get_context
 from utils.general import SQS
 from utils.response_lib import *
 
@@ -222,14 +222,18 @@ class get_library_retriever():
 
     Returns: string
     """
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+
     questions = input['input']
     
     all_results = ''
     for question in questions[:5]:
         all_results = all_results + question + '\n'
-        chunks = self.get_library_chunks(question)
-        results = '\n'.join([c.page_content for c in chunks])
+        #chunks = self.get_library_chunks(question)
+        results = get_context(question, llm, self.retriever)
+        #results = '\n'.join([c.page_content for c in chunks])
         all_results = all_results + results + '\n\n'
+        time.sleep(3)
 
     return all_results
   
