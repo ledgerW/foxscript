@@ -16,6 +16,7 @@ from langchain.prompts import PromptTemplate
 
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
+from utils.workflow import get_ephemeral_vecdb, get_context
 
 try:
   from utils.general import SQS
@@ -50,7 +51,7 @@ class GeneralScraper(Scraper):
 
     def __init__(self):
         self.driver = self.get_selenium()
-        self.driver.set_page_load_timeout(120)
+        self.driver.set_page_load_timeout(180)
 
 
     def scrape_post(self, url=None):
@@ -114,30 +115,7 @@ def scrape_and_chunk(url, token_size, tokenizer):
     return text_splitter(results, token_size, tokenizer)
   
 
-def get_ephemeral_vecdb(chunks, metadata):
-  embeddings = OpenAIEmbeddings()
-  
-  return FAISS.from_texts(chunks, embeddings, metadatas=[metadata for _ in range(len(chunks))])
 
-
-def get_context(query, llm, retriever):
-  prompt_template = """Use the following pieces of context to answer the question at the end.
-  If the context doesn't directly answer the question, that's OK!  Even additional related information
-  would be helpful! 
-
-  {context}
-
-  Question: {question}
-  Helpful Answer:"""
-  PROMPT = PromptTemplate(
-      template=prompt_template, input_variables=["context", "question"]
-  )
-
-  chain_type_kwargs = {"prompt": PROMPT}
-  vec_qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, chain_type_kwargs=chain_type_kwargs)
-  res = vec_qa({'query': query})
-
-  return res['result']
 
 
 def scrape(event, context):

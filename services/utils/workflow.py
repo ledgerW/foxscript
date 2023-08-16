@@ -13,6 +13,7 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
+from langchain.prompts import PromptTemplate
 
 import tiktoken
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -91,12 +92,6 @@ def cloud_research(url, sqs=None, query=None):
   )
 
 
-def get_ephemeral_vecdb(chunks, metadata):
-  embeddings = OpenAIEmbeddings()
-  
-  return FAISS.from_texts(chunks, embeddings, metadatas=[metadata for _ in range(len(chunks))])
-
-
 def get_sources_context(query, llm, retriever):
   vec_qa = RetrievalQAWithSourcesChain.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
   res = vec_qa({'question': query})
@@ -104,10 +99,43 @@ def get_sources_context(query, llm, retriever):
   return '\n'.join(['source: {}'.format(res['sources']), res['answer']])
 
 
-def get_context(query, llm, retriever):
-  vec_qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
-  res = vec_qa({'query': query})
+def get_ephemeral_vecdb(chunks, metadata):
+  embeddings = OpenAIEmbeddings()
   
+  return FAISS.from_texts(chunks, embeddings, metadatas=[metadata for _ in range(len(chunks))])
+
+
+def get_context(query, llm, retriever, library=False):
+  if library:
+    prompt_template = """Use the following pieces of context to answer the question at the end.
+  If the context doesn't directly answer the question, that's OK!  Even additional related information
+  would be helpful!  Include the sources you reference from the context in your answer.
+
+  {context}
+
+  Question: {question}
+  
+  Helpful response in the below format:
+  Sources: [sources from context here]
+  [response here]"""
+  else:
+    prompt_template = """Use the following pieces of context to answer the question at the end.
+  If the context doesn't directly answer the question, that's OK!  Even additional related information
+  would be helpful! 
+
+  {context}
+
+  Question: {question}
+  Helpful Answer:"""
+  
+  PROMPT = PromptTemplate(
+      template=prompt_template, input_variables=["context", "question"]
+  )
+
+  chain_type_kwargs = {"prompt": PROMPT}
+  vec_qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, chain_type_kwargs=chain_type_kwargs)
+  res = vec_qa({'query': query})
+
   return res['result']
 
 
