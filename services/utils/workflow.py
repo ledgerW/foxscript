@@ -114,7 +114,10 @@ def get_context(query, llm, retriever, library=False):
   {context}
 
   Question: {question}
-  Helpful Answer:"""
+  
+  Helpful response in the below format:
+  Sources: [sources from context here]
+  [response here]"""
   else:
     prompt_template = """Use the following pieces of context to answer the question at the end.
   If the context doesn't directly answer the question, that's OK!  Even additional related information

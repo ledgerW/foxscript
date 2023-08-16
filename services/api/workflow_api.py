@@ -230,7 +230,7 @@ class get_library_retriever():
     for question in questions[:5]:
         all_results = all_results + question + '\n'
         #chunks = self.get_library_chunks(question)
-        results = get_context(question, llm, self.retriever)
+        results = get_context(question, llm, self.retriever, library=True)
         #results = '\n'.join([c.page_content for c in chunks])
         all_results = all_results + results + '\n\n'
         time.sleep(3)
