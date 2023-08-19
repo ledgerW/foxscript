@@ -3,17 +3,13 @@ sys.path.append('..')
 
 import os
 import json
-import time
 import requests
 import pathlib
-from bs4 import BeautifulSoup
 from unstructured.partition.html import partition_html
 
 from langchain.chat_models import ChatOpenAI
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+
+from newspaper import Article
 
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
@@ -43,6 +39,16 @@ if os.getenv('IS_OFFLINE'):
   LAMBDA_DATA_DIR = '.'
 else:
   LAMBDA_DATA_DIR = '/tmp'
+
+
+def is_news_source(url):
+    f = open("news_sources.txt", "r")
+    sources = f.read().split('\n')
+
+    print('is a news source:')
+    print([src for src in sources if src in url])
+    
+    return len([src for src in sources if src in url]) > 0
 
 
 class GeneralScraper(Scraper):
@@ -102,8 +108,15 @@ def scrape_and_chunk(url, token_size, tokenizer):
     
     return chunks
   except:
-    scraper = GeneralScraper()
-    text = scraper.scrape_post(url)
+    if is_news_source(url):
+      article = Article(url=url)
+      article.download()
+      article.parse()
+      text = article.text
+    else:
+      scraper = GeneralScraper()
+      text = scraper.scrape_post(url)
+    
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     results = "\n".join(chunk for chunk in chunks if chunk)

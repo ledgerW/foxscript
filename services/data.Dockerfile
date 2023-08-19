@@ -29,6 +29,7 @@ COPY utils ./utils
 COPY data/load_data.py ./
 COPY data/scrape_data.py ./
 COPY data/researcher.py ./
+COPY data/news_sources.txt ./
 
 # Set the CMD to your handler
 CMD ["data.master"]

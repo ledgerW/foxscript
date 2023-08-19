@@ -4,6 +4,7 @@ faiss-cpu
 langchain
 selenium
 unstructured
+newspaper3k
 PyPDF2
 beautifulsoup4
 lxml==4.9.2
