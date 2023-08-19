@@ -45,7 +45,7 @@ def is_news_source(url):
     f = open("news_sources.txt", "r")
     sources = f.read().split('\n')
 
-    print('is a news source:')
+    print('news source:')
     print([src for src in sources if src in url])
     
     return len([src for src in sources if src in url]) > 0
@@ -109,11 +109,13 @@ def scrape_and_chunk(url, token_size, tokenizer):
     return chunks
   except:
     if is_news_source(url):
+      print('processing news source')
       article = Article(url=url)
       article.download()
       article.parse()
       text = article.text
     else:
+      print('processing non-news source')
       scraper = GeneralScraper()
       text = scraper.scrape_post(url)
     

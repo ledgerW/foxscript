@@ -18,6 +18,7 @@ COPY data/requirements.txt ./
 
 # Install the python requirements from requirements.txt
 RUN python3.10 -m pip install -r requirements.txt
+RUN python3.10 -m nltk.downloader punkt
 
 COPY --from=build /opt/chrome-linux /opt/chrome
 COPY --from=build /opt/chromedriver /opt/
