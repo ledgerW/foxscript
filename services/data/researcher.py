@@ -7,6 +7,7 @@ import time
 import requests
 import pathlib
 from bs4 import BeautifulSoup
+from unstructured.partition.html import partition_html
 
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -56,13 +57,13 @@ class GeneralScraper(Scraper):
 
     def scrape_post(self, url=None):
         self.driver.get(url)
-        time.sleep(5)
-        html = self.driver.execute_script("return document.getElementsByTagName('html')[0].innerHTML")
+
+        page_content = self.driver.page_source
+        elements = partition_html(text=page_content)
+        text = "\n\n".join([str(el) for el in elements])
         self.driver.quit()
 
-        soup = BeautifulSoup(html, 'lxml')
-
-        return soup
+        return text
 
 
 def text_splitter(text, n, tokenizer):
@@ -102,21 +103,13 @@ def scrape_and_chunk(url, token_size, tokenizer):
     return chunks
   except:
     scraper = GeneralScraper()
-    soup = scraper.scrape_post(url)
-
-    for script in soup(["script", "style"]):
-      script.extract()
-
-    text = soup.get_text()
+    text = scraper.scrape_post(url)
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     results = "\n".join(chunk for chunk in chunks if chunk)
 
     return text_splitter(results, token_size, tokenizer)
   
-
-
-
 
 def scrape(event, context):
     print(event)

@@ -3,6 +3,7 @@ openai
 faiss-cpu
 langchain
 selenium
+unstructured
 PyPDF2
 beautifulsoup4
 lxml==4.9.2
