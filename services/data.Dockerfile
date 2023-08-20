@@ -19,6 +19,10 @@ COPY data/requirements.txt ./
 # Install the python requirements from requirements.txt
 RUN python3.10 -m pip install -r requirements.txt
 
+RUN mkdir nltk_data
+ENV NLTK_DATA="nltk_data"
+RUN python3.10 -m nltk.downloader -d nltk_data all
+
 COPY --from=build /opt/chrome-linux /opt/chrome
 COPY --from=build /opt/chromedriver /opt/
 
@@ -29,6 +33,7 @@ COPY utils ./utils
 COPY data/load_data.py ./
 COPY data/scrape_data.py ./
 COPY data/researcher.py ./
+COPY data/news_sources.txt ./
 
 # Set the CMD to your handler
 CMD ["data.master"]

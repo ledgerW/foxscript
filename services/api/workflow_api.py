@@ -24,7 +24,8 @@ from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetr
 from pydantic import BaseModel, Field, create_model
 from typing import List
 
-from utils.workflow import get_top_n_search, cloud_research, get_wv_class_name, get_context
+from utils.workflow import get_top_n_search, get_wv_class_name, get_context
+from utils.cloud_funcs import cloud_research
 from utils.general import SQS
 from utils.response_lib import *
 

@@ -3,16 +3,13 @@ sys.path.append('..')
 
 import os
 import json
-import time
 import requests
 import pathlib
-from bs4 import BeautifulSoup
+from unstructured.partition.html import partition_html
 
 from langchain.chat_models import ChatOpenAI
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+
+from newspaper import Article
 
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
@@ -44,6 +41,16 @@ else:
   LAMBDA_DATA_DIR = '/tmp'
 
 
+def is_news_source(url):
+    f = open("news_sources.txt", "r")
+    sources = f.read().split('\n')
+
+    print('news source:')
+    print([src for src in sources if src in url])
+    
+    return len([src for src in sources if src in url]) > 0
+
+
 class GeneralScraper(Scraper):
     blog_url = None
     source = None
@@ -56,13 +63,13 @@ class GeneralScraper(Scraper):
 
     def scrape_post(self, url=None):
         self.driver.get(url)
-        time.sleep(5)
-        html = self.driver.execute_script("return document.getElementsByTagName('html')[0].innerHTML")
+
+        page_content = self.driver.page_source
+        elements = partition_html(text=page_content)
+        text = "\n\n".join([str(el) for el in elements])
         self.driver.quit()
 
-        soup = BeautifulSoup(html, 'lxml')
-
-        return soup
+        return text
 
 
 def text_splitter(text, n, tokenizer):
@@ -101,22 +108,23 @@ def scrape_and_chunk(url, token_size, tokenizer):
     
     return chunks
   except:
-    scraper = GeneralScraper()
-    soup = scraper.scrape_post(url)
-
-    for script in soup(["script", "style"]):
-      script.extract()
-
-    text = soup.get_text()
+    if is_news_source(url):
+      print('processing news source')
+      article = Article(url=url)
+      article.download()
+      article.parse()
+      text = article.text
+    else:
+      print('processing non-news source')
+      scraper = GeneralScraper()
+      text = scraper.scrape_post(url)
+    
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     results = "\n".join(chunk for chunk in chunks if chunk)
 
     return text_splitter(results, token_size, tokenizer)
   
-
-
-
 
 def scrape(event, context):
     print(event)
