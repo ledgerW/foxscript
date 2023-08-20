@@ -7,21 +7,12 @@ import urllib
 import boto3
 import weaviate as wv
 from utils import content
+from utils.weaviate_utils import wv_client
 
 
 lambda_data_dir = '/tmp'
 
 s3_client = boto3.client('s3')
-
-auth_config = wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
-
-wv_client = wv.Client(
-    url=os.environ['WEAVIATE_URL'],
-    additional_headers={
-        "X-OpenAI-Api-Key": os.environ['OPENAI_API_KEY']
-    },
-    auth_client_secret=auth_config
-)
 
 
 def handler(event, context):

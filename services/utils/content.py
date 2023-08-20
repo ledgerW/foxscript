@@ -11,12 +11,6 @@ from tenacity import (
     wait_random_exponential,
 )
 
-import sys
-sys.path.append('..')
-
-from utils import scrapers
-from utils.ScraperConfig import Config
-
 
 def get_or_create_source(source_config, wv_client):
     where_filter = {
@@ -67,31 +61,6 @@ def update_source(report_source, latest_post_date, wv_client):
         class_name = 'DataSource',
         uuid = result['data']['Get']['DataSource'][0]['_additional']['id']
     )
-
-
-def scrape_content(report_source, url=None, wv_client=None):
-    config = Config[report_source]
-    scraper = getattr(scrapers, config['scraper'])()
-
-    if url: # Scrape specific url/blog (an older one)
-        result = scraper.scrape_post(url)
-    else: # Check for and scrape the latest and update the date of latest
-        source = get_or_create_source(config, wv_client)
-        try:
-            last_time_scraped = datetime.fromisoformat(source['lastPostDate']) 
-        except:
-            last_time_scraped = datetime.strptime('2023-05-15T00:00:00Z', "%Y-%m-%dT%H:%M:%SZ").astimezone()
-
-        latest_post_url, latest_post_date = scraper.get_latest_post_meta()
-
-        if latest_post_date > last_time_scraped:
-            result = scraper.scrape_post()
-            update_source(report_source, latest_post_date, wv_client)
-            print('Set new latest date to {}'.format(latest_post_date.isoformat()))
-        else:
-            result = ''
-
-    return result
 
 
 def text_splitter(text, n, tokenizer):
