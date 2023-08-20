@@ -21,7 +21,7 @@ RUN python3.10 -m pip install -r requirements.txt
 
 RUN mkdir nltk_data
 ENV NLTK_DATA="nltk_data"
-RUN python3.10 -m nltk.downloader -d nltk_data punkt
+RUN python3.10 -m nltk.downloader -d nltk_data all
 
 COPY --from=build /opt/chrome-linux /opt/chrome
 COPY --from=build /opt/chromedriver /opt/
