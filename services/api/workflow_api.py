@@ -9,7 +9,8 @@ import json
 import boto3
 #from youtubesearchpython import VideosSearch
 
-from utils.Workflow import prep_input_vals, get_workflow_from_bubble, get_step_from_bubble
+from utils.workflow import prep_input_vals, get_workflow_from_bubble, get_step_from_bubble
+
 from utils.bubble import update_bubble_object
 from utils.general import SQS
 from utils.response_lib import *

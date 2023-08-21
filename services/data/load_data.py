@@ -5,7 +5,6 @@ import os
 import urllib
 
 import boto3
-import weaviate as wv
 from utils import content
 from utils.weaviate_utils import wv_client
 
