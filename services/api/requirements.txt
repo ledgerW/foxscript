@@ -1,6 +1,7 @@
 weaviate-client
 langchain
 pandas
+tabulate
 openai
 tiktoken
 python-dotenv

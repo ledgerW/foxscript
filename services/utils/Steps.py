@@ -80,8 +80,6 @@ class analyze_csv():
         df = pd.read_csv(path)
         
         file_name = path.split('/')[-1]
-        df_head = '{df_head}'
-        df_tail = df.tail(2).to_markdown()
         df_shape = df.shape
 
         prefix = f"""You are working with a pandas dataframe in Python. The name of the dataframe is `df`.
