@@ -135,7 +135,7 @@ functions:
   run_workflow:
     handler: workflow_api.run_workflow
     memorySize: 1024
-    timeout: 600
+    timeout: 900
     maximumRetryAttempts: 0
     layers:
       - Ref: PythonRequirementsLambdaLayer
@@ -161,7 +161,7 @@ functions:
   run_step:
     handler: workflow_api.run_step
     memorySize: 512
-    timeout: 600
+    timeout: 900
     maximumRetryAttempts: 0
     layers:
       - Ref: PythonRequirementsLambdaLayer
