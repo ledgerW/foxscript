@@ -3,6 +3,7 @@ sys.path.append('..')
 
 import os
 import json
+import time
 import requests
 
 from utils.weaviate_utils import get_wv_class_name
@@ -248,6 +249,7 @@ class Workflow():
                 print('step_input: {}'.format(step_input))
 
             step.run_step(step_input)
+            time.sleep(10)
             try:
                 print(step.output)
             except:

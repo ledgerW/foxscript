@@ -104,7 +104,7 @@ class analyze_csv():
         questions = input['input']
     
         all_results = ''
-        for question in questions[:3]:
+        for question in questions[:5]:
             all_results = all_results + question + '\n'
             try:
                 result = self.agent.run(question)
