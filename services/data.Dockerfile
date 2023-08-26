@@ -31,7 +31,6 @@ RUN mkdir utils
 COPY utils ./utils
 
 COPY data/load_data.py ./
-COPY data/scrape_data.py ./
 COPY data/researcher.py ./
 COPY data/news_sources.txt ./
 

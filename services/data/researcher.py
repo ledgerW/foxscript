@@ -11,9 +11,10 @@ from langchain.chat_models import ChatOpenAI
 
 from newspaper import Article
 
+from utils.content import text_splitter
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
-from utils.workflow import get_ephemeral_vecdb, get_context
+from utils.workflow_utils import get_ephemeral_vecdb, get_context
 
 try:
   from utils.general import SQS
@@ -70,28 +71,6 @@ class GeneralScraper(Scraper):
         self.driver.quit()
 
         return text
-
-
-def text_splitter(text, n, tokenizer):
-  chunks = []
-  chunk = ''
-  sentences = [s.strip().replace('\n', ' ') for s in text.split('.')]
-  for s in sentences:
-    # start new chunk
-    if chunk == '':
-      chunk = s
-    else:
-      chunk = chunk + ' ' + s
-    
-    chunk_len = len(tokenizer.encode(chunk))
-    if chunk_len >= 0.9*n:
-      chunks.append(chunk)
-      chunk = ''
-
-  if chunk != '':
-    chunks.append(chunk)
-  
-  return chunks
 
 
 def scrape_and_chunk_pdf(url, n, tokenizer):
