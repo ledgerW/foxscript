@@ -46,7 +46,9 @@ STAGE = os.getenv('STAGE')
 
 
 class get_chain():
-    def __init__(self, prompt=None):
+    def __init__(self, prompt=None, as_list=False):
+        self.as_list = as_list
+
         llm = ChatOpenAI(model_name="gpt-4", temperature=1.0)
 
         self.input_vars = re.findall('{(.+?)}', prompt)
@@ -70,21 +72,27 @@ class get_chain():
         """
         res = self.chain(input)
 
-        return res['text']
+        if self.as_list:
+            return res['text'].split('\n')
+        else:
+            return res['text']
     
 
 class analyze_csv():
     def __init__(self, path=None):
-        llm = ChatOpenAI(model_name="gpt-4", temperature=1.0, verbose=True)
+        llm = ChatOpenAI(model_name="gpt-4", temperature=0.1, verbose=True)
 
         df = pd.read_csv(path)
         
         file_name = path.split('/')[-1]
         df_shape = df.shape
 
-        prefix = f"""You are working with a pandas dataframe in Python. The name of the dataframe is `df`.
+        prefix = f"""You are working with a pandas dataframe in Python. The Python packages you have access to are pandas and numpy.
+        The name of the dataframe is `df`.
         The df you are working with contains data from {file_name}
         This is the result of `print(df.shape)`: {df_shape}"""
+
+        print(prefix)
 
         self.agent = create_pandas_dataframe_agent(
             llm,

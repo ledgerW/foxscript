@@ -1,6 +1,7 @@
 weaviate-client
 langchain
 pandas
+numpy
 openai
 tiktoken
 pycryptodome
