@@ -202,12 +202,18 @@ def run_step(event, context):
     else:
         inputs = prep_input_vals(input_vars, input_vals, step)
 
+        print('\nInputs:')
         print(inputs)
+        print('\n')
 
         step.run_step(inputs)
         output = step.output
 
-    # output prep
+        print('\nOutput:')
+        print(output)
+        print('\n')
+
+    # output prep for bubble display (doesn't change internal workflow output)
     if type(output) == list:
         output = '\n'.join(output)
 

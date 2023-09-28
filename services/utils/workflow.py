@@ -21,7 +21,10 @@ BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
 
 def get_init(body, email):
     if body['type'] == 'LLM Prompt':
-        init = {'prompt': body['init_text']}
+        init = {
+            'prompt': body['init_text'],
+            'as_list': body['as_list']
+        }
 
     if body['type'] == 'Analyze CSV':
         doc_url = body['init_text']
@@ -100,6 +103,8 @@ def prep_input_vals(input_vars, input_vals, input):
 
 
 def step_config_from_bubble(bubble_step, email):
+    print('\nbubble_step:')
+    print(bubble_step)
     step_config = {
         "name": bubble_step['name'],
         "step": bubble_step['step_number'],
