@@ -193,11 +193,11 @@ class do_research():
                 except:
                     continue
 
-        # Collect each url for this query
-        for _url in top_n_search_results:
-            url = _url['link']
-            urls_to_scrape.append(url)
-            queries.append(query)
+            # Collect each url for this query
+            for _url in top_n_search_results:
+                url = _url['link']
+                urls_to_scrape.append(url)
+                queries.append(query)
 
         # Scrape and Research all URLs concurrently
         sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
