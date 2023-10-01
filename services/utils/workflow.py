@@ -204,6 +204,9 @@ class Workflow():
             if input_type == "Library Research":
                 input = input[0]
 
+            if input_type == "Analyze CSV":
+                input = input[0]
+
             return input
         else:
             step = [s for s in self.steps if s.name == input_source][0]
