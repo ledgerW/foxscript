@@ -48,7 +48,7 @@ def get_context(query, llm, retriever, library=False):
   if library:
     prompt_template = """Use the following pieces of context to answer the question at the end.
   If the context doesn't directly answer the question, that's OK!  Even additional related information
-  would be helpful!  Include the sources you reference from the context in your answer.
+  would be helpful! Include the sources you reference from the context in your answer.
 
   {context}
 
