@@ -57,7 +57,6 @@ def workflow(event, context):
         
         input_vals = json.loads(event['body'])['input_vals']
         
-        print(input_vals)
         try:
             input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
         except:

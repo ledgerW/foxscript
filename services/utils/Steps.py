@@ -285,35 +285,46 @@ class get_workflow():
         print('workflow step input vals:')
         print(input_vals)
         if type(input_vals) == list:
-            sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-            queue = SQS(sqs)
-            for input in input_vals:
-                payload = {
-                    "body": {
-                    'workflow_id': self.workflow.bubble_id,
-                    'email': self.workflow.email,
-                    'doc_id': '',
-                    'input_vars': input_key,
-                    'input_vals': input,
-                    'sqs': sqs
+            if os.getenv('IS_OFFLINE'):
+                for input in input_vals:
+                    payload = {
+                        "body": {
+                        'workflow_id': self.workflow.bubble_id,
+                        'email': self.workflow.email,
+                        'doc_id': '',
+                        'input_vars': input_key,
+                        'input_vals': input,
+                        'sqs': sqs
+                        }
                     }
-                }
 
-                if os.getenv('IS_OFFLINE'):
                     print('\nWorkflow payload would be:')
                     print(payload)
                     print('\n')
-                else:
+
+                return 'Dummy OFFLINE Output'
+            else:
+                sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                queue = SQS(sqs)
+                for input in input_vals:
+                    payload = {
+                        "body": {
+                        'workflow_id': self.workflow.bubble_id,
+                        'email': self.workflow.email,
+                        'doc_id': '',
+                        'input_vars': input_key,
+                        'input_vals': input,
+                        'sqs': sqs
+                        }
+                    }
+
                     _ = lambda_client.invoke(
                         FunctionName=f'foxscript-api-{STAGE}-workflow',
                         InvocationType='Event',
                         Payload=json.dumps(payload)
                     )
                     time.sleep(5)
-          
-            if os.getenv('IS_OFFLINE'):
-                return 'Dummy OFFLINE Output'
-            else:
+            
                 workflow_outputs = queue.collect(len(input_vals), max_wait=600)
                 return '\n\n'.join(workflow_outputs)
         else:
