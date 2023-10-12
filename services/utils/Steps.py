@@ -286,6 +286,7 @@ class get_workflow():
         print(input_vals)
         if type(input_vals) == list:
             if os.getenv('IS_OFFLINE'):
+                sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
                 for input in input_vals:
                     payload = {
                         "body": {
