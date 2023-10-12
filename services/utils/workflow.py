@@ -61,14 +61,20 @@ def get_init(body, email):
 
 def prep_input_vals(input_vars, input_vals, input):
     # prep for a Workflow
-    if hasattr(input, 'steps'):
+    if hasattr(input, 'steps SKIPPING'):
         input_type = input.steps[0].config['action']
+
+        print('workflow step - prep_input_vals')
+        print(input_vals)
 
         if input_type == 'LLM Prompt':
             input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
 
         if input_type == 'Web Research':
-            input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            try:
+                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            except:
+                input_vals = {input_vars[0]: input_vals}
         
         if input_type == 'Library Research':
             input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
@@ -83,7 +89,13 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {input_vars[0]: input_vals[0]}
     # prep for Step
     else:
-        input_type = input.config['action']
+        print('prep_input_vals')
+        print(input_vals)
+        try:
+            input_type = input.config['action']
+        except:
+            input_type = 'Workflow'
+        
         if input_type == 'LLM Prompt':
             input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
 
@@ -98,6 +110,9 @@ def prep_input_vals(input_vars, input_vals, input):
         
         if input_type == 'Extract From Text':
             input_vals = {'input': input_vals[0]}
+
+        if input_type == 'Workflow':
+            input_vals = {input_vars[0]: input_vals[0]}
 
     return input_vals
 

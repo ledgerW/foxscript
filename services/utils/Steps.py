@@ -183,15 +183,22 @@ class do_research():
                 queries.append(query)
 
         # Scrape and Research all URLs concurrently
-        sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-        queue = SQS(sqs)
-        for url, query in zip(urls_to_scrape, queries):
-            cloud_research(url, sqs, query)
-            time.sleep(3)
+        if os.getenv('IS_OFFLINE'):
+            for url, query in zip(urls_to_scrape, queries):
+                print('\nCloud Research call: {} - {}'.format(url, query))
+                print('\n')
+
+            return 'This is dummy web research from running locally'
+        else:
+            sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+            queue = SQS(sqs)
+            for url, query in zip(urls_to_scrape, queries):
+                cloud_research(url, sqs, query)
+                time.sleep(3)
         
-        # wait for and collect scrape results from SQS
-        research_context = queue.collect(len(urls_to_scrape), max_wait=600)
-        return '\n'.join(research_context)
+            # wait for and collect scrape results from SQS
+            research_context = queue.collect(len(urls_to_scrape), max_wait=600)
+            return '\n'.join(research_context)
   
 
 class get_library_retriever():
@@ -275,6 +282,8 @@ class get_workflow():
         """
         input_key = list(inputs.keys())[0]
         input_vals = list(inputs.values())[0]
+        print('workflow step input vals:')
+        print(input_vals)
         if type(input_vals) == list:
             sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
             queue = SQS(sqs)
