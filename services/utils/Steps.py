@@ -17,17 +17,13 @@ import pandas as pd
 from datetime import datetime
 #from youtubesearchpython import VideosSearch
 
-from pydantic import BaseModel, Field, create_model
-from typing import List
-
-from langchain.chat_models import ChatOpenAI
 from langchain.chains.llm import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 from langchain.agents import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
 
+from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import get_top_n_search, get_context
 from utils.weaviate_utils import wv_client
 from utils.cloud_funcs import cloud_research
@@ -49,7 +45,8 @@ class get_chain():
     def __init__(self, prompt=None, as_list=False):
         self.as_list = as_list
 
-        llm = ChatOpenAI(model_name="gpt-4", temperature=1.0)
+        #llm = ChatOpenAI(model_name="gpt-4", temperature=1.0)
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=1.0)
 
         self.input_vars = re.findall('{(.+?)}', prompt)
 
@@ -58,7 +55,7 @@ class get_chain():
             template=prompt
         )
 
-        self.chain = LLMChain(llm=llm, prompt=_prompt, verbose=True)
+        self.chain = LLMChain(llm=self.LLM.llm, prompt=_prompt, verbose=True)
 
     def __call__(self, input):
         """
@@ -70,7 +67,21 @@ class get_chain():
 
         Returns: string
         """
-        res = self.chain(input)
+        res = None
+        try:
+            res = self.chain(input)
+        except:
+            for llm in self.LLM.fallbacks:
+                self.chain.llm = llm
+                try:
+                    res = self.chain(input)
+                    if res:
+                        break
+                except:
+                    continue
+
+        if not res:
+            res = {'text': 'Problem with Step.'}
 
         if self.as_list:
             return res['text'].split('\n')
@@ -80,7 +91,8 @@ class get_chain():
 
 class analyze_csv():
     def __init__(self, path=None):
-        llm = ChatOpenAI(model_name="gpt-4", temperature=0.1, verbose=True)
+        #llm = ChatOpenAI(model_name="gpt-4", temperature=0.1, verbose=True)
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
         df = pd.read_csv(path)
         
@@ -92,10 +104,8 @@ class analyze_csv():
         The df you are working with contains data from {file_name}
         This is the result of `print(df.shape)`: {df_shape}"""
 
-        print(prefix)
-
         self.agent = create_pandas_dataframe_agent(
-            llm,
+            self.LLM.llm,
             df,
             prefix=prefix,
             max_iterations=15,
@@ -114,54 +124,27 @@ class analyze_csv():
         all_results = ''
         for question in questions[:5]:
             all_results = all_results + question + '\n'
+
+            result = None
             try:
                 result = self.agent.run(question)
             except:
+                for llm in self.LLM.fallbacks:
+                    self.agent.agent.llm = llm
+                    try:
+                        result = self.agent.run(question)
+                        if result:
+                            break
+                    except:
+                        continue
+                
+            if not result:
                 result = "Problem answering this question."
+                
             all_results = all_results + result + '\n\n'
             time.sleep(3)
 
         return all_results
-    
-
-class extract_from_text():
-    def create_chain_parser_class(self, attributes):
-        fields = {"__base__": BaseModel}
-
-        for name, description in attributes.items():
-            fields[name] = (List[str], Field(default=[], description=description))
-
-        return create_model("ChainParser", **fields)
-  
-  
-    def __init__(self, attributes=None):
-        llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
-
-        self.attributes = attributes
-        ChainParser = self.create_chain_parser_class(attributes)
-
-        self.parser = PydanticOutputParser(pydantic_object=ChainParser)
-
-        prompt = PromptTemplate(
-            template="{format_instructions}\n\nGiven the below text, extract the information described in the output schema.\n{input}",
-            input_variables=["input"],
-            partial_variables={"format_instructions": self.parser.get_format_instructions()},
-        )
-
-        self.chain = LLMChain(llm=llm, prompt=prompt, verbose=True)
-
-
-    def __call__(self, input):
-        """
-        Input: {'input': "input"}
-
-        Returns: List[string]
-        """
-        input['input'] = "Original Text:\n" + input['input']
-        res = self.chain(input)
-        parsed_output = self.parser.parse(res['text']).dict()
-        
-        return parsed_output[list(self.attributes.keys())[0]]
   
 
 class do_research():
@@ -200,20 +183,29 @@ class do_research():
                 queries.append(query)
 
         # Scrape and Research all URLs concurrently
-        sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-        queue = SQS(sqs)
-        for url, query in zip(urls_to_scrape, queries):
-            cloud_research(url, sqs, query)
-            time.sleep(3)
+        if os.getenv('IS_OFFLINE'):
+            for url, query in zip(urls_to_scrape, queries):
+                print('\nCloud Research call: {} - {}'.format(url, query))
+                print('\n')
+
+            return 'This is dummy web research from running locally'
+        else:
+            sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+            queue = SQS(sqs)
+            for url, query in zip(urls_to_scrape, queries):
+                cloud_research(url, sqs, query)
+                time.sleep(3)
         
-        # wait for and collect scrape results from SQS
-        research_context = queue.collect(len(urls_to_scrape), max_wait=600)
-        return '\n'.join(research_context)
+            # wait for and collect scrape results from SQS
+            research_context = queue.collect(len(urls_to_scrape), max_wait=600)
+            return '\n'.join(research_context)
   
 
 class get_library_retriever():
     def __init__(self, class_name=None, k=3):
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
+
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
 
 
     def get_weaviate_retriever(self, class_name=None, k=3):
@@ -241,7 +233,8 @@ class get_library_retriever():
 
         Returns: string
         """
-        llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+        #llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+        
 
         questions = input['input']
 
@@ -250,7 +243,22 @@ class get_library_retriever():
             all_results = all_results + question + '\n'
             #chunks = self.get_library_chunks(question)
             #results = '\n'.join([c.page_content for c in chunks])
-            results = get_context(question, llm, self.retriever, library=True)
+            
+            results = None
+            try:
+                results = get_context(question, self.LLM.llm, self.retriever, library=True)
+            except:
+                for llm in self.LLM.fallbacks:
+                    try:
+                        results = get_context(question, llm, self.retriever, library=True)
+                        if results:
+                            break
+                    except:
+                        continue
+
+            if not results:
+                results = {'text': 'Problem with Step.'}
+
             all_results = all_results + results + '\n\n'
             time.sleep(3)
 
@@ -274,36 +282,50 @@ class get_workflow():
         """
         input_key = list(inputs.keys())[0]
         input_vals = list(inputs.values())[0]
+        print('workflow step input vals:')
+        print(input_vals)
         if type(input_vals) == list:
-            sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-            queue = SQS(sqs)
-            for input in input_vals:
-                payload = {
-                    "body": {
-                    'workflow_id': self.workflow.bubble_id,
-                    'email': self.workflow.email,
-                    'doc_id': '',
-                    'input_vars': input_key,
-                    'input_vals': input,
-                    'sqs': sqs
+            if os.getenv('IS_OFFLINE'):
+                sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                for input in input_vals:
+                    payload = {
+                        "body": {
+                        'workflow_id': self.workflow.bubble_id,
+                        'email': self.workflow.email,
+                        'doc_id': '',
+                        'input_vars': input_key,
+                        'input_vals': input,
+                        'sqs': sqs
+                        }
                     }
-                }
 
-                if os.getenv('IS_OFFLINE'):
                     print('\nWorkflow payload would be:')
                     print(payload)
                     print('\n')
-                else:
+
+                return 'Dummy OFFLINE Output'
+            else:
+                sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                queue = SQS(sqs)
+                for input in input_vals:
+                    payload = {
+                        "body": {
+                        'workflow_id': self.workflow.bubble_id,
+                        'email': self.workflow.email,
+                        'doc_id': '',
+                        'input_vars': input_key,
+                        'input_vals': input,
+                        'sqs': sqs
+                        }
+                    }
+
                     _ = lambda_client.invoke(
                         FunctionName=f'foxscript-api-{STAGE}-workflow',
                         InvocationType='Event',
                         Payload=json.dumps(payload)
                     )
                     time.sleep(5)
-          
-            if os.getenv('IS_OFFLINE'):
-                return 'Dummy OFFLINE Output'
-            else:
+            
                 workflow_outputs = queue.collect(len(input_vals), max_wait=600)
                 return '\n\n'.join(workflow_outputs)
         else:
@@ -335,10 +357,6 @@ ACTIONS = {
     'LLM Prompt': {
         'func': get_chain,
         'returns': 'string'
-    },
-    'Extract From Text': {
-        'func': extract_from_text,
-        'returns': 'list'
     },
     'Web Research': {
         'func': do_research,

@@ -7,10 +7,9 @@ import requests
 import pathlib
 from unstructured.partition.html import partition_html
 
-from langchain.chat_models import ChatOpenAI
-
 from newspaper import Article
 
+from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.content import text_splitter
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
@@ -158,11 +157,28 @@ def research(event, context):
        query = None
 
     # Scrape and Research
+    research_results = None
     try:
-      llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+      #llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+      LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=1.0)
+
       chunks = scrape_and_chunk(url, 100, tokenizer)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})
-      research_results = get_context(query, llm, vec_db.as_retriever())
+
+      try:
+        research_results = get_context(query, LLM.llm, vec_db.as_retriever())
+      except:
+        for llm in LLM.fallbacks:
+          try:
+            research_results = get_context(query, llm, vec_db.as_retriever())
+            if research_results:
+              break
+          except:
+              continue
+
+      if not research_results:
+        research_results = "Problem analyzing source."
+
     except Exception as error:
       print("Problem analyzing source: ", error)
       research_results = "Problem analyzing source."

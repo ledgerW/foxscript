@@ -68,13 +68,22 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
 
         if input_type == 'Web Research':
-            input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            try:
+                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            except:
+                input_vals = {input_vars[0]: input_vals[0]}
         
         if input_type == 'Library Research':
-            input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            try:
+                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            except:
+                input_vals = {input_vars[0]: input_vals[0]}
 
         if input_type == 'Analyze CSV':
-            input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            try:
+                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+            except:
+                input_vals = {input_vars[0]: input_vals[0]}
         
         if input_type == 'Extract From Text':
             input_vals = {input_vars[0]: input_vals[0]}
@@ -104,7 +113,10 @@ def prep_input_vals(input_vars, input_vals, input):
 
 def step_config_from_bubble(bubble_step, email):
     print('\nbubble_step:')
-    print(bubble_step)
+    try:
+        print(bubble_step)
+    except:
+        pass
     step_config = {
         "name": bubble_step['name'],
         "step": bubble_step['step_number'],
