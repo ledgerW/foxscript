@@ -198,6 +198,13 @@ def run_step(event, context):
     # get step
     step = get_step_from_bubble(step_id, email=email)
 
+    # Update status of Bubble Step
+    bubble_body = {}
+    bubble_body['is_running'] = True
+    bubble_body['is_waiting'] = False
+    bubble_body['unseen_output'] = False
+    _ = update_bubble_object('step', step.bubble_id, bubble_body)
+
     if step.config['action'] == 'Workflow':
         input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
         inputs = prep_input_vals([input_var], input_vals, step.func.workflow)
@@ -221,10 +228,12 @@ def run_step(event, context):
     if type(output) == list:
         output = '\n'.join(output)
 
+    # Update status of Bubble Step
     body = {
+        'is_running': False,
+        'is_waiting': False,
         'output': output
     }
-
     _ = update_bubble_object('step', step.bubble_id, body)
        
     return success({'SUCCESS': True})
