@@ -232,6 +232,7 @@ def run_step(event, context):
     body = {
         'is_running': False,
         'is_waiting': False,
+        'unseen_output': True,
         'output': output
     }
     _ = update_bubble_object('step', step.bubble_id, body)
