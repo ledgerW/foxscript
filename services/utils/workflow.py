@@ -268,6 +268,15 @@ class Workflow():
                 }
                 print('step_input: {}'.format(step_input))
 
+
+            # Update Step status in Bubble
+            if bubble:
+                bubble_body = {}
+                bubble_body['is_running'] = True
+                bubble_body['is_waiting'] = False
+                bubble_body['unseen_output'] = False
+                _ = update_bubble_object('step', step.bubble_id, bubble_body)
+
             step.run_step(step_input)
             time.sleep(10)
             try:
@@ -283,10 +292,11 @@ class Workflow():
                    output = step.output
 
                 bubble_body = {}
-                table = 'step'
-                bubble_id = step.bubble_id
                 bubble_body['output'] = output
-                res = update_bubble_object(table, bubble_id, bubble_body)
+                bubble_body['is_running'] = False
+                bubble_body['is_waiting'] = False
+                bubble_body['unseen_output'] = True
+                _ = update_bubble_object('step', step.bubble_id, bubble_body)
                
 
     def parse(self):
