@@ -31,7 +31,7 @@ from utils.general import SQS
 
 
 if os.getenv('IS_OFFLINE'):
-    boto3.setup_default_session(profile_name='ledger')
+    #boto3.setup_default_session(profile_name='ledger')
     lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
     LAMBDA_DATA_DIR = '.'
 else:
@@ -45,7 +45,6 @@ class get_chain():
     def __init__(self, prompt=None, as_list=False):
         self.as_list = as_list
 
-        #llm = ChatOpenAI(model_name="gpt-4", temperature=1.0)
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=1.0)
 
         self.input_vars = re.findall('{(.+?)}', prompt)
@@ -91,7 +90,6 @@ class get_chain():
 
 class analyze_csv():
     def __init__(self, path=None):
-        #llm = ChatOpenAI(model_name="gpt-4", temperature=0.1, verbose=True)
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
         df = pd.read_csv(path)
@@ -233,9 +231,6 @@ class get_library_retriever():
 
         Returns: string
         """
-        #llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
-        
-
         questions = input['input']
 
         all_results = ''
