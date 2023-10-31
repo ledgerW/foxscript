@@ -1,5 +1,6 @@
 weaviate-client
 langchain==0.0.327
+langchain-experimental==0.0.36
 pandas
 numpy
 openai
