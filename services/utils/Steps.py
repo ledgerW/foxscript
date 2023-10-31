@@ -20,7 +20,7 @@ from datetime import datetime
 from langchain.chains.llm import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
-from langchain.agents import create_pandas_dataframe_agent
+from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs

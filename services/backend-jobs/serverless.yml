@@ -1,0 +1,105 @@
+frameworkVersion: "3.32.2"
+service: foxscript-backend-jobs
+
+useDotenv: true
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-offline
+  - serverless-python-requirements
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+
+  bucket_name: foxscript-content-${self:custom.stage}
+
+  serverless-offline:
+    httpPort: 3005
+
+  # Lambda Layers
+  pythonRequirements:
+    dockerizePip: true
+    pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
+    layer:
+      name: ${self:service}
+      
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!package-lock.json'
+    - '!package.json'
+    - scheduled_jobs.py
+    - ../utils/**
+
+provider:
+  name: aws
+  stage: dev
+  region: us-east-1
+  runtime: python3.9
+  lambdaHashingVersion: 20201221
+  apiGateway:
+    restApiId:
+      'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-restApiId
+    restApiRootResourceId:
+      'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-rootResourceId
+ 
+  environment:
+    STAGE: ${self:custom.stage}
+    BUCKET: ${self:custom.bucket_name}
+    WEAVIATE_URL: ${env:WEAVIATE_URL}
+    WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
+    AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
+    AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
+    SERPER_API_KEY: ${env:SERPER_API_KEY}
+    BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
+    BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
+    BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+    LOCAL_ENDPOINT: ${env:LOCAL_ENDPOINT}
+    LOCAL_INVOKE_ENDPOINT: ${env:LOCAL_INVOKE_ENDPOINT}
+
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            # Lambda Actions
+            - 'lambda:InvokeFunction'
+            - 'lambda:InvokeAsync'
+            # S3 Actions
+            - 's3:PutObject'
+            - 's3:GetObject'
+            - 's3:DeleteObject'
+            - 's3:ListBucket'
+            # ECS Actions
+            - 'ecs:*'
+            # ECR Actions
+            - 'ecr:*'
+            # IAM Actions
+            - 'iam:*'
+            # SQS Actions
+            - 'sqs:*'
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+
+functions:
+  rotate_monthly_workflow_usage:
+    handler: scheduled_jobs.rotate_monthly_workflow_usage
+    memorySize: 256
+    timeout: 120
+    maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - schedule: cron(1 0 1 * ? *)
+      - http:
+          path: rotate_monthly_workflow_usage
+          method: post
+          cors: true
+      

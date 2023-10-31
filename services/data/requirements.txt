@@ -1,7 +1,7 @@
 weaviate-client
 openai
 faiss-cpu
-langchain
+langchain==0.0.327
 selenium
 unstructured
 newspaper3k
