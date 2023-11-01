@@ -288,6 +288,7 @@ class get_workflow():
                         'workflow_id': self.workflow.bubble_id,
                         'email': self.workflow.email,
                         'doc_id': '',
+                        'run_id': self.workflow.run_id,
                         'input_vars': input_key,
                         'input_vals': input,
                         'sqs': sqs
@@ -308,6 +309,7 @@ class get_workflow():
                         'workflow_id': self.workflow.bubble_id,
                         'email': self.workflow.email,
                         'doc_id': '',
+                        'run_id': self.workflow.run_id,
                         'input_vars': input_key,
                         'input_vals': input,
                         'sqs': sqs

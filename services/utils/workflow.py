@@ -176,6 +176,9 @@ class Workflow():
         self.steps = []
         self.output = {}
         self.user_inputs = {}
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.run_id = ''
 
     def __repr__(self):
         step_repr = ["  Step {}. {}".format(i+1, s.name) for i, s in enumerate(self.steps)]
@@ -277,12 +280,17 @@ class Workflow():
                 bubble_body['unseen_output'] = False
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
 
+            # Run the Step
             step.run_step(step_input)
             time.sleep(10)
             try:
                 print(step.output)
             except:
                 pass
+
+            # Update workflow running total word usage
+            self.input_word_cnt = self.input_word_cnt + step.input_word_cnt
+            self.output_word_cnt = self.output_word_cnt + step.output_word_cnt
 
             # Write each step output back to Bubble
             if bubble:
@@ -293,14 +301,13 @@ class Workflow():
 
                 bubble_body = {}
                 bubble_body['output'] = output
+                bubble_body['input_word_cnt'] = step.input_word_cnt
+                bubble_body['output_word_cnt'] = step.output_word_cnt
                 bubble_body['is_running'] = False
                 bubble_body['is_waiting'] = False
                 bubble_body['unseen_output'] = True
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
                
-
-    def parse(self):
-        pass
 
 
 class Step():
@@ -311,9 +318,23 @@ class Step():
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
         self.output = None
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
 
     def __repr__(self):
         return f'Step - {self.name}'
 
     def run_step(self, inputs):
+        # Run it
         self.output = self.func(inputs)
+
+        if self.config['action'] == 'Workflow':
+            self.input_word_cnt = self.func.workflow.input_word_cnt
+            self.output_word_cnt = self.func.workflow.output_word_cnt
+        else:
+            self.input_word_cnt = len(' '.join(inputs.values()).split(' '))
+            
+            if type(self.output) == list:
+                self.output_word_cnt = len(' '.join(self.output).split(' '))
+            else:
+                self.output_word_cnt = len(self.output.split(' '))
