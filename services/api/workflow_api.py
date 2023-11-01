@@ -247,6 +247,8 @@ def run_step(event, context):
 
     # Update status of Bubble Step
     body = {
+        'input_word_cnt': step.input_word_cnt,
+        'output_word_cnt': step.output_word_cnt,
         'is_running': False,
         'is_waiting': False,
         'unseen_output': True,
