@@ -264,6 +264,7 @@ class Workflow():
                 step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
                 step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
                 step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
+                step.func.workflow.run_id = self.run_id
             else:
                 print('doing Normal Step')
                 print('input_var and source: {}'.format(step.config['inputs'].items()))

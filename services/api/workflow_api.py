@@ -120,6 +120,7 @@ def run_workflow(event, context):
    
    # load and run workflow
     workflow = get_workflow_from_bubble(workflow_id, email=email)
+    workflow.run_id = run_id
 
     # get workflow inputs
     input_vals = prep_input_vals(input_vars, input_vals, workflow)
@@ -127,8 +128,6 @@ def run_workflow(event, context):
     if 'sqs' in body:
         # running as a distributed step, send output back to master
         # there is no doc_id because output returns to the calling step
-        workflow.run_id = run_id
-
         queue = SQS(body['sqs'])
         workflow.run_all(input_vals, bubble=False)
         queue.send(workflow.steps[-1].output)
