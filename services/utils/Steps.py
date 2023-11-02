@@ -289,6 +289,7 @@ class get_workflow():
                         'email': self.workflow.email,
                         'doc_id': '',
                         'run_id': self.workflow.run_id,
+                        'step_id': self.workflow.step_id,
                         'input_vars': input_key,
                         'input_vals': input,
                         'sqs': sqs
@@ -310,6 +311,7 @@ class get_workflow():
                         'email': self.workflow.email,
                         'doc_id': '',
                         'run_id': self.workflow.run_id,
+                        'step_id': self.workflow.step_id,
                         'input_vars': input_key,
                         'input_vals': input,
                         'sqs': sqs

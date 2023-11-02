@@ -179,6 +179,7 @@ class Workflow():
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.run_id = ''
+        self.step_id = ''
 
     def __repr__(self):
         step_repr = ["  Step {}. {}".format(i+1, s.name) for i, s in enumerate(self.steps)]
@@ -265,6 +266,7 @@ class Workflow():
                 step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
                 step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
                 step.func.workflow.run_id = self.run_id
+                step.func.workflow.step_id = step.bubble_id
             else:
                 print('doing Normal Step')
                 print('input_var and source: {}'.format(step.config['inputs'].items()))
