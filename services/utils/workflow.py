@@ -236,6 +236,7 @@ class Workflow():
         
         # Get Step
         step = self.steps[step_number-1]
+        print('\n')
         print('{} - {} - {}'.format(step_number, step.config['step'], step.name))
 
         step_input = {
@@ -328,11 +329,19 @@ class Step():
         # Run it
         self.output = self.func(inputs)
 
+        print('inputs:\n')
+        print(inputs)
+        print('\n')
+
         if self.config['action'] == 'Workflow':
             self.input_word_cnt = self.func.workflow.input_word_cnt
             self.output_word_cnt = self.func.workflow.output_word_cnt
         else:
-            self.input_word_cnt = len(' '.join(inputs.values()).split(' '))
+            input = list(inputs.values())
+            if type(input[0]) == list:
+                input = input[0]
+
+            self.input_word_cnt = len(' '.join(input).split(' '))
             
             if type(self.output) == list:
                 self.output_word_cnt = len(' '.join(self.output).split(' '))
