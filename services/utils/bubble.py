@@ -34,6 +34,17 @@ def write_to_bubble(table, body):
     return res
 
 
+def get_bubble_object(table, uid):
+    endpoint = BUBBLE_API_ROOT + f'/{table}' + f'/{uid}'
+
+    res = requests.get(
+        endpoint,
+        headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'},
+    )
+
+    return res
+
+
 def update_bubble_object(table, uid, body):
     endpoint = BUBBLE_API_ROOT + f'/{table}' + f'/{uid}'
 

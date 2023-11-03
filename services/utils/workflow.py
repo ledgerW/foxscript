@@ -130,7 +130,7 @@ def step_config_from_bubble(bubble_step, email):
     return step_config
 
 
-def get_step_from_bubble(step_id, email=None):
+def get_step_from_bubble(step_id, email=None, return_config=False):
     endpoint = BUBBLE_API_ROOT + '/step' + f'/{step_id}'
     res = requests.get(
         endpoint,
@@ -138,7 +138,10 @@ def get_step_from_bubble(step_id, email=None):
     )
     bubble_step = json.loads(res.content)['response']
 
-    return Step(step_config_from_bubble(bubble_step, email))
+    if return_config:
+        return step_config_from_bubble(bubble_step, email)
+    else:
+        return Step(step_config_from_bubble(bubble_step, email))
 
 
 def get_workflow_from_bubble(workflow_id, email=None):
@@ -150,15 +153,7 @@ def get_workflow_from_bubble(workflow_id, email=None):
     )
     bubble_workflow = json.loads(res.content)['response']
 
-    # get workflow steps data from bubble db
-    constraints = json.dumps([{"key":"workflow", "constraint_type": "equals", "value": workflow_id}])
-    endpoint = BUBBLE_API_ROOT + '/step' + '?constraints={}'.format(constraints) + '&sort_field=step_number'
-    res = requests.get(
-        endpoint,
-        headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'}
-    )
-    bubble_steps = json.loads(res.content)['response']['results']
-    step_configs = [step_config_from_bubble(step, email) for step in bubble_steps]
+    step_configs = [get_step_from_bubble(uid, email, return_config=True) for uid in bubble_workflow['steps']]
 
     workflow_config = {
         'name': bubble_workflow['name'],
@@ -176,6 +171,10 @@ class Workflow():
         self.steps = []
         self.output = {}
         self.user_inputs = {}
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.run_id = ''
+        self.step_id = ''
 
     def __repr__(self):
         step_repr = ["  Step {}. {}".format(i+1, s.name) for i, s in enumerate(self.steps)]
@@ -233,6 +232,7 @@ class Workflow():
         
         # Get Step
         step = self.steps[step_number-1]
+        print('\n')
         print('{} - {} - {}'.format(step_number, step.config['step'], step.name))
 
         step_input = {
@@ -260,6 +260,8 @@ class Workflow():
                 step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
                 step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
                 step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
+                step.func.workflow.run_id = self.run_id
+                step.func.workflow.step_id = step.bubble_id
             else:
                 print('doing Normal Step')
                 print('input_var and source: {}'.format(step.config['inputs'].items()))
@@ -277,12 +279,17 @@ class Workflow():
                 bubble_body['unseen_output'] = False
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
 
+            # Run the Step
             step.run_step(step_input)
             time.sleep(10)
             try:
                 print(step.output)
             except:
                 pass
+
+            # Update workflow running total word usage
+            self.input_word_cnt = self.input_word_cnt + step.input_word_cnt
+            self.output_word_cnt = self.output_word_cnt + step.output_word_cnt
 
             # Write each step output back to Bubble
             if bubble:
@@ -293,14 +300,13 @@ class Workflow():
 
                 bubble_body = {}
                 bubble_body['output'] = output
+                bubble_body['input_word_cnt'] = step.input_word_cnt
+                bubble_body['output_word_cnt'] = step.output_word_cnt
                 bubble_body['is_running'] = False
                 bubble_body['is_waiting'] = False
                 bubble_body['unseen_output'] = True
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
                
-
-    def parse(self):
-        pass
 
 
 class Step():
@@ -311,9 +317,31 @@ class Step():
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
         self.output = None
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
 
     def __repr__(self):
         return f'Step - {self.name}'
 
     def run_step(self, inputs):
+        # Run it
         self.output = self.func(inputs)
+
+        print('inputs:\n')
+        print(inputs)
+        print('\n')
+
+        if self.config['action'] == 'Workflow':
+            self.input_word_cnt = self.func.workflow.input_word_cnt
+            self.output_word_cnt = self.func.workflow.output_word_cnt
+        else:
+            input = list(inputs.values())
+            if type(input[0]) == list:
+                input = input[0]
+
+            self.input_word_cnt = len(' '.join(input).split(' '))
+            
+            if type(self.output) == list:
+                self.output_word_cnt = len(' '.join(self.output).split(' '))
+            else:
+                self.output_word_cnt = len(self.output.split(' '))
