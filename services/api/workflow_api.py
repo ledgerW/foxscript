@@ -7,7 +7,6 @@ load_dotenv()
 
 import json
 import boto3
-#from youtubesearchpython import VideosSearch
 
 from utils.workflow import prep_input_vals, get_workflow_from_bubble, get_step_from_bubble
 
@@ -22,7 +21,6 @@ STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
 if os.getenv('IS_OFFLINE'):
-   #boto3.setup_default_session(profile_name='ledger')
    lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
    LAMBDA_DATA_DIR = '.'
 else:

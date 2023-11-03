@@ -7,7 +7,7 @@ import time
 import requests
 
 from utils.weaviate_utils import get_wv_class_name
-from utils.bubble import update_bubble_object, get_bubble_doc
+from utils.bubble import update_bubble_object, get_bubble_doc, get_bubble_object
 from utils.Steps import ACTIONS
 
 if os.getenv('IS_OFFLINE'):
@@ -253,8 +253,9 @@ class Workflow():
         
         for step in self.steps:
             print('{} - {}'.format(step.config['step'], step.name))
+            is_workflow_step = step.config['action'] == 'Workflow'
 
-            if step.config['action'] == 'Workflow':
+            if is_workflow_step:
                 print('doing Workflow Step')
                 input_var, input_source = list(step.config['inputs'].items())[0]
                 step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
@@ -293,6 +294,10 @@ class Workflow():
 
             # Write each step output back to Bubble
             if bubble:
+                res = get_bubble_object('step', step.bubble_id)
+                input_word_cnt = res.json()['response']['input_word_cnt']
+                output_word_cnt = res.json()['response']['output_word_cnt']
+
                 if type(step.output) == list:
                    output = '\n'.join(step.output)
                 else:
@@ -300,8 +305,8 @@ class Workflow():
 
                 bubble_body = {}
                 bubble_body['output'] = output
-                bubble_body['input_word_cnt'] = step.input_word_cnt
-                bubble_body['output_word_cnt'] = step.output_word_cnt
+                bubble_body['input_word_cnt'] = input_word_cnt + step.input_word_cnt
+                bubble_body['output_word_cnt'] = output_word_cnt + step.output_word_cnt
                 bubble_body['is_running'] = False
                 bubble_body['is_waiting'] = False
                 bubble_body['unseen_output'] = True
@@ -334,6 +339,11 @@ class Step():
         if self.config['action'] == 'Workflow':
             self.input_word_cnt = self.func.workflow.input_word_cnt
             self.output_word_cnt = self.func.workflow.output_word_cnt
+
+            print('Workflow Step Word Counts:')
+            print(self.input_word_cnt)
+            print(self.output_word_cnt)
+            print('')
         else:
             input = list(inputs.values())
             if type(input[0]) == list:
