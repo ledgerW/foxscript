@@ -163,6 +163,11 @@ def run_workflow(event, context):
             'input_word_cnt': input_word_cnt + workflow.input_word_cnt,
             'output_word_cnt': output_word_cnt + workflow.output_word_cnt
         }
+
+        print('step id: {}'.format(step_id))
+        print('body:\n')
+        print(body)
+
         _ = update_bubble_object('step', step_id, body)
 
     if run_id:

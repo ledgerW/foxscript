@@ -130,7 +130,7 @@ def step_config_from_bubble(bubble_step, email):
     return step_config
 
 
-def get_step_from_bubble(step_id, email=None):
+def get_step_from_bubble(step_id, email=None, return_config=False):
     endpoint = BUBBLE_API_ROOT + '/step' + f'/{step_id}'
     res = requests.get(
         endpoint,
@@ -138,7 +138,10 @@ def get_step_from_bubble(step_id, email=None):
     )
     bubble_step = json.loads(res.content)['response']
 
-    return Step(step_config_from_bubble(bubble_step, email))
+    if return_config:
+        return step_config_from_bubble(bubble_step, email)
+    else:
+        return Step(step_config_from_bubble(bubble_step, email))
 
 
 def get_workflow_from_bubble(workflow_id, email=None):
@@ -150,15 +153,7 @@ def get_workflow_from_bubble(workflow_id, email=None):
     )
     bubble_workflow = json.loads(res.content)['response']
 
-    # get workflow steps data from bubble db
-    constraints = json.dumps([{"key":"workflow", "constraint_type": "equals", "value": workflow_id}])
-    endpoint = BUBBLE_API_ROOT + '/step' + '?constraints={}'.format(constraints) + '&sort_field=step_number'
-    res = requests.get(
-        endpoint,
-        headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'}
-    )
-    bubble_steps = json.loads(res.content)['response']['results']
-    step_configs = [step_config_from_bubble(step, email) for step in bubble_steps]
+    step_configs = [get_step_from_bubble(uid, email, return_config=True) for uid in bubble_workflow['steps']]
 
     workflow_config = {
         'name': bubble_workflow['name'],
