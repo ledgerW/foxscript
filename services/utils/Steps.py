@@ -313,12 +313,13 @@ class get_workflow():
                 for input in input_vals:
                     payload = {
                         "body": {
-                        'workflow_id': self.workflow.bubble_id,
-                        'email': self.workflow.email,
-                        'doc_id': '',
-                        'input_vars': input_key,
-                        'input_vals': input,
-                        'sqs': sqs
+                            'workflow_id': self.workflow.bubble_id,
+                            'email': self.workflow.email,
+                            'doc_id': '',
+                            'run_id': '',
+                            'input_vars': input_key,
+                            'input_vals': input,
+                            'sqs': sqs
                         }
                     }
 
@@ -333,12 +334,13 @@ class get_workflow():
                 for input in input_vals:
                     payload = {
                         "body": {
-                        'workflow_id': self.workflow.bubble_id,
-                        'email': self.workflow.email,
-                        'doc_id': '',
-                        'input_vars': input_key,
-                        'input_vals': input,
-                        'sqs': sqs
+                            'workflow_id': self.workflow.bubble_id,
+                            'email': self.workflow.email,
+                            'doc_id': '',
+                            'run_id': '',
+                            'input_vars': input_key,
+                            'input_vals': input,
+                            'sqs': sqs
                         }
                     }
 
