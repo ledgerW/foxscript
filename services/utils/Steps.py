@@ -86,7 +86,7 @@ class get_chain():
 
         # Get input and output word count
         full_prompt = self.chain.prep_prompts([input])[0][0].text
-        self.input_word_cnt = len(' '.join(full_prompt).split(' '))
+        self.input_word_cnt = len(full_prompt.split(' '))
         self.output_word_cnt = len(res['text'].split(' '))
 
         if self.as_list:
