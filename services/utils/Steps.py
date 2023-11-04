@@ -85,10 +85,6 @@ class get_chain():
             res = {'text': 'Problem with Step.'}
 
         # Get input and output word count
-        input = list(input.values())
-        if type(input[0]) == list:
-            input = input[0]
-
         full_prompt = self.chain.prep_prompts([input])[0][0].text
         self.input_word_cnt = len(' '.join(full_prompt).split(' '))
         self.output_word_cnt = len(res['text'].split(' '))
