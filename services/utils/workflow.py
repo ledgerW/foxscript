@@ -7,7 +7,7 @@ import time
 import requests
 
 from utils.weaviate_utils import get_wv_class_name
-from utils.bubble import update_bubble_object, get_bubble_doc
+from utils.bubble import update_bubble_object, get_bubble_doc, get_bubble_object
 from utils.Steps import ACTIONS
 
 if os.getenv('IS_OFFLINE'):
@@ -173,8 +173,6 @@ class Workflow():
         self.user_inputs = {}
         self.input_word_cnt = 0
         self.output_word_cnt = 0
-        self.run_id = ''
-        self.step_id = ''
 
     def __repr__(self):
         step_repr = ["  Step {}. {}".format(i+1, s.name) for i, s in enumerate(self.steps)]
@@ -253,15 +251,14 @@ class Workflow():
         
         for step in self.steps:
             print('{} - {}'.format(step.config['step'], step.name))
+            is_workflow_step = step.config['action'] == 'Workflow'
 
-            if step.config['action'] == 'Workflow':
+            if is_workflow_step:
                 print('doing Workflow Step')
                 input_var, input_source = list(step.config['inputs'].items())[0]
                 step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
                 step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
                 step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
-                step.func.workflow.run_id = self.run_id
-                step.func.workflow.step_id = step.bubble_id
             else:
                 print('doing Normal Step')
                 print('input_var and source: {}'.format(step.config['inputs'].items()))
@@ -326,22 +323,5 @@ class Step():
     def run_step(self, inputs):
         # Run it
         self.output = self.func(inputs)
-
-        print('inputs:\n')
-        print(inputs)
-        print('\n')
-
-        if self.config['action'] == 'Workflow':
-            self.input_word_cnt = self.func.workflow.input_word_cnt
-            self.output_word_cnt = self.func.workflow.output_word_cnt
-        else:
-            input = list(inputs.values())
-            if type(input[0]) == list:
-                input = input[0]
-
-            self.input_word_cnt = len(' '.join(input).split(' '))
-            
-            if type(self.output) == list:
-                self.output_word_cnt = len(' '.join(self.output).split(' '))
-            else:
-                self.output_word_cnt = len(self.output.split(' '))
+        self.input_word_cnt = self.func.input_word_cnt
+        self.output_word_cnt = self.func.output_word_cnt

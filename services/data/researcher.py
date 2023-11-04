@@ -159,7 +159,6 @@ def research(event, context):
     # Scrape and Research
     research_results = None
     try:
-      #llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
       LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=1.0)
 
       chunks = scrape_and_chunk(url, 100, tokenizer)
@@ -186,10 +185,14 @@ def research(event, context):
     result = f"query: {query}\n" + f"source: {url}\n" + research_results + '\n'
 
     if sqs:
-       queue = SQS(sqs)
-       queue.send(result)
+        queue = SQS(sqs)
+        queue.send({
+            'output': result,
+            'input_word_cnt': len(query.split(' ')),
+            'output_word_cnt': len(result.split(' '))
+        })
     else:
-       return success(result)
+        return success(result)
 
 
 

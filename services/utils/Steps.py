@@ -43,6 +43,8 @@ STAGE = os.getenv('STAGE')
 
 class get_chain():
     def __init__(self, prompt=None, as_list=False):
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
         self.as_list = as_list
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=1.0)
@@ -82,6 +84,11 @@ class get_chain():
         if not res:
             res = {'text': 'Problem with Step.'}
 
+        # Get input and output word count
+        full_prompt = self.chain.prep_prompts([input])[0][0].text
+        self.input_word_cnt = len(full_prompt.split(' '))
+        self.output_word_cnt = len(res['text'].split(' '))
+
         if self.as_list:
             return res['text'].split('\n')
         else:
@@ -90,6 +97,8 @@ class get_chain():
 
 class analyze_csv():
     def __init__(self, path=None):
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
         df = pd.read_csv(path)
@@ -142,12 +151,18 @@ class analyze_csv():
             all_results = all_results + result + '\n\n'
             time.sleep(3)
 
+        # get input and output word count
+        self.input_word_cnt = len(' '.join(questions).split(' '))
+        self.output_word_cnt = len(all_results.split(' '))
+
         return all_results
   
 
 class do_research():
     def __init__(self, top_n=3):
         self.top_n = top_n
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
   
 
     def __call__(self, input):
@@ -195,12 +210,19 @@ class do_research():
                 time.sleep(3)
         
             # wait for and collect scrape results from SQS
-            research_context = queue.collect(len(urls_to_scrape), max_wait=600)
-            return '\n'.join(research_context)
+            results = queue.collect(len(urls_to_scrape), max_wait=600)
+
+            outputs = [result['output'] for result in results]
+            self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
+            self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
+            
+            return '\n'.join(outputs)
   
 
 class get_library_retriever():
     def __init__(self, class_name=None, k=3):
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
@@ -257,11 +279,17 @@ class get_library_retriever():
             all_results = all_results + results + '\n\n'
             time.sleep(3)
 
+        # get input and output word count
+        self.input_word_cnt = len(' '.join(questions).split(' '))
+        self.output_word_cnt = len(all_results.split(' '))
+
         return all_results
   
 
 class get_workflow():
     def __init__(self, workflow=None):
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
         if workflow:
             self.workflow = workflow
 
@@ -285,14 +313,13 @@ class get_workflow():
                 for input in input_vals:
                     payload = {
                         "body": {
-                        'workflow_id': self.workflow.bubble_id,
-                        'email': self.workflow.email,
-                        'doc_id': '',
-                        'run_id': self.workflow.run_id,
-                        'step_id': self.workflow.step_id,
-                        'input_vars': input_key,
-                        'input_vals': input,
-                        'sqs': sqs
+                            'workflow_id': self.workflow.bubble_id,
+                            'email': self.workflow.email,
+                            'doc_id': '',
+                            'run_id': '',
+                            'input_vars': input_key,
+                            'input_vals': input,
+                            'sqs': sqs
                         }
                     }
 
@@ -307,14 +334,13 @@ class get_workflow():
                 for input in input_vals:
                     payload = {
                         "body": {
-                        'workflow_id': self.workflow.bubble_id,
-                        'email': self.workflow.email,
-                        'doc_id': '',
-                        'run_id': self.workflow.run_id,
-                        'step_id': self.workflow.step_id,
-                        'input_vars': input_key,
-                        'input_vals': input,
-                        'sqs': sqs
+                            'workflow_id': self.workflow.bubble_id,
+                            'email': self.workflow.email,
+                            'doc_id': '',
+                            'run_id': '',
+                            'input_vars': input_key,
+                            'input_vals': input,
+                            'sqs': sqs
                         }
                     }
 
@@ -325,10 +351,16 @@ class get_workflow():
                     )
                     time.sleep(5)
             
-                workflow_outputs = queue.collect(len(input_vals), max_wait=600)
-                return '\n\n'.join(workflow_outputs)
+                results = queue.collect(len(input_vals), max_wait=600)
+
+                outputs = [result['output'] for result in results]
+                self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
+                self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
+                return '\n\n'.join(outputs)
         else:
-            self.workflow.run_all(inputs)
+            self.workflow.run_all(inputs, bubble=False)
+            self.input_word_cnt = self.workflow.input_word_cnt
+            self.output_word_cnt = self.workflow.output_word_cnt
             return self.workflow.steps[-1].output
         
 
