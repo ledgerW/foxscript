@@ -89,7 +89,8 @@ class get_chain():
         if type(input[0]) == list:
             input = input[0]
 
-        self.input_word_cnt = len(' '.join(input).split(' '))
+        full_prompt = self.chain.prep_prompts([input])[0][0].text
+        self.input_word_cnt = len(' '.join(full_prompt).split(' '))
         self.output_word_cnt = len(res['text'].split(' '))
 
         if self.as_list:
@@ -359,7 +360,7 @@ class get_workflow():
                 self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
                 return '\n\n'.join(outputs)
         else:
-            self.workflow.run_all(inputs)
+            self.workflow.run_all(inputs, bubble=False)
             self.input_word_cnt = self.workflow.input_word_cnt
             self.output_word_cnt = self.workflow.output_word_cnt
             return self.workflow.steps[-1].output
