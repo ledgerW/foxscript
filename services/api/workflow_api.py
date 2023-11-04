@@ -64,11 +64,6 @@ def workflow(event, context):
 
         body = json.loads(event['body'])
 
-    if 'step_id' in body:
-        step_id = body['step_id']
-    else:
-        step_id = ''
-
     if 'sqs' in body:
        # this is a Workflow as Step running distributed
        out_body = {
@@ -76,7 +71,6 @@ def workflow(event, context):
             'email': email,
             'doc_id': doc_id,
             'run_id': run_id,
-            'step_id': step_id,
             'input_vars': input_vars,
             'input_vals': input_vals,
             'sqs': body['sqs']
@@ -87,7 +81,6 @@ def workflow(event, context):
             'email': email,
             'doc_id': doc_id,
             'run_id': run_id,
-            'step_id': step_id,
             'input_vars': input_vars,
             'input_vals': input_vals
         }
@@ -110,7 +103,6 @@ def run_workflow(event, context):
         email = event['body']['email']
         doc_id = event['body']['doc_id']
         run_id = event['body']['run_id']
-        step_id = event['body']['step_id']
         input_vars = event['body']['input_vars']
         input_vals = event['body']['input_vals']
         body = event['body']
@@ -119,7 +111,6 @@ def run_workflow(event, context):
         email = json.loads(event['body'])['email']
         doc_id = json.loads(event['body'])['doc_id']
         run_id = json.loads(event['body'])['run_id']
-        step_id = json.loads(event['body'])['step_id']
         input_vars = json.loads(event['body'])['input_vars']
         input_vals = json.loads(event['body'])['input_vals']
         body = json.loads(event['body'])
@@ -127,8 +118,6 @@ def run_workflow(event, context):
    
    # load and run workflow
     workflow = get_workflow_from_bubble(workflow_id, email=email)
-    workflow.run_id = run_id
-    workflow.step_id = step_id
 
     # get workflow inputs
     input_vals = prep_input_vals(input_vars, input_vals, workflow)
@@ -138,45 +127,27 @@ def run_workflow(event, context):
         # there is no doc_id because output returns to the calling step
         queue = SQS(body['sqs'])
         workflow.run_all(input_vals, bubble=False)
-        queue.send(workflow.steps[-1].output)
+        queue.send({
+            'output': workflow.steps[-1].output,
+            'input_word_cnt': workflow.input_word_cnt,
+            'output_word_cnt': workflow.output_word_cnt
+        })
     else:
         # write individual step results to bubble as they complete
         workflow.run_all(input_vals, bubble=True)
 
     if doc_id:
-        # send result to Bubble frontend db
+        # send result to Bubble Document
         body = {
             'name': workflow.steps[-1].output[:25],
             'text': workflow.steps[-1].output
         }
         _ = update_bubble_object('document', doc_id, body)
 
-    if step_id:
         # send word usage to Bubble run history table
-        res = get_bubble_object('step', step_id)
-        input_word_cnt = res.json()['response']['input_word_cnt']
-        output_word_cnt = res.json()['response']['output_word_cnt']
-
         body = {
-            'input_word_cnt': input_word_cnt + workflow.input_word_cnt,
-            'output_word_cnt': output_word_cnt + workflow.output_word_cnt
-        }
-
-        print('step id: {}'.format(step_id))
-        print('body:\n')
-        print(body)
-
-        _ = update_bubble_object('step', step_id, body)
-
-    if run_id:
-        # send word usage to Bubble run history table
-        res = get_bubble_object('workflow-runs', run_id)
-        input_word_cnt = res.json()['response']['input_word_cnt']
-        output_word_cnt = res.json()['response']['output_word_cnt']
-
-        body = {
-            'input_word_cnt': input_word_cnt + workflow.input_word_cnt,
-            'output_word_cnt': output_word_cnt + workflow.output_word_cnt
+            'input_word_cnt': workflow.input_word_cnt,
+            'output_word_cnt': workflow.output_word_cnt
         }
         _ = update_bubble_object('workflow-runs', run_id, body)
        

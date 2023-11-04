@@ -173,8 +173,6 @@ class Workflow():
         self.user_inputs = {}
         self.input_word_cnt = 0
         self.output_word_cnt = 0
-        self.run_id = ''
-        self.step_id = ''
 
     def __repr__(self):
         step_repr = ["  Step {}. {}".format(i+1, s.name) for i, s in enumerate(self.steps)]
@@ -261,8 +259,6 @@ class Workflow():
                 step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
                 step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
                 step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
-                step.func.workflow.run_id = self.run_id
-                step.func.workflow.step_id = step.bubble_id
             else:
                 print('doing Normal Step')
                 print('input_var and source: {}'.format(step.config['inputs'].items()))
@@ -294,10 +290,6 @@ class Workflow():
 
             # Write each step output back to Bubble
             if bubble:
-                res = get_bubble_object('step', step.bubble_id)
-                input_word_cnt = res.json()['response']['input_word_cnt']
-                output_word_cnt = res.json()['response']['output_word_cnt']
-
                 if type(step.output) == list:
                    output = '\n'.join(step.output)
                 else:
@@ -305,8 +297,8 @@ class Workflow():
 
                 bubble_body = {}
                 bubble_body['output'] = output
-                bubble_body['input_word_cnt'] = input_word_cnt + step.input_word_cnt
-                bubble_body['output_word_cnt'] = output_word_cnt + step.output_word_cnt
+                bubble_body['input_word_cnt'] = step.input_word_cnt
+                bubble_body['output_word_cnt'] = step.output_word_cnt
                 bubble_body['is_running'] = False
                 bubble_body['is_waiting'] = False
                 bubble_body['unseen_output'] = True
@@ -331,27 +323,5 @@ class Step():
     def run_step(self, inputs):
         # Run it
         self.output = self.func(inputs)
-
-        print('inputs:\n')
-        print(inputs)
-        print('\n')
-
-        if self.config['action'] == 'Workflow':
-            self.input_word_cnt = self.func.workflow.input_word_cnt
-            self.output_word_cnt = self.func.workflow.output_word_cnt
-
-            print('Workflow Step Word Counts:')
-            print(self.input_word_cnt)
-            print(self.output_word_cnt)
-            print('')
-        else:
-            input = list(inputs.values())
-            if type(input[0]) == list:
-                input = input[0]
-
-            self.input_word_cnt = len(' '.join(input).split(' '))
-            
-            if type(self.output) == list:
-                self.output_word_cnt = len(' '.join(self.output).split(' '))
-            else:
-                self.output_word_cnt = len(self.output.split(' '))
+        self.input_word_cnt = self.func.input_word_cnt
+        self.output_word_cnt = self.func.output_word_cnt
