@@ -160,6 +160,7 @@ def step(event, context):
 
     try:
         step_id = event['body']['step_id']
+        run_id = event['body']['run_id']
         email = event['body']['email']
 
         input_vars = event['body']['input_vars']
@@ -169,6 +170,7 @@ def step(event, context):
         input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
     except:
         step_id = json.loads(event['body'])['step_id']
+        run_id = json.loads(event['body'])['run_id']
         email = json.loads(event['body'])['email']
 
         input_vars = json.loads(event['body'])['input_vars']
@@ -184,6 +186,7 @@ def step(event, context):
         InvocationType='Event',
         Payload=json.dumps({"body": {
             'step_id': step_id,
+            'run_id': run_id,
             'email': email,
             'input_vars': input_vars,
             'input_vals': input_vals
@@ -198,11 +201,13 @@ def run_step(event, context):
 
     try:
         step_id = event['body']['step_id']
+        run_id = event['body']['run_id']
         email = event['body']['email']
         input_vars = event['body']['input_vars']
         input_vals = event['body']['input_vals']
     except:
         step_id = json.loads(event['body'])['step_id']
+        run_id = json.loads(event['body'])['run_id']
         email = json.loads(event['body'])['email']
         input_vars = json.loads(event['body'])['input_vars']
         input_vals = json.loads(event['body'])['input_vals']
@@ -250,5 +255,11 @@ def run_step(event, context):
         'output': output
     }
     _ = update_bubble_object('step', step.bubble_id, body)
+
+    body = {
+        'input_word_cnt': step.input_word_cnt,
+        'output_word_cnt': step.output_word_cnt
+    }
+    _ = update_bubble_object('step-runs', run_id, body)
        
     return success({'SUCCESS': True})
