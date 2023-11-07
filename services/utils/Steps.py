@@ -274,7 +274,7 @@ class get_library_retriever():
                         continue
 
             if not results:
-                results = {'text': 'Problem with Step.'}
+                results = 'Problem with Step.'
 
             all_results = all_results + results + '\n\n'
             time.sleep(3)
