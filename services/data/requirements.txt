@@ -1,5 +1,5 @@
 weaviate-client
-openai
+openai==0.28.1
 faiss-cpu
 langchain==0.0.327
 selenium
