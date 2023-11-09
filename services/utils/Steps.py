@@ -364,6 +364,26 @@ class get_workflow():
             return self.workflow.steps[-1].output
         
 
+class combine_output():
+    def __init__(self):
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+
+    def __call__(self, input):
+        """
+        Input: {
+            'input_var_name': "input_var_val",
+            'input_var2_name': "input_var2_val",
+            ...
+        }
+
+        Returns: string
+        """
+        combined = '\n\n'.join([txt for txt in input.values()])
+
+        return combined
+        
+
 #class get_yt_url():
 #  def __init__(self, n=1):
 #    self.n = n
@@ -403,6 +423,10 @@ ACTIONS = {
     },
     'Workflow': {
         'func': get_workflow,
+        'returns': 'string'
+    },
+    'Combine': {
+        'func': combine_output,
         'returns': 'string'
     }
 }
