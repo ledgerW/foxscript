@@ -381,6 +381,10 @@ class combine_output():
         """
         combined = '\n\n'.join([txt for txt in input.values()])
 
+        # Get input and output word count
+        self.input_word_cnt = len(combined.split(' '))
+        self.output_word_cnt = len(combined.split(' '))
+
         return combined
         
 
