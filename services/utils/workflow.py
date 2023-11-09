@@ -26,6 +26,9 @@ def get_init(body, email):
             'as_list': body['as_list']
         }
 
+    if body['type'] == 'Combine':
+        init = {}
+
     if body['type'] == 'Analyze CSV':
         doc_url = body['init_text']
         doc_file_name = doc_url.split('/')[-1]
@@ -93,7 +96,7 @@ def prep_input_vals(input_vars, input_vals, input):
     # prep for Step
     else:
         input_type = input.config['action']
-        if input_type == 'LLM Prompt':
+        if input_type == 'LLM Prompt' or input_type == 'Combine':
             input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
 
         if input_type == 'Web Research':
