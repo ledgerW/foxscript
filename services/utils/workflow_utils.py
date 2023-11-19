@@ -13,7 +13,7 @@ from datetime import datetime
 import time
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
+from utils.Kmeans import KMeans
 from utils.cloud_funcs import cloud_scrape
 from utils.general import SQS
 
@@ -123,7 +123,7 @@ def get_content_embeddings(urls):
 
 
 def cluster(embeddings, n_clusters):
-    kmeans = KMeans(n_clusters=n_clusters, init='k-means++')
+    kmeans = KMeans(n_clusters=n_clusters)
     kmeans.fit(embeddings)
     
     return kmeans
