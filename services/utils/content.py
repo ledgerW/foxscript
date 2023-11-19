@@ -63,26 +63,29 @@ def update_source(report_source, latest_post_date, wv_client):
     )
 
 
-def text_splitter(text, n, tokenizer):
+def text_splitter(text, n, tokenizer, sentences=False):
     chunks = []
     chunk = ''
     sentences = [s.strip().replace('\n', ' ') for s in text.split('. ')]
-    for s in sentences:
-        # start new chunk
-        if chunk == '':
-            chunk = s
-        else:
-            chunk = chunk + ' ' + s
-        
-        chunk_len = len(tokenizer.encode(chunk))
-        if chunk_len >= 0.9*n:
-            chunks.append(chunk)
-            chunk = ''
+    if sentences:
+        return sentences
+    else:
+        for s in sentences:
+            # start new chunk
+            if chunk == '':
+                chunk = s
+            else:
+                chunk = chunk + ' ' + s
+            
+            chunk_len = len(tokenizer.encode(chunk))
+            if chunk_len >= 0.9*n:
+                chunks.append(chunk)
+                chunk = ''
 
-    if chunk != '':
-        chunks.append(chunk)
-    
-    return chunks
+        if chunk != '':
+            chunks.append(chunk)
+        
+        return chunks
 
 
 def multi_page_text_splitter(pages, n, tokenizer):

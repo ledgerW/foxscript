@@ -9,6 +9,13 @@ except:
   pass
 
 import requests
+from datetime import datetime
+import time
+import pandas as pd
+import numpy as np
+from utils.Kmeans import KMeans
+from utils.cloud_funcs import cloud_scrape
+from utils.general import SQS
 
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -34,8 +41,9 @@ WP_API_KEY = os.getenv('WP_API_KEY')
 def get_top_n_search(query, n):
   search = GoogleSerperAPIWrapper()
   search_result = search.results(query)
+  results = [res for res in search_result['organic'] if 'youtube.com' not in res['link']]
   
-  return search_result['organic'][:n]
+  return results[:n]
 
 
 def get_ephemeral_vecdb(chunks, metadata):
@@ -76,6 +84,101 @@ def get_context(query, llm, retriever, library=False):
   res = vec_qa({'query': query})
 
   return res['result']
+
+
+# Cluster Sub-Topics Helpers
+def get_content_embeddings(urls):
+    embedder = OpenAIEmbeddings()
+    topic_df = pd.DataFrame()
+
+    # Distributed Scraping
+    sqs = 'scrape{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+    queue = SQS(sqs)
+    for url in urls:
+        print(f'Scraping {url}')
+        cloud_scrape(url, sqs=sqs)
+        time.sleep(3)
+
+    results = queue.collect(len(urls), max_wait=600)
+    all_chunks = [result['chunks'].split('<SPLIT>') for result in results]
+    print('Total chunks: {}'.format(len(all_chunks)))
+    all_urls = [result['url'] for result in results]
+
+    for url, chunks in zip(all_urls, all_chunks):
+        print(f"Getting embeddings for {url}")
+        text_embeddings = embedder.embed_documents(chunks)
+
+        new_text_df = pd.DataFrame({
+            'chunk': chunks,
+            'url': url,
+            'embedding': text_embeddings
+        })
+
+        topic_df = pd.concat([topic_df, new_text_df])
+
+    topic_df = topic_df.drop_duplicates(subset=['chunk'])
+    print('topic_df shape: {}'.format(topic_df.shape))
+
+    return topic_df
+
+
+def cluster(embeddings, n_clusters):
+    kmeans = KMeans(n_clusters=n_clusters)
+    kmeans.fit(embeddings)
+    
+    return kmeans
+
+
+def get_topic_clusters(topic, top_n=10):
+    search_results = get_top_n_search(topic, top_n)
+    urls = [res['link'] for res in search_results]
+
+    topic_df = get_content_embeddings(urls)
+
+    embedding_matrix = np.vstack(topic_df.embedding.values)
+
+    n_clusters = max(2, int(topic_df.shape[0]/10))
+    print(f"Making {n_clusters} clusters")
+    kmeans = cluster(embedding_matrix, n_clusters)
+    topic_df['cluster'] = kmeans.labels_
+
+    return topic_df
+
+
+def get_cluster_results(topic_df, llm):
+    print('Getting subtopic themes')
+    input_word_cnt = 0
+    output_word_cnt = 0
+    samples = 5
+
+    all_subtopics = ""
+    clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
+    for i in clusters:
+        this_cluster_df = topic_df[topic_df.cluster == i]
+        n_samples = this_cluster_df.shape[0]
+
+        sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
+        prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
+
+        # TODO: FoxLLM fallbacks
+        res = llm.invoke(prompt)
+        theme = res.content.replace("\n", "")
+
+        subtopic = f"Sub-topic {i}: {theme}\n"
+        subtopic = subtopic + f"N Samples: {n_samples}\n"
+
+        return_n_samples = min(3, n_samples)
+        sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
+        for j in range(return_n_samples):
+            subtopic = subtopic + sample_cluster_rows.chunk.values[j] + '\n'
+
+        subtopic = subtopic + ("-" * 10) + '\n'
+
+        all_subtopics = all_subtopics + subtopic
+        input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
+        output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
+
+    return all_subtopics, input_word_cnt, output_word_cnt
 
 
 def get_search_snippets(query):

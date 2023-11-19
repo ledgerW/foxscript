@@ -13,3 +13,4 @@ pycryptodome
 boto3
 tenacity
 pyyaml
+pandas

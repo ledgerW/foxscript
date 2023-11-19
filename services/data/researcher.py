@@ -15,6 +15,7 @@ from utils.response_lib import *
 from utils.scrapers.base import Scraper
 from utils.workflow_utils import get_ephemeral_vecdb, get_context
 
+
 try:
   from utils.general import SQS
 except:
@@ -42,7 +43,10 @@ else:
 
 
 def is_news_source(url):
-    f = open("news_sources.txt", "r")
+    try:
+       f = open("news_sources.txt", "r")
+    except:
+       f = open("data/news_sources.txt", "r")
     sources = f.read().split('\n')
 
     print('news source:')
@@ -80,7 +84,7 @@ def scrape_and_chunk_pdf(url, n, tokenizer):
   return handle_pdf(pathlib.Path(LAMBDA_DATA_DIR, 'tmp.pdf'), n, tokenizer)
 
 
-def scrape_and_chunk(url, token_size, tokenizer):
+def scrape_and_chunk(url, token_size, tokenizer, sentences=False):
   try:
     chunks, pages, meta = scrape_and_chunk_pdf(url, 100, tokenizer)
     
@@ -101,7 +105,7 @@ def scrape_and_chunk(url, token_size, tokenizer):
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     results = "\n".join(chunk for chunk in chunks if chunk)
 
-    return text_splitter(results, token_size, tokenizer)
+    return text_splitter(results, token_size, tokenizer, sentences)
   
 
 def scrape(event, context):
@@ -119,15 +123,11 @@ def scrape(event, context):
     else:
        sqs = None
 
-    if 'query' in body:
-       query = body['query']
-    else:
-       query = None
-
     # Scrape
     chunks = scrape_and_chunk(url, 100, tokenizer)
-
-    result = {'url': url, 'query': query, 'chunks': chunks}
+    
+    chunks = '<SPLIT>'.join(chunks)
+    result = {'url': url, 'chunks': chunks}
 
     if sqs:
        queue = SQS(sqs)
@@ -192,7 +192,11 @@ def research(event, context):
             'output_word_cnt': len(result.split(' '))
         })
     else:
-        return success(result)
+        return success({
+            'output': result,
+            'input_word_cnt': len(query.split(' ')),
+            'output_word_cnt': len(result.split(' '))
+        })
 
 
 
@@ -205,7 +209,7 @@ if __name__ == "__main__":
 
   print(args)
 
-  llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
+  #llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
   chunks = scrape_and_chunk(args.url, 100, tokenizer)
   vec_db = get_ephemeral_vecdb(chunks, {'source': args.url})
   research_results = get_context(args.query, llm, vec_db.as_retriever())
