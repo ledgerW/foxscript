@@ -39,6 +39,9 @@ def get_init(body, email):
     if body['type'] == 'Web Research':
         init = {'top_n': int(body['init_number'])}
 
+    if body['type'] == 'Subtopics':
+        init = {'top_n': int(body['init_number'])}
+
     if body['type'] == 'Library Research':
         class_name, account = get_wv_class_name(email, body['init_text'])
         init = {
@@ -55,9 +58,6 @@ def get_init(body, email):
 
     if body['type'] == 'Workflow':
         init = {'workflow': get_workflow_from_bubble(body['init_text'], email=email)}
-        
-    if body['type'] == 'Get YouTube URL':
-        init = {'n': body['init_number']}
 
     return init
 
@@ -75,6 +75,9 @@ def prep_input_vals(input_vars, input_vals, input):
                 input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
             except:
                 input_vals = {input_vars[0]: input_vals[0]}
+
+        if input_type == 'Subtopics':
+            input_vals = {input_vars[0]: input_vals[0]}
         
         if input_type == 'Library Research':
             try:
@@ -87,9 +90,6 @@ def prep_input_vals(input_vars, input_vals, input):
                 input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
             except:
                 input_vals = {input_vars[0]: input_vals[0]}
-        
-        if input_type == 'Extract From Text':
-            input_vals = {input_vars[0]: input_vals[0]}
 
         if input_type == 'Workflow':
             input_vals = {input_vars[0]: input_vals[0]}
@@ -101,15 +101,18 @@ def prep_input_vals(input_vars, input_vals, input):
 
         if input_type == 'Web Research':
             input_vals = {'input': input_vals[0].split('\n')}
+
+        if input_type == 'Subtopics':
+            input_vals = {'input': input_vals[0]}
         
         if input_type == 'Library Research':
             input_vals = {'input': input_vals[0].split('\n')}
 
         if input_type == 'Analyze CSV':
             input_vals = {'input': input_vals[0].split('\n')}
-        
-        if input_type == 'Extract From Text':
-            input_vals = {'input': input_vals[0]}
+
+        if input_type == 'Workflow':
+            input_vals = {'input': input_vals[0].split('\n')}
 
     return input_vals
 

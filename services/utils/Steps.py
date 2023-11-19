@@ -22,9 +22,10 @@ from langchain.prompts import PromptTemplate
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
+from langchain.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
-from utils.workflow_utils import get_top_n_search, get_context
+from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results
 from utils.weaviate_utils import wv_client
 from utils.cloud_funcs import cloud_research
 from utils.general import SQS
@@ -196,27 +197,27 @@ class do_research():
                 queries.append(query)
 
         # Scrape and Research all URLs concurrently
-        if os.getenv('IS_OFFLINE'):
-            for url, query in zip(urls_to_scrape, queries):
-                print('\nCloud Research call: {} - {}'.format(url, query))
-                print('\n')
+        #if os.getenv('IS_OFFLINE'):
+        #    for url, query in zip(urls_to_scrape, queries):
+        #        print('\nCloud Research call: {} - {}'.format(url, query))
+        #        print('\n')
 
-            return 'This is dummy web research from running locally'
-        else:
-            sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-            queue = SQS(sqs)
-            for url, query in zip(urls_to_scrape, queries):
-                cloud_research(url, sqs, query)
-                time.sleep(3)
+        #    return 'This is dummy web research from running locally'
+        #else:
+        sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+        queue = SQS(sqs)
+        for url, query in zip(urls_to_scrape, queries):
+            cloud_research(url, sqs, query)
+            time.sleep(3)
+    
+        # wait for and collect scrape results from SQS
+        results = queue.collect(len(urls_to_scrape), max_wait=600)
+
+        outputs = [result['output'] for result in results]
+        self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
+        self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
         
-            # wait for and collect scrape results from SQS
-            results = queue.collect(len(urls_to_scrape), max_wait=600)
-
-            outputs = [result['output'] for result in results]
-            self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
-            self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
-            
-            return '\n'.join(outputs)
+        return '\n'.join(outputs)
   
 
 class get_library_retriever():
@@ -284,6 +285,33 @@ class get_library_retriever():
         self.output_word_cnt = len(all_results.split(' '))
 
         return all_results
+    
+
+class get_subtopics():
+    def __init__(self, top_n=10):
+        self.top_n = top_n
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
+  
+
+    def __call__(self, input):
+        """
+        Input: {'input': "topic"}
+
+        Returns string
+        """
+        topic = input['input']
+
+        topic_df = get_topic_clusters(topic, self.top_n)
+
+        subtopic_results, input_word_cnt, output_word_cnt = get_cluster_results(topic_df, self.LLM.llm)
+
+        self.input_word_cnt = input_word_cnt + len(topic.split(' '))
+        self.output_word_cnt = output_word_cnt
+        
+        return subtopic_results
   
 
 class get_workflow():
@@ -431,6 +459,10 @@ ACTIONS = {
     },
     'Combine': {
         'func': combine_output,
+        'returns': 'string'
+    },
+    'Subtopics': {
+        'func': get_subtopics,
         'returns': 'string'
     }
 }
