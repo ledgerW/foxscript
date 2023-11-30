@@ -153,30 +153,34 @@ def get_cluster_results(topic_df, llm):
 
     all_subtopics = ""
     clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
-    for i in clusters:
+    for idx, i in enumerate(clusters):
         this_cluster_df = topic_df[topic_df.cluster == i]
         n_samples = this_cluster_df.shape[0]
 
-        sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
-        prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
+        if n_samples > 0:
+            sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
+            prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
 
-        # TODO: FoxLLM fallbacks
-        res = llm.invoke(prompt)
-        theme = res.content.replace("\n", "")
+            # TODO: FoxLLM fallbacks
+            res = llm.invoke(prompt)
+            theme = res.content.replace("\n", "")
 
-        subtopic = f"Sub-topic {i}: {theme}\n"
-        subtopic = subtopic + f"N Samples: {n_samples}\n"
+            subtopic = f"Sub-topic {idx}: {theme}\n"
+            subtopic = subtopic + f"N Samples: {n_samples}\n"
 
-        return_n_samples = min(3, n_samples)
-        sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
-        for j in range(return_n_samples):
-            subtopic = subtopic + sample_cluster_rows.chunk.values[j] + '\n'
+            return_n_samples = min(100, n_samples)
+            sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
+            for url in sample_cluster_rows.url.unique():
+                subtopic = subtopic + f"\nSource: {url}\n"
+                this_url_df = sample_cluster_rows.query('url == @url').reset_index(drop=True)
+                for j in range(this_url_df.shape[0]):
+                    subtopic = subtopic + '- ' + this_url_df.chunk.values[j] + '\n'
 
-        subtopic = subtopic + ("-" * 10) + '\n'
+            subtopic = subtopic + ("-" * 10) + '\n'
 
-        all_subtopics = all_subtopics + subtopic
-        input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
-        output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
+            all_subtopics = all_subtopics + subtopic
+            input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
+            output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
 
     return all_subtopics, input_word_cnt, output_word_cnt
 

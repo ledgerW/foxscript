@@ -85,7 +85,10 @@ def run_local(task_name, task_args={}):
 
 def batch_workflow(event, context):
     print(event)
-    task_args = json.loads(event['body'])
+    try:
+        task_args = json.loads(event['body'])
+    except:
+        task_args = event['body']
 
     print('batch_api task_args:')
     print(type(task_args))
