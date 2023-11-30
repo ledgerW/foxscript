@@ -9,3 +9,7 @@ python-dotenv
 pydantic
 requests
 urllib3<2
+boto3
+requests
+PyPDF2
+tenacity

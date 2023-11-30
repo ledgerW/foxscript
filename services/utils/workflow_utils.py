@@ -145,7 +145,7 @@ def get_topic_clusters(topic, top_n=10):
     return topic_df
 
 
-def get_cluster_results(topic_df, llm):
+def get_cluster_results(topic_df, LLM):
     print('Getting subtopic themes')
     input_word_cnt = 0
     output_word_cnt = 0
@@ -161,8 +161,21 @@ def get_cluster_results(topic_df, llm):
             sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
             prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
 
-            # TODO: FoxLLM fallbacks
-            res = llm.invoke(prompt)
+            # FoxLLM fallbacks, if necessary
+            res = None
+            try:
+                res = LLM.llm.invoke(prompt)
+            except:
+                for llm in LLM.fallbacks:
+                    print(f'fallback to {llm}')
+                    LLM.llm = llm
+                    try:
+                        res = LLM.llm.invoke(prompt)
+                        if res:
+                            break
+                    except:
+                        continue
+            
             theme = res.content.replace("\n", "")
 
             subtopic = f"Sub-topic {idx}: {theme}\n"

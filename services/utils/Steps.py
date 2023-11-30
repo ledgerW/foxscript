@@ -74,6 +74,7 @@ class get_chain():
             res = self.chain(input)
         except:
             for llm in self.LLM.fallbacks:
+                print(f'fallback to {llm}')
                 self.chain.llm = llm
                 try:
                     res = self.chain(input)
@@ -307,7 +308,7 @@ class get_subtopics():
 
         topic_df = get_topic_clusters(topic, self.top_n)
 
-        subtopic_results, input_word_cnt, output_word_cnt = get_cluster_results(topic_df, self.LLM.llm)
+        subtopic_results, input_word_cnt, output_word_cnt = get_cluster_results(topic_df, self.LLM)
 
         self.input_word_cnt = input_word_cnt + len(topic.split(' '))
         self.output_word_cnt = output_word_cnt
