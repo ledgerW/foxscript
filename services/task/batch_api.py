@@ -15,7 +15,7 @@ SERVICE = os.environ['SERVICE']
 
 
 
-def run_cloud(article_url=None, article_path=None):
+def run_cloud(task_name, task_args={}):
     cf_client = boto3.client('cloudformation')
     stackname = f'foxscript-task-{STAGE}'
     response = cf_client.describe_stacks(StackName=stackname)
@@ -26,14 +26,10 @@ def run_cloud(article_url=None, article_path=None):
     SUBNET3 = [out['OutputValue'] for out in outputs if out['OutputKey']=='AppSubnet3'][0]
     SECURITY_GROUP = [out['OutputValue'] for out in outputs if out['OutputKey']=='AppSecurityGroupId'][0]
 
-    # Build auto task command
-    base_cmd = ['hollywood_writer.py']
+    # Build task command
+    base_cmd = [f"{task_name}.py"]
 
-    if article_url:
-        task_cmd = ['--article_url'] + [article_url]
-
-    if article_path:
-        task_cmd = ['--article_path'] + [article_path]
+    task_cmd = ['--task_args'] + [json.dumps(task_args)]
 
     command = base_cmd + task_cmd
 
@@ -47,7 +43,7 @@ def run_cloud(article_url=None, article_path=None):
     res = client.run_task(
         cluster=cluster, 
         launchType='FARGATE',
-        taskDefinition=f'foxscript-{STAGE}',
+        taskDefinition=f'{task_name}-{STAGE}',
         count=1,
         platformVersion='LATEST',
         networkConfiguration={
@@ -66,7 +62,7 @@ def run_cloud(article_url=None, article_path=None):
         overrides={
         'containerOverrides': [
             {
-                'name': f'foxscript-{STAGE}',
+                'name': f'{task_name}-{STAGE}',
                 'command': command,
                 'environment': [
                     {
@@ -80,44 +76,30 @@ def run_cloud(article_url=None, article_path=None):
     )
 
 
-def run_local(article_url=None, article_path=None):
-    import pathlib
-    from utils.scrapers import EWScraper
-    from hollywood_writer import main
-
-    if article_url:
-        ew_scraper = EWScraper()
-        result = ew_scraper.scrape_post(article_url)
-
-        article_name = result['title'][:30].replace(' ', '_')
-        article = 'ARTICLE:\n' + result['content']
-
-    if article_path:
-        article_name = pathlib.Path(article_path).name.replace('.txt', '')
-        with open(article_path) as f:
-            article = f.read()
+def run_local(task_name, task_args={}):
+    from run_batch_workflow import main
     
-    main(article, article_name)
+    main(task_args)
 
 
 
-def handler(event, context):
+def batch_workflow(event, context):
     print(event)
     try:
-        article_url = event['article_url']
-        article_path = event['article_path']
+        task_args = json.loads(event['body'])
     except:
-        article_url = json.loads(event['article_url'])
-        article_path = json.loads(event['article_path'])
+        task_args = event['body']
 
-    print(article_url)
-    print(article_path)
+    print('batch_api task_args:')
+    print(type(task_args))
+    print(task_args)
+    print('')
 
     if os.getenv('IS_OFFLINE', 'false') == 'true':
         print('RUNNING LOCAL')
-        run_local(article_url, article_path)
+        run_local('run_batch_workflow', task_args=task_args)
     else:
         print('RUNNING CLOUD')
-        run_cloud(article_url, article_path)
+        run_cloud('run_batch_workflow', task_args=task_args)
 
     return success({'success': True})

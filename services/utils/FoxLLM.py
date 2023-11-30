@@ -77,7 +77,9 @@ class FoxLLM():
             self.llm = self.openai_models[model_name]
         else:
             self.llm = self.az_models[model_name]
+        
         self.fallbacks = list(reversed(self.model_fallbacks[model_name]))
 
+    
     def fallback(self):
         self.llm = self.model_fallbacks[self.model_name].pop()

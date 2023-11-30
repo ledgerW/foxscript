@@ -145,7 +145,7 @@ def get_topic_clusters(topic, top_n=10):
     return topic_df
 
 
-def get_cluster_results(topic_df, llm):
+def get_cluster_results(topic_df, LLM):
     print('Getting subtopic themes')
     input_word_cnt = 0
     output_word_cnt = 0
@@ -153,30 +153,47 @@ def get_cluster_results(topic_df, llm):
 
     all_subtopics = ""
     clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
-    for i in clusters:
+    for idx, i in enumerate(clusters):
         this_cluster_df = topic_df[topic_df.cluster == i]
         n_samples = this_cluster_df.shape[0]
 
-        sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
-        prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
+        if n_samples > 0:
+            sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
+            prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
 
-        # TODO: FoxLLM fallbacks
-        res = llm.invoke(prompt)
-        theme = res.content.replace("\n", "")
+            # FoxLLM fallbacks, if necessary
+            res = None
+            try:
+                res = LLM.llm.invoke(prompt)
+            except:
+                for llm in LLM.fallbacks:
+                    print(f'fallback to {llm}')
+                    LLM.llm = llm
+                    try:
+                        res = LLM.llm.invoke(prompt)
+                        if res:
+                            break
+                    except:
+                        continue
+            
+            theme = res.content.replace("\n", "")
 
-        subtopic = f"Sub-topic {i}: {theme}\n"
-        subtopic = subtopic + f"N Samples: {n_samples}\n"
+            subtopic = f"Sub-topic {idx}: {theme}\n"
+            subtopic = subtopic + f"N Samples: {n_samples}\n"
 
-        return_n_samples = min(3, n_samples)
-        sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
-        for j in range(return_n_samples):
-            subtopic = subtopic + sample_cluster_rows.chunk.values[j] + '\n'
+            return_n_samples = min(100, n_samples)
+            sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
+            for url in sample_cluster_rows.url.unique():
+                subtopic = subtopic + f"\nSource: {url}\n"
+                this_url_df = sample_cluster_rows.query('url == @url').reset_index(drop=True)
+                for j in range(this_url_df.shape[0]):
+                    subtopic = subtopic + '- ' + this_url_df.chunk.values[j] + '\n'
 
-        subtopic = subtopic + ("-" * 10) + '\n'
+            subtopic = subtopic + ("-" * 10) + '\n'
 
-        all_subtopics = all_subtopics + subtopic
-        input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
-        output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
+            all_subtopics = all_subtopics + subtopic
+            input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
+            output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
 
     return all_subtopics, input_word_cnt, output_word_cnt
 
@@ -228,6 +245,27 @@ def get_wiki_snippets(query):
 
 
 # WORDPRESS STUFF
+#def get_yt_url(query):
+#  vid_search = VideosSearch(query, limit = 3)
+#
+#  return vid_search.result()['result'][0]['link']
+
+
+def get_article_img(article):
+  key_fig_1 = article.split('### Who')[1].split('\n')[1]
+
+  search = GoogleSerperAPIWrapper(type="images")
+  results = search.results(key_fig_1)
+
+  img_url = results['images'][0]['imageUrl']
+  for img in results['images']:
+    if (img['imageWidth'] > img['imageHeight']) and ('.jpg' in img['imageUrl']):
+        img_url = img['imageUrl']
+        break
+    
+  return img_url
+
+
 def upload_wp_media_image(img_url):
     url = 'https://public-api.wordpress.com/rest/v1.1/sites/chatterboxoffice.com/media/new'
     headers = {

@@ -10,12 +10,9 @@ import boto3
 
 from utils.workflow import prep_input_vals, get_workflow_from_bubble, get_step_from_bubble
 
-from utils.bubble import update_bubble_object, get_bubble_object
+from utils.bubble import update_bubble_object
 from utils.general import SQS
 from utils.response_lib import *
-
-import tiktoken
-tokenizer = tiktoken.get_encoding("cl100k_base")
 
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
@@ -86,11 +83,31 @@ def workflow(event, context):
         }
     
     # run step as lambda Event so we can return immediately and free frontend
-    _ = lambda_client.invoke(
-        FunctionName=f'foxscript-api-{STAGE}-run_workflow',
-        InvocationType='Event',
-        Payload=json.dumps({"body": out_body})
-    ) 
+    if run_id == 'BATCH_RUN':
+        out_body = {
+            'workflow_id': workflow_id,
+            'email': email,
+            'doc_id': doc_id,
+            'run_id': run_id,
+            'input_vars': input_vars,
+            'batch_input_url': input_vals[0],
+            'batch_doc_id': input_vals[1]
+        }
+
+        print('BATCH RUN:')
+        print(json.dumps({"body": out_body}))
+
+        _ = lambda_client.invoke(
+            FunctionName=f'foxscript-task-{STAGE}-batch_workflow',
+            InvocationType='Event',
+            Payload=json.dumps({"body": out_body})
+        ) 
+    else:
+        _ = lambda_client.invoke(
+            FunctionName=f'foxscript-api-{STAGE}-run_workflow',
+            InvocationType='Event',
+            Payload=json.dumps({"body": out_body})
+        ) 
 
     return success({'SUCCESS': True})
 

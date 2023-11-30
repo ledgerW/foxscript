@@ -16,12 +16,12 @@ custom:
 
   serverless-offline:
     lambdaPort: 3003
-    httpPort: 3006
+    httpPort: 3005
 
   # VPC
   vpcConfig:
     vpcEnabled:
-      oxpecker-auto: true
+      foxscript-task: true
 
     enabled: true
  
@@ -61,8 +61,10 @@ custom:
     # see https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints.html
     # for a list of available service endpoints to provision within the VPC
     # (varies per region)
-    #services:
-    #  - ecs
+    services:
+      - lambda
+      - sqs
+      - cloudformation
     #  - ecs-agent
     #  - ecs-telemetry
     #  - lambda
@@ -80,8 +82,8 @@ package:
     - '!node_modules/**'
     - '!package-lock.json'
     - '!package.json'
-    - foxscript_api.py
-    - hollywood_writer.py
+    - batch_api.py
+    - run_batch_workflow.py
     - ../utils/**
 
 provider:
@@ -107,8 +109,12 @@ provider:
     WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
+    AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
+    AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
     SERPER_API_KEY: ${env:SERPER_API_KEY}
-    WP_API_KEY: ${env:WP_API_KEY}
+    BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
+    BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
+    BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
 
   iam:
     role:
@@ -143,35 +149,37 @@ provider:
 
 fargate:
   tasks:
-    foxscript:
-      name: 'foxscript-${self:custom.stage}'
+    run_batch_workflow:
+      name: 'run_batch_workflow-${self:custom.stage}'
       image: task_image
       memory: '4GB'
       cpu: 1024
       command:
-        - foxscript.py
+        - run_batch_workflow.py
       environment:
         STAGE: ${self:custom.stage}
         WEAVIATE_URL: ${env:WEAVIATE_URL}
         WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
-        OPENAI_API_KEY: ${env:OPENAI_API_KEY}
-        OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
+        AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
+        AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
         SERPER_API_KEY: ${env:SERPER_API_KEY}
-        WP_API_KEY: ${env:WP_API_KEY}
+        BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
+        BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
+        BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
         BUCKET: ${self:custom.bucket_name}
       schedule: 'rate(365 days)'
       vpc:
         assignPublicIp: true
 
 functions:
-  foxscript:
+  batch_workflow:
     runtime: python3.9
-    handler: foxscript_api.handler
+    handler: batch_api.batch_workflow
     memorySize: 256
     timeout: 300
     maximumRetryAttempts: 0
     events:
       - http:
-          path: foxscript
+          path: batch_workflow
           method: post
           cors: true

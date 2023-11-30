@@ -63,11 +63,11 @@ def update_source(report_source, latest_post_date, wv_client):
     )
 
 
-def text_splitter(text, n, tokenizer, sentences=False):
+def text_splitter(text, n, tokenizer, return_sentences=False):
     chunks = []
     chunk = ''
     sentences = [s.strip().replace('\n', ' ') for s in text.split('. ')]
-    if sentences:
+    if return_sentences:
         return sentences
     else:
         for s in sentences:
