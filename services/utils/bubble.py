@@ -22,7 +22,7 @@ def get_bubble_doc(url, local_doc_path):
         f.write(response.content)
 
 
-def write_to_bubble(table, body):
+def create_bubble_object(table, body):
     endpoint = BUBBLE_API_ROOT + f'/{table}'
 
     res = requests.post(
@@ -38,6 +38,17 @@ def get_bubble_object(table, uid):
     endpoint = BUBBLE_API_ROOT + f'/{table}' + f'/{uid}'
 
     res = requests.get(
+        endpoint,
+        headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'},
+    )
+
+    return res
+
+
+def delete_bubble_object(table, uid):
+    endpoint = BUBBLE_API_ROOT + f'/{table}' + f'/{uid}'
+
+    res = requests.delete(
         endpoint,
         headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'},
     )

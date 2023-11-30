@@ -228,6 +228,27 @@ def get_wiki_snippets(query):
 
 
 # WORDPRESS STUFF
+#def get_yt_url(query):
+#  vid_search = VideosSearch(query, limit = 3)
+#
+#  return vid_search.result()['result'][0]['link']
+
+
+def get_article_img(article):
+  key_fig_1 = article.split('### Who')[1].split('\n')[1]
+
+  search = GoogleSerperAPIWrapper(type="images")
+  results = search.results(key_fig_1)
+
+  img_url = results['images'][0]['imageUrl']
+  for img in results['images']:
+    if (img['imageWidth'] > img['imageHeight']) and ('.jpg' in img['imageUrl']):
+        img_url = img['imageUrl']
+        break
+    
+  return img_url
+
+
 def upload_wp_media_image(img_url):
     url = 'https://public-api.wordpress.com/rest/v1.1/sites/chatterboxoffice.com/media/new'
     headers = {

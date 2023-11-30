@@ -7,7 +7,7 @@ import time
 import requests
 
 from utils.weaviate_utils import get_wv_class_name
-from utils.bubble import update_bubble_object, get_bubble_doc, get_bubble_object
+from utils.bubble import update_bubble_object, get_bubble_doc
 from utils.Steps import ACTIONS
 
 if os.getenv('IS_OFFLINE'):
