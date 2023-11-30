@@ -36,7 +36,10 @@ def main(task_args):
 
     workflow_id = task_args['workflow_id']
     email = task_args['email']
+    
     input_vars = task_args['input_vars']
+    input_vars = input_vars[0] if type(input_vars) == list else input_vars
+
     doc_id = task_args['doc_id']
     batch_url = task_args['batch_input_url']
     batch_doc_id = task_args['batch_doc_id']
