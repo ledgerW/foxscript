@@ -100,7 +100,7 @@ functions:
         - researcher.scrape
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 1024
+    memorySize: 2048
     timeout: 600
     maximumRetryAttempts: 0
     events:

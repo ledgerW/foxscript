@@ -3,6 +3,7 @@ import pathlib
 import json
 import re
 from datetime import datetime
+from langchain.text_splitter import TokenTextSplitter
 import tiktoken
 from PyPDF2 import PdfReader
 from tenacity import (
@@ -64,28 +65,11 @@ def update_source(report_source, latest_post_date, wv_client):
 
 
 def text_splitter(text, n, tokenizer, return_sentences=False):
-    chunks = []
-    chunk = ''
-    sentences = [s.strip().replace('\n', ' ') for s in text.split('. ')]
-    if return_sentences:
-        return sentences
-    else:
-        for s in sentences:
-            # start new chunk
-            if chunk == '':
-                chunk = s
-            else:
-                chunk = chunk + ' ' + s
-            
-            chunk_len = len(tokenizer.encode(chunk))
-            if chunk_len >= 0.9*n:
-                chunks.append(chunk)
-                chunk = ''
+    text_splitter = TokenTextSplitter(chunk_size=n, chunk_overlap=10)
+    texts = text_splitter.split_text(text)
+    texts = [t.strip() for t in texts]
 
-        if chunk != '':
-            chunks.append(chunk)
-        
-        return chunks
+    return texts
 
 
 def multi_page_text_splitter(pages, n, tokenizer):

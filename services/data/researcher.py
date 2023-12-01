@@ -90,13 +90,15 @@ def scrape_and_chunk(url, token_size, tokenizer, sentences=False):
     
     return chunks
   except:
-    if is_news_source(url):
+    #if is_news_source(url):
+    try:
       print('processing news source')
       article = Article(url=url)
       article.download()
       article.parse()
       text = article.text
-    else:
+    #else:
+    except:
       print('processing non-news source')
       scraper = GeneralScraper()
       text = scraper.scrape_post(url)

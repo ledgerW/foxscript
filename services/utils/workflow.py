@@ -286,7 +286,7 @@ class Workflow():
             step.run_step(step_input)
             time.sleep(10)
             try:
-                print(step.output)
+                print(step.output[:1000])
             except:
                 pass
 
