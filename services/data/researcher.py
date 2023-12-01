@@ -90,18 +90,21 @@ def scrape_and_chunk(url, token_size, tokenizer, sentences=False):
     
     return chunks
   except:
-    #if is_news_source(url):
-    try:
-      print('processing news source')
-      article = Article(url=url)
-      article.download()
-      article.parse()
-      text = article.text
-    #else:
-    except:
-      print('processing non-news source')
-      scraper = GeneralScraper()
-      text = scraper.scrape_post(url)
+    if is_news_source(url):
+        print('processing news source')
+        article = Article(url=url)
+        try:
+            article.download()
+            article.parse()
+            text = article.text
+        except:
+            print('issue with news source - processing as non-news source')
+            scraper = GeneralScraper()
+            text = scraper.scrape_post(url)
+    else:
+        print('processing non-news source')
+        scraper = GeneralScraper()
+        text = scraper.scrape_post(url)
     
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
