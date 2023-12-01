@@ -84,7 +84,7 @@ def scrape_and_chunk_pdf(url, n, tokenizer):
   return handle_pdf(pathlib.Path(LAMBDA_DATA_DIR, 'tmp.pdf'), n, tokenizer)
 
 
-def scrape_and_chunk(url, token_size, tokenizer, sentences=False):
+def scrape_and_chunk(url, token_size, tokenizer, sentences=False, chunk_overlap=10):
   try:
     chunks, pages, meta = scrape_and_chunk_pdf(url, 100, tokenizer)
     
@@ -110,7 +110,7 @@ def scrape_and_chunk(url, token_size, tokenizer, sentences=False):
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     results = "\n".join(chunk for chunk in chunks if chunk)
 
-    return text_splitter(results, token_size, tokenizer, sentences)
+    return text_splitter(results, token_size, tokenizer, sentences, chunk_overlap=chunk_overlap)
   
 
 def scrape(event, context):
@@ -128,8 +128,13 @@ def scrape(event, context):
     else:
        sqs = None
 
+    if 'chunk_overlap' in body:
+        chunk_overlap = body['chunk_overlap']
+    else:
+        chunk_overlap = 10
+
     # Scrape
-    chunks = scrape_and_chunk(url, 100, tokenizer)
+    chunks = scrape_and_chunk(url, 100, tokenizer, chunk_overlap=chunk_overlap)
     
     chunks = '<SPLIT>'.join(chunks)
     result = {'url': url, 'chunks': chunks}

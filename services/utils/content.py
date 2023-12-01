@@ -64,8 +64,8 @@ def update_source(report_source, latest_post_date, wv_client):
     )
 
 
-def text_splitter(text, n, tokenizer, return_sentences=False):
-    text_splitter = TokenTextSplitter(chunk_size=n, chunk_overlap=10)
+def text_splitter(text, n, tokenizer=None, return_sentences=False, chunk_overlap=10):
+    text_splitter = TokenTextSplitter(chunk_size=n, chunk_overlap=chunk_overlap)
     texts = text_splitter.split_text(text)
     texts = [t.strip() for t in texts]
 
@@ -73,29 +73,15 @@ def text_splitter(text, n, tokenizer, return_sentences=False):
 
 
 def multi_page_text_splitter(pages, n, tokenizer):
-    chunks = []
+    all_chunks = []
     page_nums = []
     chunk = ''
     for num, page in enumerate(pages):
-        sentences = [s.strip().replace('\n', ' ') for s in page.split('. ')]
-        for s in sentences:
-            # start new chunk
-            if chunk == '':
-                chunk = s
-            else:
-                chunk = chunk + ' ' + s
-            
-            chunk_len = len(tokenizer.encode(chunk))
-            if chunk_len >= 0.9*n:
-                chunks.append(chunk)
-                page_nums.append(num+1)
-                chunk = ''
-
-    if chunk != '':
-        chunks.append(chunk)
-        page_nums.append(num+1)
+        chunks = text_splitter(page, n)
+        all_chunks = all_chunks + chunks
+        page_nums = page_nums + [num+1 for _ in chunks]
     
-    return chunks, page_nums
+    return all_chunks, page_nums
 
 
 def handle_pdf(report_path, n, tokenizer):
