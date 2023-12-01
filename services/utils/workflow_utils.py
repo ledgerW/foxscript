@@ -101,7 +101,7 @@ def get_content_embeddings(urls):
 
     results = queue.collect(len(urls), max_wait=600)
     all_chunks = [result['chunks'].split('<SPLIT>') for result in results]
-    print('Total chunks: {}'.format(len(all_chunks)))
+    print('Total chunks: {}'.format(sum([len(l) for l in all_chunks])))
     all_urls = [result['url'] for result in results]
 
     for url, chunks in zip(all_urls, all_chunks):
