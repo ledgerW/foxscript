@@ -18,13 +18,15 @@ from utils.weaviate_utils import get_wv_class_name, create_library, delete_libra
 from utils.bubble import get_bubble_doc
 from utils.cloud_funcs import cloud_scrape
 
-
+STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
 if os.getenv('IS_OFFLINE'):
-  LAMBDA_DATA_DIR = '.'
+   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
+   LAMBDA_DATA_DIR = '.'
 else:
-  LAMBDA_DATA_DIR = '/tmp'
+   lambda_client = boto3.client('lambda')
+   LAMBDA_DATA_DIR = '/tmp'
 
 
 def to_json_doc(doc_name, doc_content, url=""):
@@ -77,6 +79,30 @@ def upload_to_s3(event, context):
       email = json.loads(event['body'])['email']
       name = json.loads(event['body'])['name']
       doc_url = json.loads(event['body'])['doc_url']
+
+  # If this is a batch job, sent to fargate task and exit
+  if doc_url.startswith('BATCH_RUN'):
+      _, batch_doc_url, batch_doc_id, library_id = doc_url.split('<SPLIT>')
+
+      out_body = {
+          'email': email,
+          'name': name,
+          'batch_doc_url': batch_doc_url,
+          'batch_doc_id': batch_doc_id,
+          'library_id': library_id
+      }
+
+      print('BATCH RUN:')
+      print(json.dumps({"body": out_body}))
+
+      _ = lambda_client.invoke(
+          FunctionName=f'foxscript-task-{STAGE}-batch_upload_to_s3',
+          InvocationType='Event',
+          Payload=json.dumps({"body": out_body})
+      )
+
+      return success({"body": out_body})
+
 
   # Fetch and write content to local disk
   if 'foxscript.ai' not in doc_url and 'fileupload' not in doc_url:
