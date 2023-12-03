@@ -71,6 +71,7 @@ def data_class(event, context):
 
 # Lambda Handler
 def upload_to_s3(event, context):
+  print(event)
   try:
       email = event['body']['email']
       name = event['body']['name']
