@@ -100,7 +100,10 @@ def main(task_args):
 
             # add new doc to project
             res = get_bubble_object('project', project_id)
-            project_docs = res.json()['response']['documents']
+            try:
+                project_docs = res.json()['response']['documents']
+            except:
+                project_docs = []
 
             _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
 

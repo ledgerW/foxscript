@@ -68,7 +68,7 @@ def main(task_args):
 
         _ = lambda_client.invoke(
             FunctionName=f'foxscript-api-{STAGE}-upload_to_s3',
-            InvocationType='RequestResponse',
+            InvocationType='Event',
             Payload=json.dumps({"body": out_body})
         )
 
@@ -83,9 +83,14 @@ def main(task_args):
 
         # add new doc to library
         res = get_bubble_object('library', library_id)
-        library_docs = res.json()['response']['library-docs']
+        try:
+            library_docs = res.json()['response']['library-docs']
+        except:
+            library_docs = []
 
         _ = update_bubble_object('library', library_id, {'library-docs': library_docs+[new_doc_id]})
+
+        sleep(5)
     
     # Delete batch input document
     _ = delete_bubble_object('batch-doc', batch_doc_id)
