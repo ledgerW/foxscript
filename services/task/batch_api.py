@@ -77,7 +77,11 @@ def run_cloud(task_name, task_args={}):
 
 
 def run_local(task_name, task_args={}):
-    from run_batch_workflow import main
+    if task_name == 'run_batch_workflow':
+        from run_batch_workflow import main
+    
+    if task_name == 'run_batch_upload_to_s3':
+        from run_batch_upload_to_s3 import main
     
     main(task_args)
 
@@ -101,5 +105,27 @@ def batch_workflow(event, context):
     else:
         print('RUNNING CLOUD')
         run_cloud('run_batch_workflow', task_args=task_args)
+
+    return success({'success': True})
+
+
+def batch_upload_to_s3(event, context):
+    print(event)
+    try:
+        task_args = json.loads(event['body'])
+    except:
+        task_args = event['body']
+
+    print('batch_api task_args:')
+    print(type(task_args))
+    print(task_args)
+    print('')
+
+    if os.getenv('IS_OFFLINE', 'false') == 'true':
+        print('RUNNING LOCAL')
+        run_local('run_batch_upload_to_s3', task_args=task_args)
+    else:
+        print('RUNNING CLOUD')
+        run_cloud('run_batch_upload_to_s3', task_args=task_args)
 
     return success({'success': True})

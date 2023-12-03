@@ -67,8 +67,8 @@ def main(task_args):
     with open(batch_input_path, encoding="utf-8") as f:
         batch_list = f.read()
 
-    print('batch_list:')
-    print(batch_list.split('\n'))
+    print('batch_list top 10:')
+    print(batch_list.split('\n')[:10])
 
     for input_val in batch_list.split('\n'):
         print(input_val)
@@ -100,7 +100,10 @@ def main(task_args):
 
             # add new doc to project
             res = get_bubble_object('project', project_id)
-            project_docs = res.json()['response']['documents']
+            try:
+                project_docs = res.json()['response']['documents']
+            except:
+                project_docs = []
 
             _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
 

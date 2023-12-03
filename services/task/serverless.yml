@@ -84,6 +84,7 @@ package:
     - '!package.json'
     - batch_api.py
     - run_batch_workflow.py
+    - run_batch_upload_to_s3.py
     - ../utils/**
 
 provider:
@@ -171,6 +172,28 @@ fargate:
       vpc:
         assignPublicIp: true
 
+    run_batch_upload_to_s3:
+      name: 'run_batch_upload_to_s3-${self:custom.stage}'
+      image: task_image
+      memory: '4GB'
+      cpu: 1024
+      command:
+        - run_batch_upload_to_s3.py
+      environment:
+        STAGE: ${self:custom.stage}
+        WEAVIATE_URL: ${env:WEAVIATE_URL}
+        WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
+        AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
+        AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
+        SERPER_API_KEY: ${env:SERPER_API_KEY}
+        BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
+        BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
+        BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+        BUCKET: ${self:custom.bucket_name}
+      schedule: 'rate(365 days)'
+      vpc:
+        assignPublicIp: true
+
 functions:
   batch_workflow:
     runtime: python3.9
@@ -181,5 +204,17 @@ functions:
     events:
       - http:
           path: batch_workflow
+          method: post
+          cors: true
+
+  batch_upload_to_s3:
+    runtime: python3.9
+    handler: batch_api.batch_upload_to_s3
+    memorySize: 256
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: batch_upload_to_s3
           method: post
           cors: true
