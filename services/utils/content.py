@@ -150,11 +150,13 @@ def handle_json(report_path, n, tokenizer):
     title = report_json['title']
     author = report_json['author']
     date = report_json['date'].split('T')[0]
+    url = report_json['url']
 
     for idx, chunk in enumerate(chunks):
         chunk_with_meta = f"""Title: {title}
         Author: {author}
         Date: {date}
+        URL: {url}
         {chunk}
         """
 
