@@ -67,10 +67,15 @@ def main(task_args):
     with open(batch_input_path, encoding="utf-8") as f:
         batch_list = f.read()
 
+    if "<SPLIT>" in batch_list:
+        splitter = "<SPLIT>"
+    else:
+        splitter = "\n"
+    
     print('batch_list top 10:')
-    print(batch_list.split('\n')[:10])
+    print(batch_list.split(splitter)[:10])
 
-    for input_val in batch_list.split('\n'):
+    for input_val in batch_list.split(splitter):
         print(input_val)
         # get workflow inputs
         input_vals = prep_input_vals([input_vars], [input_val], workflow)
