@@ -11,6 +11,7 @@ RUN mkdir utils
 COPY utils ./utils
 
 COPY task/run_batch_workflow.py run_batch_workflow.py
+COPY task/run_batch_upload_to_s3.py run_batch_upload_to_s3.py
 
 # Override default lambda entrypoint
 ENTRYPOINT [ "python3.10" ]
