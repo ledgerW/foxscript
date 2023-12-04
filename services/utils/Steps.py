@@ -27,7 +27,7 @@ from langchain.embeddings import OpenAIEmbeddings
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results
 from utils.weaviate_utils import wv_client
-from utils.cloud_funcs import cloud_research
+from utils.cloud_funcs import cloud_research, cloud_scrape
 from utils.general import SQS
 
 
@@ -162,70 +162,77 @@ class analyze_csv():
   
 
 class do_research():
-    def __init__(self, top_n=3):
+    def __init__(self, top_n=3, web_qa=True):
         self.top_n = top_n
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.web_qa = web_qa
   
 
     def __call__(self, input):
         """
-        Input: {'input': ["questions"]}
+        Input: {'input': ["questions OR URL"]}
 
         Returns string
         """
-        questions = input['input']
+        if not self.web_qa:
+            url = input['input'][0]
 
-        urls_to_scrape = []
-        queries = []
-        for _query in questions[:5]:
-            query = _query.strip()
-            print(query)
+            res = cloud_scrape(url, sqs=None, invocation_type='RequestResponse', chunk_overlap=0)
+            res_body = json.loads(res['Payload'].read().decode("utf-8"))
+            content = json.loads(res_body['body'])['chunks'].replace('<SPLIT>', ' ')
 
-            # top n search context
-            try:
-                top_n_search_results = get_top_n_search(query, self.top_n)
-            except:
+            self.input_word_cnt = 1
+            self.output_word_cnt = len(content.split(' '))
+            
+            return content
+        else:
+            questions = input['input']
+
+            urls_to_scrape = []
+            queries = []
+            for _query in questions[:5]:
+                query = _query.strip()
+                print(query)
+
+                # top n search context
                 try:
-                    time.sleep(3)
                     top_n_search_results = get_top_n_search(query, self.top_n)
                 except:
-                    continue
+                    try:
+                        time.sleep(3)
+                        top_n_search_results = get_top_n_search(query, self.top_n)
+                    except:
+                        continue
 
-            # Collect each url for this query
-            for _url in top_n_search_results:
-                url = _url['link']
-                urls_to_scrape.append(url)
-                queries.append(query)
+                # Collect each url for this query
+                for _url in top_n_search_results:
+                    url = _url['link']
+                    urls_to_scrape.append(url)
+                    queries.append(query)
 
-        # Scrape and Research all URLs concurrently
-        #if os.getenv('IS_OFFLINE'):
-        #    for url, query in zip(urls_to_scrape, queries):
-        #        print('\nCloud Research call: {} - {}'.format(url, query))
-        #        print('\n')
-
-        #    return 'This is dummy web research from running locally'
-        #else:
-        sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-        queue = SQS(sqs)
-        for url, query in zip(urls_to_scrape, queries):
-            cloud_research(url, sqs, query)
-            time.sleep(3)
-    
-        # wait for and collect scrape results from SQS
-        results = queue.collect(len(urls_to_scrape), max_wait=600)
-
-        outputs = [result['output'] for result in results]
-        self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
-        self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
+            # Scrape and Research all URLs concurrently
+            sqs = 'research{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+            queue = SQS(sqs)
+            for url, query in zip(urls_to_scrape, queries):
+                cloud_research(url, sqs, query)
+                time.sleep(3)
         
-        return '\n'.join(outputs)
+            # wait for and collect scrape results from SQS
+            results = queue.collect(len(urls_to_scrape), max_wait=600)
+
+            outputs = [result['output'] for result in results]
+            self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
+            self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
+            
+            return '\n'.join(outputs)
   
 
 class get_library_retriever():
-    def __init__(self, class_name=None, k=3):
+    def __init__(self, class_name=None, k=3, as_qa=True):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.as_qa = as_qa
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
@@ -259,25 +266,27 @@ class get_library_retriever():
         questions = input['input']
 
         all_results = ''
-        for question in questions[:5]:
-            all_results = all_results + question + '\n'
-            #chunks = self.get_library_chunks(question)
-            #results = '\n'.join([c.page_content for c in chunks])
+        for question in questions:
+            all_results = all_results + "Query:\n" + question + '\n\n'
             
-            results = None
-            try:
-                results = get_context(question, self.LLM.llm, self.retriever, library=True)
-            except:
-                for llm in self.LLM.fallbacks:
-                    try:
-                        results = get_context(question, llm, self.retriever, library=True)
-                        if results:
-                            break
-                    except:
-                        continue
+            if self.as_qa:
+                results = None
+                try:
+                    results = get_context(question, self.LLM.llm, self.retriever, library=True)
+                except:
+                    for llm in self.LLM.fallbacks:
+                        try:
+                            results = get_context(question, llm, self.retriever, library=True)
+                            if results:
+                                break
+                        except:
+                            continue
 
-            if not results:
-                results = 'Problem with Step.'
+                if not results:
+                    results = 'Problem with Step.'
+            else:
+                chunks = self.get_library_chunks(question)
+                results = '\n'.join([c.page_content for c in chunks])
 
             all_results = all_results + results + '\n\n'
             time.sleep(3)

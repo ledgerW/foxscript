@@ -37,7 +37,10 @@ def get_init(body, email):
         init = {'path': local_doc_path}
 
     if body['type'] == 'Web Research':
-        init = {'top_n': int(body['init_number'])}
+        init = {
+            'top_n': int(body['init_number']),
+            'web_qa': body['web_qa']
+        }
 
     if body['type'] == 'Subtopics':
         init = {'top_n': int(body['init_number'])}
@@ -46,14 +49,8 @@ def get_init(body, email):
         class_name, account = get_wv_class_name(email, body['init_text'])
         init = {
             'class_name': class_name,
-            'k': int(body['init_number'])
-        }
-
-    if body['type'] == 'Extract From Text':
-        init = {
-            'attributes': {
-                'extraction': body['init_text']
-            }
+            'k': int(body['init_number']),
+            'as_qa': body['as_qa']
         }
 
     if body['type'] == 'Workflow':
