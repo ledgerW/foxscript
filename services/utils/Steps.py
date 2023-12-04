@@ -267,7 +267,7 @@ class get_library_retriever():
 
         all_results = ''
         for question in questions:
-            all_results = all_results + question + '\n'
+            all_results = all_results + "Query:\n" + question + '\n\n'
             
             if self.as_qa:
                 results = None
