@@ -223,9 +223,10 @@ class do_research():
   
 
 class get_library_retriever():
-    def __init__(self, class_name=None, k=3):
+    def __init__(self, class_name=None, k=3, as_qa=True):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.as_qa = as_qa
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
@@ -259,25 +260,27 @@ class get_library_retriever():
         questions = input['input']
 
         all_results = ''
-        for question in questions[:5]:
+        for question in questions:
             all_results = all_results + question + '\n'
-            #chunks = self.get_library_chunks(question)
-            #results = '\n'.join([c.page_content for c in chunks])
             
-            results = None
-            try:
-                results = get_context(question, self.LLM.llm, self.retriever, library=True)
-            except:
-                for llm in self.LLM.fallbacks:
-                    try:
-                        results = get_context(question, llm, self.retriever, library=True)
-                        if results:
-                            break
-                    except:
-                        continue
+            if self.as_qa:
+                results = None
+                try:
+                    results = get_context(question, self.LLM.llm, self.retriever, library=True)
+                except:
+                    for llm in self.LLM.fallbacks:
+                        try:
+                            results = get_context(question, llm, self.retriever, library=True)
+                            if results:
+                                break
+                        except:
+                            continue
 
-            if not results:
-                results = 'Problem with Step.'
+                if not results:
+                    results = 'Problem with Step.'
+            else:
+                chunks = self.get_library_chunks(question)
+                results = '\n'.join([c.page_content for c in chunks])
 
             all_results = all_results + results + '\n\n'
             time.sleep(3)
