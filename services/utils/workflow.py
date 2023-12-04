@@ -37,7 +37,10 @@ def get_init(body, email):
         init = {'path': local_doc_path}
 
     if body['type'] == 'Web Research':
-        init = {'top_n': int(body['init_number'])}
+        init = {
+            'top_n': int(body['init_number']),
+            'web_qa': body['web_qa']
+        }
 
     if body['type'] == 'Subtopics':
         init = {'top_n': int(body['init_number'])}
