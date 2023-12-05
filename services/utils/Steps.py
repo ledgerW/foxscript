@@ -229,10 +229,13 @@ class do_research():
   
 
 class get_library_retriever():
-    def __init__(self, class_name=None, k=3, as_qa=True):
+    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.class_name = class_name
+        self.k = k
         self.as_qa = as_qa
+        self.from_similar_docs = from_similar_docs
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
@@ -251,8 +254,8 @@ class get_library_retriever():
         return retriever
 
 
-    def get_library_chunks(self, query):
-        chunks = self.retriever.get_relevant_documents(query)
+    def get_library_chunks(self, query, where_filter=None):
+        chunks = self.retriever.get_relevant_documents(query, where_filter=where_filter)
 
         return chunks
 
@@ -285,8 +288,34 @@ class get_library_retriever():
                 if not results:
                     results = 'Problem with Step.'
             else:
-                chunks = self.get_library_chunks(question)
-                results = '\n'.join([c.page_content for c in chunks])
+                if self.from_similar_docs:
+                    # get docs that are similar overall first
+                    nearVector = {
+                        "vector": OpenAIEmbeddings().embed_query(question)
+                    }
+
+                    result = wv_client.query\
+                        .get(f"{self.class_name}Content", ['title', 'source', 'url'])\
+                        .with_additional(["distance", 'id'])\
+                        .with_near_vector(nearVector)\
+                        .with_limit(self.k)\
+                        .do()
+
+                    articles = [{'source': res['source'], 'url': res['url'], 'id': res['_additional']['id']} for res in result['data']['Get'][f"{self.class_name}Content"]]
+                    doc_urls = list(set([doc['url'] for doc in articles]))
+
+                    # now get similar chunks only from overall similar docs
+                    where_filter = {
+                        "path": ["fromContent", f"{self.class_name}Content", "url"],
+                        "operator": "ContainsAny",
+                        "valueText": doc_urls
+                    }
+
+                    chunks = self.get_library_chunks(question, where_filter=where_filter)
+                    results = '\n'.join([c.page_content for c in chunks])
+                else:
+                    chunks = self.get_library_chunks(question)
+                    results = '\n'.join([c.page_content for c in chunks])
 
             all_results = all_results + results + '\n\n'
             time.sleep(3)

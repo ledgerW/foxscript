@@ -2,6 +2,15 @@
   "class": "Content",
   "description": "Content",
   "vectorIndexType": "hnsw",
+  "vectorizer": "ref2vec-centroid",
+  "moduleConfig": {
+    "ref2vec-centroid": {
+      "referenceProperties": [
+        "hasChunks"
+      ],
+      "method": "mean"
+    }
+  },
   "properties": [
     {
       "name": "summary",

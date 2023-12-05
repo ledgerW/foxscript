@@ -131,10 +131,10 @@ def handle_pdf(report_path, n, tokenizer):
 
     meta = {
         'date': date,
-        'url': '',
-        'title': title,
+        'url': use_title,
+        'title': use_title,
         'author': author,
-        'source': title
+        'source': use_title
     }
         
     return chunks, pages, meta
