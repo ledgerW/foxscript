@@ -153,6 +153,7 @@ def get_cluster_results(topic_df, LLM):
 
     all_subtopics = ""
     clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
+    existing_themes = ''
     for idx, i in enumerate(clusters):
         this_cluster_df = topic_df[topic_df.cluster == i]
         n_samples = this_cluster_df.shape[0]
@@ -171,9 +172,12 @@ def get_cluster_results(topic_df, LLM):
             
             prompt = f"""Sentences:
     {sentences}
+
+    Existing Themes:
+    {existing_themes}
     
     You have two jobs.
-    1) Come up with a short, descriptive, specific theme name for the sentences provided above.
+    1) Come up with a short, descriptive, specific theme name for the sentences provided above. But you can't reuse an Existing Theme name.
     2) Write a thorough, detail-oriented distilation of the sentences. Be sure to capture any specific numbers or figures.
     The details are important! Think of this task as distilling all the information without leaving out any important details.
     Prefer thoughness over brevity here.
@@ -203,6 +207,8 @@ def get_cluster_results(topic_df, LLM):
                         continue
             
             theme_and_summary = res.content
+            theme = theme_and_summary.split('Theme:')[1].split('Key Elements:')[0].replace('\n', '').strip()
+            existing_themes = existing_themes + f"\n{theme}"
 
             subtopic = f"Subtopic {idx+1}\n"
             subtopic = subtopic + f"Sections of text found: {n_samples}\n"
