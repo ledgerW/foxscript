@@ -205,7 +205,7 @@ def get_cluster_results(topic_df, LLM):
             subtopic = subtopic + f"Sections of text found: {n_samples}\n"
             subtopic = subtopic + f"{theme_and_summary}\n"
 
-            subtopic = subtopic + + '\n' ("-" * 10) + '\n\n'
+            subtopic = subtopic + '\n' + ("_" * 10) + '\n\n'
 
             all_subtopics = all_subtopics + subtopic
             input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
