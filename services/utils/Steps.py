@@ -92,7 +92,11 @@ class get_chain():
         self.output_word_cnt = len(res['text'].split(' '))
 
         if self.as_list:
-            return_items = res['text'].split('\n')
+            if "<SPLIT>" in res['text']:
+                splitter = "<SPLIT>"
+            else:
+                splitter = "\n"
+            return_items = res['text'].split(splitter)
             return [item for item in return_items if item != '']
         else:
             return res['text']
