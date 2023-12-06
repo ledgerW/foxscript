@@ -173,16 +173,19 @@ def get_cluster_results(topic_df, LLM):
     {sentences}
     
     You have two jobs.
-    1) Come up with a theme name for the sentences provided above based on what they all have in common.
-    2) Write a thorough, detail-oriented summary of the sentences. Be sure to capture any specific numbers or figures.
-    The details are important! Think of this task as condensing all the information without leaving out any important details.
-    It's better to err on the side of thoroughness here. And don't forget to cite the source URLs at the end of sentences or paragraphs, using markdown hyperlinks.
+    1) Come up with a short, descriptive, specific theme name for the sentences provided above.
+    2) Write a thorough, detail-oriented distilation of the sentences. Be sure to capture any specific numbers or figures.
+    The details are important! Think of this task as distilling all the information without leaving out any important details.
+    Prefer thoughness over brevity here.
 
     Follow the template below for your output.
     
     Theme: [theme name]
-    Summary:
-    [summary of sentences]"""
+    Key Elements:
+    [distilation of sentences]
+    
+    Sources:
+    [list of source urls]"""
 
             # FoxLLM fallbacks, if necessary
             res = None
@@ -205,7 +208,7 @@ def get_cluster_results(topic_df, LLM):
             subtopic = subtopic + f"Sections of text found: {n_samples}\n"
             subtopic = subtopic + f"{theme_and_summary}\n"
 
-            subtopic = subtopic + '\n' + ("_" * 10) + '\n\n'
+            subtopic = subtopic + '\n' + ("_" * 3) + '\n\n'
 
             all_subtopics = all_subtopics + subtopic
             input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
