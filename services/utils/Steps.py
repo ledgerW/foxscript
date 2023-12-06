@@ -301,10 +301,13 @@ class get_library_retriever():
                     }
 
                     if self.ignore_url:
+                        url_to_ignore = input['URL To Ignore']
+                        url_to_ignore = url_to_ignore[0] if type(url_to_ignore)==list else url_to_ignore
+
                         where_filter = {
                             "path": ["url"],
                             "operator": "NotEqual",
-                            "valueText": input['URL To Ignore'],
+                            "valueText": url_to_ignore,
                         }
                     else:
                         where_filter = {}
