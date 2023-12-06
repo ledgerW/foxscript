@@ -149,7 +149,7 @@ def get_cluster_results(topic_df, LLM):
     print('Getting subtopic themes')
     input_word_cnt = 0
     output_word_cnt = 0
-    samples = 5
+    samples = 100
 
     all_subtopics = ""
     clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
@@ -158,8 +158,31 @@ def get_cluster_results(topic_df, LLM):
         n_samples = this_cluster_df.shape[0]
 
         if n_samples > 0:
-            sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
-            prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
+            #return_n_samples = min(100, n_samples)
+            #sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
+            sentences = ''
+            for url in this_cluster_df.url.unique():
+                sentences = sentences + f"\nSource: {url}\n"
+                this_url_df = this_cluster_df.query('url == @url').reset_index(drop=True)
+                for j in range(this_url_df.shape[0]):
+                    sentences = sentences + '- ' + this_url_df.chunk.values[j] + '\n'
+            
+            #sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
+            
+            prompt = f"""Sentences:
+    {sentences}
+    
+    You have two jobs.
+    1) Come up with a theme name for the sentences provided above based on what they all have in common.
+    2) Write a thorough, detail-oriented summary of the sentences. Be sure to capture any specific numbers or figures.
+    The details are important! This is a summary, but it should be a thorough one. And don't forget to cite the source URLs
+    at the end of sentences or paragraphs, using markdown hyperlinks.
+
+    Follow the template below for your output.
+    
+    Theme: [theme name]
+    Summary:
+    [summary of sentences]"""
 
             # FoxLLM fallbacks, if necessary
             res = None
@@ -176,20 +199,13 @@ def get_cluster_results(topic_df, LLM):
                     except:
                         continue
             
-            theme = res.content.replace("\n", "")
+            theme_and_summary = res.content
 
-            subtopic = f"Sub-topic {idx}: {theme}\n"
-            subtopic = subtopic + f"N Samples: {n_samples}\n"
+            subtopic = f"Subtopic {idx+1}\n"
+            subtopic = subtopic + f"Sections of text found: {n_samples}\n"
+            subtopic = subtopic + f"{theme_and_summary}\n"
 
-            return_n_samples = min(100, n_samples)
-            sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
-            for url in sample_cluster_rows.url.unique():
-                subtopic = subtopic + f"\nSource: {url}\n"
-                this_url_df = sample_cluster_rows.query('url == @url').reset_index(drop=True)
-                for j in range(this_url_df.shape[0]):
-                    subtopic = subtopic + '- ' + this_url_df.chunk.values[j] + '\n'
-
-            subtopic = subtopic + ("-" * 10) + '\n'
+            subtopic = subtopic + + '\n' ("-" * 10) + '\n\n'
 
             all_subtopics = all_subtopics + subtopic
             input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
