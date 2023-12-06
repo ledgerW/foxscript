@@ -48,7 +48,7 @@ class get_chain():
         self.output_word_cnt = 0
         self.as_list = as_list
 
-        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=1.0)
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
         self.input_vars = re.findall('{(.+?)}', prompt)
 
@@ -229,13 +229,14 @@ class do_research():
   
 
 class get_library_retriever():
-    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False):
+    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False, ignore_url=False):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.class_name = class_name
         self.k = k
         self.as_qa = as_qa
         self.from_similar_docs = from_similar_docs
+        self.ignore_url = ignore_url
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
@@ -263,6 +264,11 @@ class get_library_retriever():
     def __call__(self, input):
         """
         Input: {'input': ["questions"]}
+        or
+        Input: {
+            'input': ["questions"],
+            'URL to Ignore': 'https://urltoignore.com'
+        }
 
         Returns: string
         """
@@ -294,9 +300,19 @@ class get_library_retriever():
                         "vector": OpenAIEmbeddings().embed_query(question)
                     }
 
+                    if self.ignore_url:
+                        where_filter = {
+                            "path": ["url"],
+                            "operator": "NotEqual",
+                            "valueText": input['URL to Ignore'],
+                        }
+                    else:
+                        where_filter = {}
+
                     result = wv_client.query\
                         .get(f"{self.class_name}Content", ['title', 'source', 'url'])\
                         .with_additional(["distance", 'id'])\
+                        .with_where(where_filter)\
                         .with_near_vector(nearVector)\
                         .with_limit(self.k)\
                         .do()

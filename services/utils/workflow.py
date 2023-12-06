@@ -50,7 +50,9 @@ def get_init(body, email):
         init = {
             'class_name': class_name,
             'k': int(body['init_number']),
-            'as_qa': body['as_qa']
+            'as_qa': body['as_qa'],
+            'from_similar_docs': body['from_similar_docs'],
+            'ignore_url': body['ignore_url']
         }
 
     if body['type'] == 'Workflow':
@@ -77,10 +79,22 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {input_vars[0]: input_vals[0]}
         
         if input_type == 'Library Research':
-            try:
-                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
-            except:
-                input_vals = {input_vars[0]: input_vals[0]}
+            if len(input_vars) == 1:
+                try:
+                    input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+                except:
+                    input_vals = {input_vars[0]: input_vals[0]}
+            else:
+                try:
+                    input_vals = {
+                        input_vars[0]: [input_vals[0].split('\n')],
+                        input_vars[1]: input_vals[1]
+                    }
+                except:
+                    input_vals = {
+                        input_vars[0]: input_vals[0],
+                        input_vars[1]: input_vars[1]
+                    }
 
         if input_type == 'Analyze CSV':
             try:
