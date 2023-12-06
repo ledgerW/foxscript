@@ -175,8 +175,8 @@ def get_cluster_results(topic_df, LLM):
     You have two jobs.
     1) Come up with a theme name for the sentences provided above based on what they all have in common.
     2) Write a thorough, detail-oriented summary of the sentences. Be sure to capture any specific numbers or figures.
-    The details are important! This is a summary, but it should be a thorough one. And don't forget to cite the source URLs
-    at the end of sentences or paragraphs, using markdown hyperlinks.
+    The details are important! Think of this task as condensing all the information without leaving out any important details.
+    It's better to err on the side of thoroughness here. And don't forget to cite the source URLs at the end of sentences or paragraphs, using markdown hyperlinks.
 
     Follow the template below for your output.
     
