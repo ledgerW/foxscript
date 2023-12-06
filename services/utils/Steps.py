@@ -267,7 +267,7 @@ class get_library_retriever():
         or
         Input: {
             'input': ["questions"],
-            'URL to Ignore': 'https://urltoignore.com'
+            'URL To Ignore': 'https://urltoignore.com'
         }
 
         Returns: string
@@ -304,7 +304,7 @@ class get_library_retriever():
                         where_filter = {
                             "path": ["url"],
                             "operator": "NotEqual",
-                            "valueText": input['URL to Ignore'],
+                            "valueText": input['URL To Ignore'],
                         }
                     else:
                         where_filter = {}

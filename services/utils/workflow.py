@@ -117,7 +117,10 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {'input': input_vals[0]}
         
         if input_type == 'Library Research':
-            input_vals = {'input': input_vals[0].split('\n')}
+            input_vals = {
+                input_vars[0]: input_vals[0].split('\n'),
+                input_vars[1]: input_vals[1]
+            }
 
         if input_type == 'Analyze CSV':
             input_vals = {'input': input_vals[0].split('\n')}
