@@ -12,6 +12,7 @@ import os
 import json
 import time
 import re
+import uuid
 import boto3
 import pandas as pd
 from datetime import datetime
@@ -26,9 +27,10 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results
-from utils.weaviate_utils import wv_client
+from utils.weaviate_utils import wv_client, get_wv_class_name, create_library, to_json_doc
 from utils.cloud_funcs import cloud_research, cloud_scrape
 from utils.general import SQS
+from utils.bubble import create_bubble_object, update_bubble_object, get_bubble_object
 
 
 if os.getenv('IS_OFFLINE'):
@@ -40,6 +42,7 @@ else:
     LAMBDA_DATA_DIR = '/tmp'
 
 STAGE = os.getenv('STAGE')
+BUCKET = os.getenv('BUCKET')
 
 
 class get_chain():
@@ -242,6 +245,7 @@ class get_library_retriever():
         self.from_similar_docs = from_similar_docs
         self.ignore_url = ignore_url
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
+        self.workflow_library = None
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
 
@@ -276,6 +280,14 @@ class get_library_retriever():
 
         Returns: string
         """
+        if self.class_name == 'Workflow Library':
+            print('Attempting to use Workflow Library')
+
+            if self.workflow_library:
+                self.retriever = self.get_weaviate_retriever(class_name=self.workflow_library, k=self.k)
+                print(f'Using Worklfow Library: {self.workflow_library}')
+
+
         questions = input['input']
 
         all_results = ''
@@ -464,8 +476,7 @@ class combine_output():
         """
         Input: {
             'input_var_name': "input_var_val",
-            'input_var2_name': "input_var2_val",
-            ...
+            'input_var2_name': "input_var2_val"
         }
 
         Returns: string
@@ -477,6 +488,84 @@ class combine_output():
         self.output_word_cnt = len(combined.replace('\n\n', ' ').split(' '))
 
         return combined
+    
+
+class send_output():
+    def __init__(self, destination=None):
+        self.destination = destination
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.workflow_name = None
+        self.step_name = None
+        self.doc_id = None
+        self.email = None
+        self.workflow_library = None
+
+    def __call__(self, input):
+        """
+        Input: {'input': "input_val"}
+
+        Returns: string
+        """
+        content = input['input']
+
+        if self.destination == 'Project':
+            # get project id for output docs using dummy temp doc id provided in initial call
+            res = get_bubble_object('document', self.doc_id)
+            project_id = res.json()['response']['project']
+            
+            # send result to Bubble Document
+            new_doc_name = f"{self.workflow_name} - {self.step_name}"
+            body = {
+                'name': new_doc_name,
+                'text': content,
+                'user_email': self.email,
+                'project': project_id
+            }
+            res = create_bubble_object('document', body)
+            new_doc_id = res.json()['id']
+
+            # add new doc to project
+            res = get_bubble_object('project', project_id)
+            try:
+                project_docs = res.json()['response']['documents']
+            except:
+                project_docs = []
+
+            _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+
+            return_value = new_doc_name
+
+        if self.destination == 'Workflow Library':
+            # create new workflow library (will be destroyed at end of workflow)
+            name = str(uuid.uuid4()).replace('-', '_')
+            cls_name, account_name = get_wv_class_name(self.email, name)
+            create_library(cls_name)
+            self.workflow_library = cls_name
+
+            # load content into workflow library
+            payload = {
+                "body": {
+                    'bucket': BUCKET,
+                    'cls_name': cls_name,
+                    'content': content
+
+                }
+            }
+
+            _ = lambda_client.invoke(
+                FunctionName=f'foxscript-data-{STAGE}-load_data',
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
+            )
+
+            return_value = cls_name
+
+        # Get input and output word count
+        self.input_word_cnt = len(input['input'].replace('\n\n', ' ').split(' '))
+        self.output_word_cnt = len(input['input'].replace('\n\n', ' ').split(' '))
+
+        return return_value
         
 
 #class get_yt_url():
@@ -526,6 +615,10 @@ ACTIONS = {
     },
     'Subtopics': {
         'func': get_subtopics,
+        'returns': 'string'
+    },
+    'Send Output': {
+        'func': send_output,
         'returns': 'string'
     }
 }

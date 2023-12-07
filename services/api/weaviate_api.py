@@ -14,7 +14,7 @@ import weaviate as wv
 from datetime import datetime
 
 from utils.response_lib import *
-from utils.weaviate_utils import get_wv_class_name, create_library, delete_library
+from utils.weaviate_utils import get_wv_class_name, create_library, delete_library, to_json_doc
 from utils.bubble import get_bubble_doc
 from utils.cloud_funcs import cloud_scrape
 
@@ -28,23 +28,6 @@ else:
    lambda_client = boto3.client('lambda')
    LAMBDA_DATA_DIR = '/tmp'
 
-
-def to_json_doc(doc_name, doc_content, url=""):
-    doc_json = {
-        'title': doc_name,
-        'content': doc_content,
-        'date': datetime.now().astimezone().isoformat(),
-        'author': "",
-        'source': doc_name,
-        'url': url
-    }
-
-    local_doc_path = f'{LAMBDA_DATA_DIR}/{doc_name}.json'
-    upload_suffix = 'json'
-    with open(local_doc_path, 'w', encoding="utf-8") as file:
-        json.dump(doc_json, file)
-
-    return local_doc_path, upload_suffix
 
 
 # Lambda Handler

@@ -1,7 +1,13 @@
 import os
 import json
+from datetime import datetime
 
 import weaviate as wv
+
+if os.getenv('IS_OFFLINE'):
+   LAMBDA_DATA_DIR = '.'
+else:
+   LAMBDA_DATA_DIR = '/tmp'
 
 
 wv_client = wv.Client(
@@ -11,6 +17,24 @@ wv_client = wv.Client(
     },
     auth_client_secret=wv.auth.AuthApiKey(api_key=os.environ['WEAVIATE_API_KEY'])
 )
+
+
+def to_json_doc(doc_name, doc_content, url=""):
+    doc_json = {
+        'title': doc_name,
+        'content': doc_content,
+        'date': datetime.now().astimezone().isoformat(),
+        'author': "",
+        'source': doc_name,
+        'url': url
+    }
+
+    local_doc_path = f'{LAMBDA_DATA_DIR}/{doc_name}.json'
+    upload_suffix = 'json'
+    with open(local_doc_path, 'w', encoding="utf-8") as file:
+        json.dump(doc_json, file)
+
+    return local_doc_path, upload_suffix
 
 
 def get_wv_class_name(email, name):

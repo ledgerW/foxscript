@@ -191,6 +191,10 @@ class Workflow():
         self.steps = []
         self.output = {}
         self.user_inputs = {}
+        self.email = None
+        self.doc_id = None
+        self.bubble_id = None
+        self.workflow_library = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
 
@@ -296,6 +300,10 @@ class Workflow():
                 bubble_body['unseen_output'] = False
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
 
+            # Give Step the Workflow Library, if there is one
+            if self.workflow_library:
+                step.workflow_library = self.workflow_library
+
             # Run the Step
             step.run_step(step_input)
             time.sleep(10)
@@ -303,6 +311,10 @@ class Workflow():
                 print(step.output[:1000])
             except:
                 pass
+
+            # Get Workflow Library, if there is one
+            if step.workflow_library:
+                self.workflow_library = step.workflow_library
 
             # Update workflow running total word usage
             self.input_word_cnt = self.input_word_cnt + step.input_word_cnt
@@ -331,11 +343,13 @@ class Step():
         self.name = config['name']
         self.config = config
         self.func = ACTIONS[config['action']]['func'](**config['init'])
+        self.func.step_name = self.name
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
         self.output = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.workflow_library = None
 
     def __repr__(self):
         return f'Step - {self.name}'
@@ -343,5 +357,12 @@ class Step():
     def run_step(self, inputs):
         # Run it
         self.output = self.func(inputs)
+
+        try:
+            self.workflow_library = self.func.workflow_library
+            print(f'Workflow has Library: {self.workflow_library}')
+        except:
+            print('No Workflow Library')
+
         self.input_word_cnt = self.func.input_word_cnt
         self.output_word_cnt = self.func.output_word_cnt
