@@ -26,6 +26,11 @@ def get_init(body, email):
             'as_list': body['as_list']
         }
 
+    if body['type'] == 'Send Output':
+        init = {
+            'destination': body['destination']
+        }
+
     if body['type'] == 'Combine':
         init = {}
 
