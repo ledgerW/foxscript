@@ -538,8 +538,7 @@ class send_output():
             return_value = new_doc_name
 
         if self.destination == 'Workflow Library':
-            if os.getenv('IS_OFFLINE'):
-                lambda_client = boto3.client('lambda')
+            lambda_client = boto3.client('lambda')
 
             # create new workflow library (will be destroyed at end of workflow)
             name = str(uuid.uuid4()).replace('-', '_')
