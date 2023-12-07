@@ -6,7 +6,7 @@ import urllib
 import json
 
 import boto3
-from utils import content
+from utils.content import load_content
 from utils.weaviate_utils import wv_client, to_json_doc
 
 
@@ -38,7 +38,7 @@ def handler(event, context):
         local_content_path, upload_suffix = to_json_doc(data_class, content)
     
     if local_content_path.endswith('.pdf') or local_content_path.endswith('.json'):
-        content.load_content(
+        load_content(
             local_content_path,
             data_class=data_class,
             chunk_size=100,
