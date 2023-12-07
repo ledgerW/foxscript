@@ -276,6 +276,11 @@ class get_library_retriever():
             'input': ["questions"],
             'URL To Ignore': 'https://urltoignore.com'
         }
+        or
+        Input: {
+            'input': ["questions"],
+            'Library From Input': 'Libraryname'
+        }
 
         Returns: string
         """
@@ -285,6 +290,12 @@ class get_library_retriever():
             if self.workflow_library:
                 self.retriever = self.get_weaviate_retriever(class_name=self.workflow_library, k=self.k)
                 print(f'Using Worklfow Library: {self.workflow_library}')
+
+        if 'Library from input' in self.class_name:
+            print('Attempting to use Library From Input')
+
+            self.retriever = self.get_weaviate_retriever(class_name=input['Library From Input'], k=self.k)
+            print('Using Library From Input: {}'.format(input['Library From Input']))
 
 
         questions = input['input']
