@@ -6,7 +6,7 @@ import json
 import time
 import requests
 
-from utils.weaviate_utils import get_wv_class_name
+from utils.weaviate_utils import get_wv_class_name, delete_library
 from utils.bubble import update_bubble_object, get_bubble_doc
 from utils.Steps import ACTIONS
 
@@ -169,7 +169,7 @@ def get_step_from_bubble(step_id, email=None, return_config=False):
         return Step(step_config_from_bubble(bubble_step, email))
 
 
-def get_workflow_from_bubble(workflow_id, email=None):
+def get_workflow_from_bubble(workflow_id, email=None, doc_id=None):
     # get workflow data from bubble db
     endpoint = BUBBLE_API_ROOT + '/workflow' + f'/{workflow_id}'
     res = requests.get(
@@ -184,7 +184,8 @@ def get_workflow_from_bubble(workflow_id, email=None):
         'name': bubble_workflow['name'],
         'steps': step_configs,
         'workflow_id': workflow_id,
-        'email': email
+        'email': email,
+        'doc_id': doc_id
     }
 
     return Workflow().load_from_config(workflow_config)
@@ -216,6 +217,7 @@ class Workflow():
         try:
             self.bubble_id = config['workflow_id']
             self.email = config['email']
+            self.doc_id = config['doc_id']
         except:
             pass
         
@@ -305,9 +307,19 @@ class Workflow():
                 bubble_body['unseen_output'] = False
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
 
-            # Give Step the Workflow Library, if there is one
+
+            # Attach Workflow Items to Step and Step func
+            step.doc_id = self.doc_id
+            step.func.doc_id = self.doc_id
+            step.workflow_name = self.name
+            step.func.workflow_name = self.name
+            step.email = self.email
+            step.func.email = self.email
+
+
             if self.workflow_library:
                 step.workflow_library = self.workflow_library
+                step.func.workflow_library = self.workflow_library
 
             # Run the Step
             step.run_step(step_input)
@@ -340,6 +352,11 @@ class Workflow():
                 bubble_body['is_waiting'] = False
                 bubble_body['unseen_output'] = True
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
+
+        # Finished running all steps
+        if self.workflow_library:
+            delete_library(self.workflow_library)
+            print(f"Removed {self.workflow_library} from Weaviate")
                
 
 
@@ -349,12 +366,14 @@ class Step():
         self.config = config
         self.func = ACTIONS[config['action']]['func'](**config['init'])
         self.func.step_name = self.name
+        self.doc_id = None
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
         self.output = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_library = None
+        self.email = None
 
     def __repr__(self):
         return f'Step - {self.name}'

@@ -34,7 +34,6 @@ from utils.bubble import create_bubble_object, update_bubble_object, get_bubble_
 
 
 if os.getenv('IS_OFFLINE'):
-    #boto3.setup_default_session(profile_name='ledger')
     lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
     LAMBDA_DATA_DIR = '.'
 else:
@@ -280,7 +279,7 @@ class get_library_retriever():
 
         Returns: string
         """
-        if self.class_name == 'Workflow Library':
+        if 'Workflow library' in self.class_name:
             print('Attempting to use Workflow Library')
 
             if self.workflow_library:
@@ -508,6 +507,7 @@ class send_output():
         Returns: string
         """
         content = input['input']
+        content = '\n'.join(content) if type(content)==list else content
 
         if self.destination == 'Project':
             # get project id for output docs using dummy temp doc id provided in initial call
@@ -516,6 +516,7 @@ class send_output():
             
             # send result to Bubble Document
             new_doc_name = f"{self.workflow_name} - {self.step_name}"
+
             body = {
                 'name': new_doc_name,
                 'text': content,
@@ -537,6 +538,9 @@ class send_output():
             return_value = new_doc_name
 
         if self.destination == 'Workflow Library':
+            if os.getenv('IS_OFFLINE'):
+                lambda_client = boto3.client('lambda')
+
             # create new workflow library (will be destroyed at end of workflow)
             name = str(uuid.uuid4()).replace('-', '_')
             cls_name, account_name = get_wv_class_name(self.email, name)
@@ -562,8 +566,8 @@ class send_output():
             return_value = cls_name
 
         # Get input and output word count
-        self.input_word_cnt = len(input['input'].replace('\n\n', ' ').split(' '))
-        self.output_word_cnt = len(input['input'].replace('\n\n', ' ').split(' '))
+        self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
+        self.output_word_cnt = len(content.replace('\n\n', ' ').split(' '))
 
         return return_value
         

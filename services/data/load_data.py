@@ -37,8 +37,6 @@ def handler(event, context):
 
         local_content_path, upload_suffix = to_json_doc(data_class, content)
     
-    print(doc_name)
-    
     if local_content_path.endswith('.pdf') or local_content_path.endswith('.json'):
         content.load_content(
             local_content_path,
@@ -46,6 +44,7 @@ def handler(event, context):
             chunk_size=100,
             wv_client=wv_client
         )
+        print(f"Loaded {local_content_path}")
     else:
         print("NOT PROCESSING - Doesn't end in .pdf or .json")
 

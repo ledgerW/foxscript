@@ -6,8 +6,10 @@ import weaviate as wv
 
 if os.getenv('IS_OFFLINE'):
    LAMBDA_DATA_DIR = '.'
+   WEAVIATE_SCHEMA_DIR = '../../'
 else:
    LAMBDA_DATA_DIR = '/tmp'
+   WEAVIATE_SCHEMA_DIR = ''
 
 
 wv_client = wv.Client(
@@ -64,7 +66,7 @@ def create_library(name):
     }
 
     # make new source content class
-    with open('weaviate/schema/Content.json', 'r', encoding='utf-8') as f:
+    with open(WEAVIATE_SCHEMA_DIR + 'weaviate/schema/Content.json', 'r', encoding='utf-8') as f:
       content_cls = json.loads(f.read())
 
     content_cls['class'] = content_cls_name
@@ -73,7 +75,7 @@ def create_library(name):
 
 
     # make new source chunk class
-    with open('weaviate/schema/Chunk.json', 'r', encoding='utf-8') as f:
+    with open(WEAVIATE_SCHEMA_DIR + 'weaviate/schema/Chunk.json', 'r', encoding='utf-8') as f:
       chunk_cls = json.loads(f.read())
 
     chunk_cls['class'] = chunk_cls_name
