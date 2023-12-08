@@ -12,6 +12,7 @@ import os
 import json
 import time
 import re
+import uuid
 import boto3
 import pandas as pd
 from datetime import datetime
@@ -26,13 +27,13 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results
-from utils.weaviate_utils import wv_client
+from utils.weaviate_utils import wv_client, get_wv_class_name, create_library, to_json_doc
 from utils.cloud_funcs import cloud_research, cloud_scrape
 from utils.general import SQS
+from utils.bubble import create_bubble_object, update_bubble_object, get_bubble_object
 
 
 if os.getenv('IS_OFFLINE'):
-    #boto3.setup_default_session(profile_name='ledger')
     lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
     LAMBDA_DATA_DIR = '.'
 else:
@@ -40,6 +41,7 @@ else:
     LAMBDA_DATA_DIR = '/tmp'
 
 STAGE = os.getenv('STAGE')
+BUCKET = os.getenv('BUCKET')
 
 
 class get_chain():
@@ -48,7 +50,7 @@ class get_chain():
         self.output_word_cnt = 0
         self.as_list = as_list
 
-        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=1.0)
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
         self.input_vars = re.findall('{(.+?)}', prompt)
 
@@ -92,7 +94,11 @@ class get_chain():
         self.output_word_cnt = len(res['text'].split(' '))
 
         if self.as_list:
-            return_items = res['text'].split('\n')
+            if "<SPLIT>" in res['text']:
+                splitter = "<SPLIT>"
+            else:
+                splitter = "\n"
+            return_items = res['text'].split(splitter)
             return [item for item in return_items if item != '']
         else:
             return res['text']
@@ -229,14 +235,16 @@ class do_research():
   
 
 class get_library_retriever():
-    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False):
+    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False, ignore_url=False):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.class_name = class_name
         self.k = k
         self.as_qa = as_qa
         self.from_similar_docs = from_similar_docs
+        self.ignore_url = ignore_url
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
+        self.workflow_library = None
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
 
@@ -263,9 +271,33 @@ class get_library_retriever():
     def __call__(self, input):
         """
         Input: {'input': ["questions"]}
+        or
+        Input: {
+            'input': ["questions"],
+            'URL To Ignore': 'https://urltoignore.com'
+        }
+        or
+        Input: {
+            'input': ["questions"],
+            'Library From Input': 'Libraryname'
+        }
 
         Returns: string
         """
+        if 'Workflow library' in self.class_name:
+            print('Attempting to use Workflow Library')
+
+            if self.workflow_library:
+                self.retriever = self.get_weaviate_retriever(class_name=self.workflow_library, k=self.k)
+                print(f'Using Worklfow Library: {self.workflow_library}')
+
+        if 'Library from input' in self.class_name:
+            print('Attempting to use Library From Input')
+
+            self.retriever = self.get_weaviate_retriever(class_name=input['Library From Input'], k=self.k)
+            print('Using Library From Input: {}'.format(input['Library From Input']))
+
+
         questions = input['input']
 
         all_results = ''
@@ -294,9 +326,22 @@ class get_library_retriever():
                         "vector": OpenAIEmbeddings().embed_query(question)
                     }
 
+                    if self.ignore_url:
+                        url_to_ignore = input['URL To Ignore']
+                        url_to_ignore = url_to_ignore[0] if type(url_to_ignore)==list else url_to_ignore
+
+                        where_filter = {
+                            "path": ["url"],
+                            "operator": "NotEqual",
+                            "valueText": url_to_ignore,
+                        }
+                    else:
+                        where_filter = {}
+
                     result = wv_client.query\
                         .get(f"{self.class_name}Content", ['title', 'source', 'url'])\
                         .with_additional(["distance", 'id'])\
+                        .with_where(where_filter)\
                         .with_near_vector(nearVector)\
                         .with_limit(self.k)\
                         .do()
@@ -441,8 +486,7 @@ class combine_output():
         """
         Input: {
             'input_var_name': "input_var_val",
-            'input_var2_name': "input_var2_val",
-            ...
+            'input_var2_name': "input_var2_val"
         }
 
         Returns: string
@@ -454,6 +498,88 @@ class combine_output():
         self.output_word_cnt = len(combined.replace('\n\n', ' ').split(' '))
 
         return combined
+    
+
+class send_output():
+    def __init__(self, destination=None):
+        self.destination = destination
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.workflow_name = None
+        self.step_name = None
+        self.doc_id = None
+        self.email = None
+        self.workflow_library = None
+
+    def __call__(self, input):
+        """
+        Input: {'input': "input_val"}
+
+        Returns: string
+        """
+        content = input['input']
+        content = '\n'.join(content) if type(content)==list else content
+
+        if self.destination == 'Project':
+            # get project id for output docs using dummy temp doc id provided in initial call
+            res = get_bubble_object('document', self.doc_id)
+            project_id = res.json()['response']['project']
+            
+            # send result to Bubble Document
+            new_doc_name = f"{self.workflow_name} - {self.step_name}"
+
+            body = {
+                'name': new_doc_name,
+                'text': content,
+                'user_email': self.email,
+                'project': project_id
+            }
+            res = create_bubble_object('document', body)
+            new_doc_id = res.json()['id']
+
+            # add new doc to project
+            res = get_bubble_object('project', project_id)
+            try:
+                project_docs = res.json()['response']['documents']
+            except:
+                project_docs = []
+
+            _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+
+            return_value = new_doc_name
+
+        if self.destination == 'Workflow Library':
+            lambda_client = boto3.client('lambda')
+
+            # create new workflow library (will be destroyed at end of workflow)
+            name = str(uuid.uuid4()).replace('-', '_')
+            cls_name, account_name = get_wv_class_name(self.email, name)
+            create_library(cls_name)
+            self.workflow_library = cls_name
+
+            # load content into workflow library
+            payload = {
+                "body": {
+                    'bucket': BUCKET,
+                    'cls_name': cls_name,
+                    'content': content
+
+                }
+            }
+
+            _ = lambda_client.invoke(
+                FunctionName=f'foxscript-data-{STAGE}-load_data',
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
+            )
+
+            return_value = cls_name
+
+        # Get input and output word count
+        self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
+        self.output_word_cnt = len(content.replace('\n\n', ' ').split(' '))
+
+        return return_value
         
 
 #class get_yt_url():
@@ -503,6 +629,10 @@ ACTIONS = {
     },
     'Subtopics': {
         'func': get_subtopics,
+        'returns': 'string'
+    },
+    'Send Output': {
+        'func': send_output,
         'returns': 'string'
     }
 }

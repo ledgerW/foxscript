@@ -6,7 +6,7 @@ import json
 import time
 import requests
 
-from utils.weaviate_utils import get_wv_class_name
+from utils.weaviate_utils import get_wv_class_name, delete_library
 from utils.bubble import update_bubble_object, get_bubble_doc
 from utils.Steps import ACTIONS
 
@@ -24,6 +24,11 @@ def get_init(body, email):
         init = {
             'prompt': body['init_text'],
             'as_list': body['as_list']
+        }
+
+    if body['type'] == 'Send Output':
+        init = {
+            'destination': body['destination']
         }
 
     if body['type'] == 'Combine':
@@ -50,7 +55,9 @@ def get_init(body, email):
         init = {
             'class_name': class_name,
             'k': int(body['init_number']),
-            'as_qa': body['as_qa']
+            'as_qa': body['as_qa'],
+            'from_similar_docs': body['from_similar_docs'],
+            'ignore_url': body['ignore_url']
         }
 
     if body['type'] == 'Workflow':
@@ -77,10 +84,22 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {input_vars[0]: input_vals[0]}
         
         if input_type == 'Library Research':
-            try:
-                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
-            except:
-                input_vals = {input_vars[0]: input_vals[0]}
+            if len(input_vars) == 1:
+                try:
+                    input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+                except:
+                    input_vals = {input_vars[0]: input_vals[0]}
+            else:
+                try:
+                    input_vals = {
+                        input_vars[0]: [input_vals[0].split('\n')],
+                        input_vars[1]: input_vals[1]
+                    }
+                except:
+                    input_vals = {
+                        input_vars[0]: input_vals[0],
+                        input_vars[1]: input_vars[1]
+                    }
 
         if input_type == 'Analyze CSV':
             try:
@@ -103,7 +122,10 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {'input': input_vals[0]}
         
         if input_type == 'Library Research':
-            input_vals = {'input': input_vals[0].split('\n')}
+            input_vals = {
+                input_vars[0]: input_vals[0].split('\n'),
+                input_vars[1]: input_vals[1]
+            }
 
         if input_type == 'Analyze CSV':
             input_vals = {'input': input_vals[0].split('\n')}
@@ -147,7 +169,7 @@ def get_step_from_bubble(step_id, email=None, return_config=False):
         return Step(step_config_from_bubble(bubble_step, email))
 
 
-def get_workflow_from_bubble(workflow_id, email=None):
+def get_workflow_from_bubble(workflow_id, email=None, doc_id=None):
     # get workflow data from bubble db
     endpoint = BUBBLE_API_ROOT + '/workflow' + f'/{workflow_id}'
     res = requests.get(
@@ -162,7 +184,8 @@ def get_workflow_from_bubble(workflow_id, email=None):
         'name': bubble_workflow['name'],
         'steps': step_configs,
         'workflow_id': workflow_id,
-        'email': email
+        'email': email,
+        'doc_id': doc_id
     }
 
     return Workflow().load_from_config(workflow_config)
@@ -174,6 +197,10 @@ class Workflow():
         self.steps = []
         self.output = {}
         self.user_inputs = {}
+        self.email = None
+        self.doc_id = None
+        self.bubble_id = None
+        self.workflow_library = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
 
@@ -190,6 +217,7 @@ class Workflow():
         try:
             self.bubble_id = config['workflow_id']
             self.email = config['email']
+            self.doc_id = config['doc_id']
         except:
             pass
         
@@ -279,6 +307,20 @@ class Workflow():
                 bubble_body['unseen_output'] = False
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
 
+
+            # Attach Workflow Items to Step and Step func
+            step.doc_id = self.doc_id
+            step.func.doc_id = self.doc_id
+            step.workflow_name = self.name
+            step.func.workflow_name = self.name
+            step.email = self.email
+            step.func.email = self.email
+
+
+            if self.workflow_library:
+                step.workflow_library = self.workflow_library
+                step.func.workflow_library = self.workflow_library
+
             # Run the Step
             step.run_step(step_input)
             time.sleep(10)
@@ -286,6 +328,10 @@ class Workflow():
                 print(step.output[:1000])
             except:
                 pass
+
+            # Get Workflow Library, if there is one
+            if step.workflow_library:
+                self.workflow_library = step.workflow_library
 
             # Update workflow running total word usage
             self.input_word_cnt = self.input_word_cnt + step.input_word_cnt
@@ -306,6 +352,11 @@ class Workflow():
                 bubble_body['is_waiting'] = False
                 bubble_body['unseen_output'] = True
                 _ = update_bubble_object('step', step.bubble_id, bubble_body)
+
+        # Finished running all steps
+        if self.workflow_library:
+            delete_library(self.workflow_library)
+            print(f"Removed {self.workflow_library} from Weaviate")
                
 
 
@@ -314,11 +365,15 @@ class Step():
         self.name = config['name']
         self.config = config
         self.func = ACTIONS[config['action']]['func'](**config['init'])
+        self.func.step_name = self.name
+        self.doc_id = None
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
         self.output = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.workflow_library = None
+        self.email = None
 
     def __repr__(self):
         return f'Step - {self.name}'
@@ -326,5 +381,12 @@ class Step():
     def run_step(self, inputs):
         # Run it
         self.output = self.func(inputs)
+
+        try:
+            self.workflow_library = self.func.workflow_library
+            print(f'Workflow has Library: {self.workflow_library}')
+        except:
+            print('No Workflow Library')
+
         self.input_word_cnt = self.func.input_word_cnt
         self.output_word_cnt = self.func.output_word_cnt

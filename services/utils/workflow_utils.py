@@ -99,7 +99,7 @@ def get_content_embeddings(urls):
         cloud_scrape(url, sqs=sqs)
         time.sleep(3)
 
-    results = queue.collect(len(urls), max_wait=600)
+    results = queue.collect(len(urls), max_wait=420)
     all_chunks = [result['chunks'].split('<SPLIT>') for result in results]
     print('Total chunks: {}'.format(sum([len(l) for l in all_chunks])))
     all_urls = [result['url'] for result in results]
@@ -138,6 +138,7 @@ def get_topic_clusters(topic, top_n=10):
     embedding_matrix = np.vstack(topic_df.embedding.values)
 
     n_clusters = max(2, int(topic_df.shape[0]/10))
+    n_clusters = min(20, n_clusters)
     print(f"Making {n_clusters} clusters")
     kmeans = cluster(embedding_matrix, n_clusters)
     topic_df['cluster'] = kmeans.labels_
@@ -149,17 +150,47 @@ def get_cluster_results(topic_df, LLM):
     print('Getting subtopic themes')
     input_word_cnt = 0
     output_word_cnt = 0
-    samples = 5
+    samples = 100
 
     all_subtopics = ""
     clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
+    existing_themes = ''
     for idx, i in enumerate(clusters):
         this_cluster_df = topic_df[topic_df.cluster == i]
         n_samples = this_cluster_df.shape[0]
 
         if n_samples > 0:
-            sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
-            prompt = f'Sentences:\n"""\n{sentences}\n"""\n\nWhat do the sentences above have in common? Give them a descriptive theme name.\n\nTheme:'
+            #return_n_samples = min(100, n_samples)
+            #sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
+            sentences = ''
+            for url in this_cluster_df.url.unique():
+                sentences = sentences + f"\nSource: {url}\n"
+                this_url_df = this_cluster_df.query('url == @url').reset_index(drop=True)
+                for j in range(this_url_df.shape[0]):
+                    sentences = sentences + '- ' + this_url_df.chunk.values[j] + '\n'
+            
+            #sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
+            
+            prompt = f"""Sentences:
+    {sentences}
+
+    Existing Themes:
+    {existing_themes}
+    
+    You have two jobs.
+    1) Come up with a short, descriptive, specific theme name for the sentences provided above. But you can't reuse an Existing Theme name.
+    2) Write a thorough, detail-oriented distilation of the sentences. Be sure to capture any specific numbers or figures.
+    The details are important! Think of this task as distilling all the information without leaving out any important details.
+    Prefer thoughness over brevity here.
+
+    Follow the template below for your output.
+    
+    Theme: [theme name]
+    Key Elements:
+    [distilation of sentences]
+    
+    Sources:
+    [list of source urls]"""
 
             # FoxLLM fallbacks, if necessary
             res = None
@@ -176,20 +207,15 @@ def get_cluster_results(topic_df, LLM):
                     except:
                         continue
             
-            theme = res.content.replace("\n", "")
+            theme_and_summary = res.content
+            theme = theme_and_summary.split('Theme:')[1].split('Key Elements:')[0].replace('\n', '').strip()
+            existing_themes = existing_themes + f"\n{theme}"
 
-            subtopic = f"Sub-topic {idx}: {theme}\n"
-            subtopic = subtopic + f"N Samples: {n_samples}\n"
+            subtopic = f"Subtopic {idx+1}\n"
+            subtopic = subtopic + f"Sections of text found: {n_samples}\n"
+            subtopic = subtopic + f"{theme_and_summary}\n"
 
-            return_n_samples = min(100, n_samples)
-            sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
-            for url in sample_cluster_rows.url.unique():
-                subtopic = subtopic + f"\nSource: {url}\n"
-                this_url_df = sample_cluster_rows.query('url == @url').reset_index(drop=True)
-                for j in range(this_url_df.shape[0]):
-                    subtopic = subtopic + '- ' + this_url_df.chunk.values[j] + '\n'
-
-            subtopic = subtopic + ("-" * 10) + '\n'
+            subtopic = subtopic + '\n' + ("_" * 3) + '\n\n'
 
             all_subtopics = all_subtopics + subtopic
             input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))

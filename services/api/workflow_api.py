@@ -134,7 +134,7 @@ def run_workflow(event, context):
    
    
    # load and run workflow
-    workflow = get_workflow_from_bubble(workflow_id, email=email)
+    workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
 
     # get workflow inputs
     input_vals = prep_input_vals(input_vars, input_vals, workflow)
