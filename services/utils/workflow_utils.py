@@ -99,7 +99,7 @@ def get_content_embeddings(urls):
         cloud_scrape(url, sqs=sqs)
         time.sleep(3)
 
-    results = queue.collect(len(urls), max_wait=600)
+    results = queue.collect(len(urls), max_wait=420)
     all_chunks = [result['chunks'].split('<SPLIT>') for result in results]
     print('Total chunks: {}'.format(sum([len(l) for l in all_chunks])))
     all_urls = [result['url'] for result in results]
@@ -138,6 +138,7 @@ def get_topic_clusters(topic, top_n=10):
     embedding_matrix = np.vstack(topic_df.embedding.values)
 
     n_clusters = max(2, int(topic_df.shape[0]/10))
+    n_clusters = min(20, n_clusters)
     print(f"Making {n_clusters} clusters")
     kmeans = cluster(embedding_matrix, n_clusters)
     topic_df['cluster'] = kmeans.labels_
