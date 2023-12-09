@@ -13,7 +13,7 @@ custom:
   bucket_name: foxscript-content-${self:custom.stage}
 
   serverless-offline:
-    httpPort: 3005
+    httpPort: 3006
 
 package:
   individually: true
