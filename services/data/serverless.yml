@@ -39,7 +39,7 @@ provider:
   ecr:
     images:
       data_image:
-        path: ..
+        path: ../..
         file: data.Dockerfile
 
   environment:

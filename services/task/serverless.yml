@@ -100,7 +100,7 @@ provider:
   ecr:
     images:
       task_image:
-        path: ..
+        path: ../..
         file: task.Dockerfile
 
   environment:
