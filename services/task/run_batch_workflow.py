@@ -45,7 +45,7 @@ def main(task_args):
     batch_doc_id = task_args['batch_doc_id']
 
     # load and run workflow
-    workflow = get_workflow_from_bubble(workflow_id, email=email)
+    workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
 
     # get project id for output docs using dummy temp doc id provided in initial call
     res = get_bubble_object('document', doc_id)
