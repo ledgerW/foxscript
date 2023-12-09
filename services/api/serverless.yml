@@ -45,11 +45,6 @@ provider:
       'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-restApiId
     restApiRootResourceId:
       'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-rootResourceId
-  ecr:
-    images:
-      api_image:
-        path: ..
-        file: api.Dockerfile
  
   environment:
     STAGE: ${self:custom.stage}
