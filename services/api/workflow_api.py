@@ -64,6 +64,7 @@ def workflow(event, context):
     if 'sqs' in body:
        # this is a Workflow as Step running distributed
        out_body = {
+            'order': body['order'],
             'workflow_id': workflow_id,
             'email': email,
             'doc_id': doc_id,
