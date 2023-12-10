@@ -86,6 +86,7 @@ def main(task_args):
             queue = SQS(task_args['sqs'])
             workflow.run_all(input_vals, bubble=False)
             queue.send({
+                'order': 0,
                 'output': workflow.steps[-1].output,
                 'input_word_cnt': workflow.input_word_cnt,
                 'output_word_cnt': workflow.output_word_cnt

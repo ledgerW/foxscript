@@ -64,6 +64,7 @@ def workflow(event, context):
     if 'sqs' in body:
        # this is a Workflow as Step running distributed
        out_body = {
+            'order': body['order'],
             'workflow_id': workflow_id,
             'email': email,
             'doc_id': doc_id,
@@ -145,6 +146,7 @@ def run_workflow(event, context):
         queue = SQS(body['sqs'])
         workflow.run_all(input_vals, bubble=False)
         queue.send({
+            'order': body['order'],
             'output': workflow.steps[-1].output,
             'input_word_cnt': workflow.input_word_cnt,
             'output_word_cnt': workflow.output_word_cnt

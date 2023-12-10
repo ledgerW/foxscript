@@ -423,7 +423,7 @@ class get_workflow():
         if type(input_vals) == list:
             if os.getenv('IS_OFFLINE'):
                 sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-                for input in input_vals:
+                for order, input in enumerate(input_vals):
                     payload = {
                         "body": {
                             'workflow_id': self.workflow.bubble_id,
@@ -432,7 +432,8 @@ class get_workflow():
                             'run_id': '',
                             'input_vars': input_key,
                             'input_vals': input,
-                            'sqs': sqs
+                            'sqs': sqs,
+                            'order': order
                         }
                     }
 
@@ -444,7 +445,7 @@ class get_workflow():
             else:
                 sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
                 queue = SQS(sqs)
-                for input in input_vals:
+                for order, input in enumerate(input_vals):
                     payload = {
                         "body": {
                             'workflow_id': self.workflow.bubble_id,
@@ -453,7 +454,8 @@ class get_workflow():
                             'run_id': '',
                             'input_vars': input_key,
                             'input_vals': input,
-                            'sqs': sqs
+                            'sqs': sqs,
+                            'order': order
                         }
                     }
 

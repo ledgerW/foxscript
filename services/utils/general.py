@@ -2,6 +2,7 @@ import boto3
 import json
 import time
 from datetime import datetime
+import pandas as pd
 
 
 class SQS():
@@ -57,11 +58,17 @@ class SQS():
             else:
                 time.sleep(0.1)
 
-            # force break after 5 minutes
+            # force break after max wait
             if (datetime.now() - start).seconds > max_wait:
                 self.self_destruct()
                 break
         
+        # sort items if order key is present
+        try:
+            all_items = json.loads(pd.DataFrame(all_items).sort_values(by='order').to_json(orient='records'))
+        except:
+            pass
+
         return all_items
 
     def self_destruct(self):

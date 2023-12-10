@@ -15,8 +15,7 @@ custom:
   bucket_name: foxscript-content-${self:custom.stage}
 
   serverless-offline:
-    lambdaPort: 3003
-    httpPort: 3005
+    httpPort: 3007
 
   # VPC
   vpcConfig:
