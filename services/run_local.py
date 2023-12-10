@@ -15,6 +15,5 @@ if __name__ == "__main__":
     stage = f"--stage {args.stage}"
 
     cmd = ' '.join([base, api, data, task, backend_jobs, stage])
-    #print(cmd)
 
     subprocess.run(cmd, shell=True) 
