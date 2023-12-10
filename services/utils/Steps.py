@@ -528,7 +528,7 @@ class send_output():
             project_id = res.json()['response']['project']
             
             # send result to Bubble Document
-            new_doc_name = f"{self.workflow_name} - {self.step_name}"
+            new_doc_name = f"{self.step_name} - {content[:30]}"
 
             body = {
                 'name': new_doc_name,
