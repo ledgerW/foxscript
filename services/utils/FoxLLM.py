@@ -18,8 +18,8 @@ AZ_GPT_4_TURBO = 'gpt-4-turbo'
 AZ_GPT_4_32K = 'gpt-4-32k'
 AZ_EMBEDDING = 'text-embedding-ada-002'
 
-GPT_35 = 'gpt-3.5-turbo'
-GPT_35_16K = 'gpt-3.5-turbo-16k'
+GPT_35 = 'gpt-3.5-turbo-1106'
+GPT_35_16K = 'gpt-3.5-turbo-1106'
 GPT_4 = 'gpt-4'
 GPT_4_TURBO = 'gpt-4-1106-preview'
 EMBEDDING = 'text-embedding-ada-002'
@@ -68,15 +68,12 @@ class FoxLLM():
             'gpt-35-16k': [
                 self.openai_models['gpt-35'],
                 self.az_models['gpt-35'],
-                self.openai_models['gpt-35-16k']
+                self.az_models['gpt-35-16k']
             ]
         }
 
         # Default to
-        if model_name == 'gpt-4':
-            self.llm = self.openai_models[model_name]
-        else:
-            self.llm = self.az_models[model_name]
+        self.llm = self.openai_models[model_name]
         
         self.fallbacks = list(reversed(self.model_fallbacks[model_name]))
 
