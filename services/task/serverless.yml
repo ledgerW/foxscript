@@ -61,9 +61,9 @@ custom:
     # for a list of available service endpoints to provision within the VPC
     # (varies per region)
     services:
-      - lambda
-      - sqs
-      - cloudformation
+    #  - lambda
+    #  - sqs
+    #  - cloudformation
     #  - ecs-agent
     #  - ecs-telemetry
     #  - lambda

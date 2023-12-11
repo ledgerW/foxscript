@@ -18,6 +18,12 @@ import pandas as pd
 from datetime import datetime
 #from youtubesearchpython import VideosSearch
 
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
+
 from langchain.chains.llm import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
@@ -262,6 +268,7 @@ class get_library_retriever():
         return retriever
 
 
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     def get_library_chunks(self, query, where_filter=None):
         chunks = self.retriever.get_relevant_documents(query, where_filter=where_filter)
 
@@ -528,7 +535,7 @@ class send_output():
             project_id = res.json()['response']['project']
             
             # send result to Bubble Document
-            new_doc_name = f"{self.workflow_name} - {self.step_name}"
+            new_doc_name = f"{self.step_name} - {content[:30]}"
 
             body = {
                 'name': new_doc_name,
