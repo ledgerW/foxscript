@@ -40,7 +40,10 @@ def workflow(event, context):
         input_vars = [x.strip() for x in input_vars.split(',') if x]
 
         input_vals = event['body']['input_vals']
-        input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
+        if type(input_vals) == str:
+            input_vals = [x.strip() for x in input_vals.split('<SPLIT>') if x]
+        else:
+            pass
 
         body = event['body']
     except:

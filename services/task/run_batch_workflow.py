@@ -96,7 +96,7 @@ def main(task_args):
 
             # send result to Bubble Document
             body = {
-                'name': workflow.steps[-1].output[:25],
+                'name': list(input_vals.values())[0].replace('\n','_').replace(' ','_')[:50],
                 'text': workflow.steps[-1].output,
                 'user_email': email,
                 'project': project_id
