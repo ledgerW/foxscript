@@ -67,7 +67,10 @@ def get_init(body, email):
         }
 
     if body['type'] == 'Workflow':
-        init = {'workflow': get_workflow_from_bubble(body['init_text'], email=email)}
+        init = {
+            'workflow': get_workflow_from_bubble(body['init_text'], email=email),
+            'in_parallel': body['in_parallel']
+        }
 
     return init
 

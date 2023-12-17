@@ -407,11 +407,13 @@ class get_subtopics():
   
 
 class get_workflow():
-    def __init__(self, workflow=None):
+    def __init__(self, workflow=None, in_parallel=True):
+        self.in_parallel = in_parallel
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         if workflow:
             self.workflow = workflow
+            self.clean_workflow = workflow
 
     def __call__(self, inputs):
         """
@@ -450,35 +452,49 @@ class get_workflow():
 
                 return 'Dummy OFFLINE Output'
             else:
-                sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-                queue = SQS(sqs)
-                for order, input in enumerate(input_vals):
-                    payload = {
-                        "body": {
-                            'workflow_id': self.workflow.bubble_id,
-                            'email': self.workflow.email,
-                            'doc_id': '',
-                            'run_id': '',
-                            'input_vars': input_key,
-                            'input_vals': input,
-                            'sqs': sqs,
-                            'order': order
+                if self.in_parallel:
+                    sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                    queue = SQS(sqs)
+                    for order, input in enumerate(input_vals):
+                        payload = {
+                            "body": {
+                                'workflow_id': self.workflow.bubble_id,
+                                'email': self.workflow.email,
+                                'doc_id': '',
+                                'run_id': '',
+                                'input_vars': input_key,
+                                'input_vals': input,
+                                'sqs': sqs,
+                                'order': order
+                            }
                         }
-                    }
 
-                    _ = lambda_client.invoke(
-                        FunctionName=f'foxscript-api-{STAGE}-workflow',
-                        InvocationType='Event',
-                        Payload=json.dumps(payload)
-                    )
-                    time.sleep(5)
-            
-                results = queue.collect(len(input_vals), max_wait=600)
+                        _ = lambda_client.invoke(
+                            FunctionName=f'foxscript-api-{STAGE}-workflow',
+                            InvocationType='Event',
+                            Payload=json.dumps(payload)
+                        )
+                        time.sleep(2)
+                
+                    results = queue.collect(len(input_vals), max_wait=780)
 
-                outputs = [result['output'] for result in results]
-                self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
-                self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
-                return '\n\n'.join(outputs)
+                    outputs = [result['output'] for result in results]
+                    self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
+                    self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
+                    return '\n\n'.join(outputs)
+                else:
+                    output = ''
+                    for order, input in enumerate(input_vals):
+                        self.workflow.run_all({input_key: input}, bubble=False)
+                        self.input_word_cnt = self.input_word_cnt + self.workflow.input_word_cnt
+                        self.output_word_cnt = self.output_word_cnt + self.workflow.output_word_cnt
+                        output = output + self.workflow.steps[-1].output + '\n\n'
+
+                        # reset workflow
+                        self.workflow = self.clean_workflow
+                    
+                    return output
+
         else:
             self.workflow.run_all(inputs, bubble=False)
             self.input_word_cnt = self.workflow.input_word_cnt
