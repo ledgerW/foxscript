@@ -510,8 +510,9 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None):
+    def __init__(self, destination=None, as_workflow_doc=False):
         self.destination = destination
+        self.as_workflow_doc = as_workflow_doc
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -519,6 +520,8 @@ class send_output():
         self.doc_id = None
         self.email = None
         self.workflow_library = None
+        self.workflow_document = None
+
 
     def __call__(self, input):
         """
@@ -529,33 +532,66 @@ class send_output():
         content = input['input']
         content = '\n'.join(content) if type(content)==list else content
 
+        print(f'Destination: {self.destination}')
+        print(f'As Workflow Doc: {self.as_workflow_doc}')
+        print(f'Workflow Doc: {self.workflow_document}')
+
         if self.destination == 'Project':
             # get project id for output docs using dummy temp doc id provided in initial call
             res = get_bubble_object('document', self.doc_id)
             project_id = res.json()['response']['project']
             
             # send result to Bubble Document
-            new_doc_name = f"{self.step_name} - {content[:30]}"
+            if self.as_workflow_doc:
+                try:
+                    res = update_bubble_object('document', self.workflow_document, {'text': content})
+                    resp = res.json()['response']
+                    new_doc_id = self.workflow_document
+                except:
+                    new_doc_name = 'tmp-workflow-doc'
 
-            body = {
-                'name': new_doc_name,
-                'text': content,
-                'user_email': self.email,
-                'project': project_id
-            }
-            res = create_bubble_object('document', body)
-            new_doc_id = res.json()['id']
+                    body = {
+                        'name': new_doc_name,
+                        'text': content,
+                        'user_email': self.email,
+                        'project': project_id
+                    }
+                    res = create_bubble_object('document', body)
+                    new_doc_id = res.json()['id'] 
 
-            # add new doc to project
-            res = get_bubble_object('project', project_id)
-            try:
-                project_docs = res.json()['response']['documents']
-            except:
-                project_docs = []
+                    self.workflow_document = new_doc_id
 
-            _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+                    # add new doc to project
+                    res = get_bubble_object('project', project_id)
+                    try:
+                        project_docs = res.json()['response']['documents']
+                    except:
+                        project_docs = []
 
-            return_value = new_doc_name
+                    _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]}) 
+            else:
+                new_doc_name = f"{self.step_name} - {content[:30]}"
+
+                body = {
+                    'name': new_doc_name,
+                    'text': content,
+                    'user_email': self.email,
+                    'project': project_id
+                }
+                res = create_bubble_object('document', body)
+                new_doc_id = res.json()['id']
+
+                # add new doc to project
+                res = get_bubble_object('project', project_id)
+                try:
+                    project_docs = res.json()['response']['documents']
+                except:
+                    project_docs = []
+
+                _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+
+            return_value = new_doc_id
+
 
         if self.destination == 'Workflow Library':
             lambda_client = boto3.client('lambda')
@@ -583,6 +619,47 @@ class send_output():
             )
 
             return_value = cls_name
+
+        # Get input and output word count
+        self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
+        self.output_word_cnt = len(content.replace('\n\n', ' ').split(' '))
+
+        return return_value
+    
+
+class fetch_input():
+    def __init__(self, source=None):
+        self.source = source
+        self.workflow_document = None
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.workflow_name = None
+        self.step_name = None
+        self.doc_id = None
+        self.email = None
+
+
+    def __call__(self, input):
+        """
+        Input: {'input': "input_val"}
+
+        Returns: string
+        """
+        input = input['input']
+
+        if self.source == 'Workflow Document':
+            # get project id for output docs using dummy temp doc id provided in initial call
+            res = get_bubble_object('document', self.workflow_document)
+            content = res.json()['response']['text']
+            
+            return_value = content
+
+        if self.source == 'Document From Input':
+            # get project id for output docs using dummy temp doc id provided in initial call
+            res = get_bubble_object('document', input)
+            content = res.json()['response']['text']
+            
+            return_value = content
 
         # Get input and output word count
         self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
@@ -642,6 +719,10 @@ ACTIONS = {
     },
     'Send Output': {
         'func': send_output,
+        'returns': 'string'
+    },
+    'Fetch Input': {
+        'func': fetch_input,
         'returns': 'string'
     }
 }

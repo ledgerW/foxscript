@@ -7,7 +7,7 @@ import time
 import requests
 
 from utils.weaviate_utils import get_wv_class_name, delete_library
-from utils.bubble import update_bubble_object, get_bubble_doc
+from utils.bubble import update_bubble_object, get_bubble_doc, delete_bubble_object
 from utils.Steps import ACTIONS
 
 if os.getenv('IS_OFFLINE'):
@@ -28,7 +28,13 @@ def get_init(body, email):
 
     if body['type'] == 'Send Output':
         init = {
-            'destination': body['destination']
+            'destination': body['destination'],
+            'as_workflow_doc': body['as_workflow_doc']
+        }
+
+    if body['type'] == 'Fetch Input':
+        init = {
+            'source': body['source']
         }
 
     if body['type'] == 'Combine':
@@ -201,6 +207,7 @@ class Workflow():
         self.doc_id = None
         self.bubble_id = None
         self.workflow_library = None
+        self.workflow_document = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
 
@@ -310,16 +317,20 @@ class Workflow():
 
             # Attach Workflow Items to Step and Step func
             step.doc_id = self.doc_id
-            step.func.doc_id = self.doc_id
             step.workflow_name = self.name
-            step.func.workflow_name = self.name
             step.email = self.email
+            step.func.doc_id = self.doc_id
+            step.func.workflow_name = self.name
             step.func.email = self.email
 
 
             if self.workflow_library:
                 step.workflow_library = self.workflow_library
                 step.func.workflow_library = self.workflow_library
+
+            if self.workflow_document:
+                step.workflow_document = self.workflow_document
+                step.func.workflow_document = self.workflow_document
 
             # Run the Step
             step.run_step(step_input)
@@ -332,6 +343,10 @@ class Workflow():
             # Get Workflow Library, if there is one
             if step.workflow_library:
                 self.workflow_library = step.workflow_library
+
+            # Get Workflow Document, if there is one
+            if step.workflow_document:
+                self.workflow_document = step.workflow_document
 
             # Update workflow running total word usage
             self.input_word_cnt = self.input_word_cnt + step.input_word_cnt
@@ -357,6 +372,10 @@ class Workflow():
         if self.workflow_library:
             delete_library(self.workflow_library)
             print(f"Removed {self.workflow_library} from Weaviate")
+
+        if self.workflow_document:
+            delete_bubble_object('document', self.workflow_document)
+            print(f"Removed Workflow Doc {self.workflow_document} from Bubble")
                
 
 
@@ -372,8 +391,9 @@ class Step():
         self.output = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
-        self.workflow_library = None
         self.email = None
+        self.workflow_library = None
+        self.workflow_document = None
 
     def __repr__(self):
         return f'Step - {self.name}'
@@ -387,6 +407,12 @@ class Step():
             print(f'Workflow has Library: {self.workflow_library}')
         except:
             print('No Workflow Library')
+
+        try:
+            self.workflow_document = self.func.workflow_document
+            print(f'Workflow has Document: {self.workflow_document}')
+        except:
+            print('No Workflow Document')
 
         self.input_word_cnt = self.func.input_word_cnt
         self.output_word_cnt = self.func.output_word_cnt
