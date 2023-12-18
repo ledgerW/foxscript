@@ -97,7 +97,7 @@ def get_content_embeddings(urls):
     for url in urls:
         print(f'Scraping {url}')
         cloud_scrape(url, sqs=sqs)
-        time.sleep(3)
+        time.sleep(1)
 
     results = queue.collect(len(urls), max_wait=420)
     all_chunks = [result['chunks'].split('<SPLIT>') for result in results]
