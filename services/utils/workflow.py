@@ -30,7 +30,7 @@ def get_init(body, email):
         init = {
             'destination': body['destination'],
             'as_workflow_doc': body['as_workflow_doc'],
-            'target_doc': body['target_doc']
+            'target_doc_input': body['target_doc_input']
         }
 
     if body['type'] == 'Fetch Input':

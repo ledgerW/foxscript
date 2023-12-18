@@ -526,10 +526,10 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None, as_workflow_doc=False, target_doc=None):
+    def __init__(self, destination=None, as_workflow_doc=False, target_doc_input=None):
         self.destination = destination
         self.as_workflow_doc = as_workflow_doc
-        self.target_doc = target_doc
+        self.target_doc_input = target_doc_input
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -543,6 +543,11 @@ class send_output():
     def __call__(self, input):
         """
         Input: {'input': "input_val"}
+        or
+        Input: {
+            'input': "questions",
+            'Target Doc': '1234xIOS9erereoi'
+        }
 
         Returns: string
         """
@@ -560,10 +565,10 @@ class send_output():
             
             # send result to Bubble Document
             if self.as_workflow_doc:
-                if self.target_doc:
-                    res = update_bubble_object('document', self.target_doc, {'text': content})
+                if self.target_doc_input:
+                    res = update_bubble_object('document', input['Target Doc'], {'text': content})
                     resp = res.json()['response']
-                    new_doc_id = self.target_doc
+                    new_doc_id = input['Target Doc']
                 else:
                     try:
                         res = update_bubble_object('document', self.workflow_document, {'text': content})
