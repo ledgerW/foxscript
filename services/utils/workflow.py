@@ -29,7 +29,8 @@ def get_init(body, email):
     if body['type'] == 'Send Output':
         init = {
             'destination': body['destination'],
-            'as_workflow_doc': body['as_workflow_doc']
+            'as_workflow_doc': body['as_workflow_doc'],
+            'target_doc': body['target_doc']
         }
 
     if body['type'] == 'Fetch Input':

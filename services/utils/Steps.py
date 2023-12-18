@@ -526,9 +526,10 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None, as_workflow_doc=False):
+    def __init__(self, destination=None, as_workflow_doc=False, target_doc=None):
         self.destination = destination
         self.as_workflow_doc = as_workflow_doc
+        self.target_doc = target_doc
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -559,32 +560,37 @@ class send_output():
             
             # send result to Bubble Document
             if self.as_workflow_doc:
-                try:
-                    res = update_bubble_object('document', self.workflow_document, {'text': content})
+                if self.target_doc:
+                    res = update_bubble_object('document', self.target_doc, {'text': content})
                     resp = res.json()['response']
-                    new_doc_id = self.workflow_document
-                except:
-                    new_doc_name = 'tmp-workflow-doc'
-
-                    body = {
-                        'name': new_doc_name,
-                        'text': content,
-                        'user_email': self.email,
-                        'project': project_id
-                    }
-                    res = create_bubble_object('document', body)
-                    new_doc_id = res.json()['id'] 
-
-                    self.workflow_document = new_doc_id
-
-                    # add new doc to project
-                    res = get_bubble_object('project', project_id)
+                    new_doc_id = self.target_doc
+                else:
                     try:
-                        project_docs = res.json()['response']['documents']
+                        res = update_bubble_object('document', self.workflow_document, {'text': content})
+                        resp = res.json()['response']
+                        new_doc_id = self.workflow_document
                     except:
-                        project_docs = []
+                        new_doc_name = 'tmp-workflow-doc'
 
-                    _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]}) 
+                        body = {
+                            'name': new_doc_name,
+                            'text': content,
+                            'user_email': self.email,
+                            'project': project_id
+                        }
+                        res = create_bubble_object('document', body)
+                        new_doc_id = res.json()['id'] 
+
+                        self.workflow_document = new_doc_id
+
+                        # add new doc to project
+                        res = get_bubble_object('project', project_id)
+                        try:
+                            project_docs = res.json()['response']['documents']
+                        except:
+                            project_docs = []
+
+                        _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]}) 
             else:
                 new_doc_name = f"{self.step_name} - {content[:30]}"
 
