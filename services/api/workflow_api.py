@@ -137,7 +137,7 @@ def run_workflow(event, context):
         body = json.loads(event['body'])
    
    
-   # load and run workflow
+    # load and run workflow
     workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
 
     # get workflow inputs
