@@ -485,6 +485,7 @@ class get_workflow():
                 else:
                     output = ''
                     for order, input in enumerate(input_vals):
+                        print(f'IN SEQUENCE WORKFLOW: {order}')
                         self.workflow.run_all({input_key: input}, bubble=False)
                         self.input_word_cnt = self.input_word_cnt + self.workflow.input_word_cnt
                         self.output_word_cnt = self.output_word_cnt + self.workflow.output_word_cnt
@@ -570,8 +571,7 @@ class send_output():
             # send result to Bubble Document
             if self.as_workflow_doc:
                 if self.target_doc_input:
-                    res = update_bubble_object('document', input['Target Doc'], {'text': content})
-                    resp = res.json()['response']
+                    _ = update_bubble_object('document', input['Target Doc'], {'text': content})
                     new_doc_id = input['Target Doc']
                 else:
                     try:
