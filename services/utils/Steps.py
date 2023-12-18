@@ -526,7 +526,7 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None, as_workflow_doc=False, target_doc_input=None):
+    def __init__(self, destination=None, as_workflow_doc=False, target_doc_input=False):
         self.destination = destination
         self.as_workflow_doc = as_workflow_doc
         self.target_doc_input = target_doc_input
@@ -559,9 +559,13 @@ class send_output():
         print(f'Workflow Doc: {self.workflow_document}')
 
         if self.destination == 'Project':
-            # get project id for output docs using dummy temp doc id provided in initial call
-            res = get_bubble_object('document', self.doc_id)
-            project_id = res.json()['response']['project']
+            try:
+                # get project id for output docs using dummy temp doc id provided in initial call
+                res = get_bubble_object('document', self.doc_id)
+                project_id = res.json()['response']['project']
+            except:
+                print('Passing. No Doc ID')
+                pass
             
             # send result to Bubble Document
             if self.as_workflow_doc:
