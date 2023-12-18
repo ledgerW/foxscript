@@ -228,7 +228,7 @@ class do_research():
             queue = SQS(sqs)
             for url, query in zip(urls_to_scrape, queries):
                 cloud_research(url, sqs, query)
-                time.sleep(3)
+                time.sleep(0.5)
         
             # wait for and collect scrape results from SQS
             results = queue.collect(len(urls_to_scrape), max_wait=600)
@@ -370,7 +370,7 @@ class get_library_retriever():
                     results = '\n'.join([c.page_content for c in chunks])
 
             all_results = all_results + results + '\n\n'
-            time.sleep(3)
+            time.sleep(0.5)
 
         # get input and output word count
         self.input_word_cnt = len(' '.join(questions).split(' '))
@@ -474,7 +474,7 @@ class get_workflow():
                             InvocationType='Event',
                             Payload=json.dumps(payload)
                         )
-                        time.sleep(2)
+                        time.sleep(0.5)
                 
                     results = queue.collect(len(input_vals), max_wait=780)
 

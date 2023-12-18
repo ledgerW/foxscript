@@ -338,7 +338,7 @@ class Workflow():
 
             # Run the Step
             step.run_step(step_input)
-            time.sleep(10)
+            time.sleep(1)
             try:
                 print(step.output[:1000])
             except:
