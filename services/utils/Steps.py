@@ -658,6 +658,7 @@ class send_output():
                     )
 
                 results = queue.collect(len(urls), max_wait=600)
+                return_value = self.workflow_library
             else:
                 # load content into workflow library
                 payload = {
