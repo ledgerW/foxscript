@@ -30,12 +30,19 @@ def handler(event, context):
             bucket = event['body']['bucket']
             data_class = event['body']['cls_name']
             content = event['body']['content']
+            body = event['body']
         except:
             bucket = json.loads(event['body'])['bucket']
             data_class = json.loads(event['body'])['cls_name']
             content = json.loads(event['body'])['content']
+            body = json.loads(event['body'])
 
-        local_content_path, upload_suffix = to_json_doc(data_class, content)
+        if 'url' in body:
+            url = body['url']
+        else:
+            url = ""
+
+        local_content_path, upload_suffix = to_json_doc(data_class, content, url=url)
     
     if local_content_path.endswith('.pdf') or local_content_path.endswith('.json'):
         load_content(

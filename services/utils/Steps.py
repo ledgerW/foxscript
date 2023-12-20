@@ -627,19 +627,29 @@ class send_output():
         if self.destination == 'Workflow Library':
             lambda_client = boto3.client('lambda')
 
-            # create new workflow library (will be destroyed at end of workflow)
-            name = str(uuid.uuid4()).replace('-', '_')
-            cls_name, account_name = get_wv_class_name(self.email, name)
-            create_library(cls_name)
-            self.workflow_library = cls_name
+            if not self.workflow_library:
+                # create new workflow library first time only
+                # (will be destroyed at end of workflow)
+                name = str(uuid.uuid4()).replace('-', '_')
+                cls_name, account_name = get_wv_class_name(self.email, name)
+                create_library(cls_name)
+                self.workflow_library = cls_name
+
+            # check for a url in the first line
+            if "<SPLIT>" in content:
+                splitter = "<SPLIT>"
+            else:
+                splitter = "\n"
+
+            url = content.split(splitter)[0]
 
             # load content into workflow library
             payload = {
                 "body": {
                     'bucket': BUCKET,
-                    'cls_name': cls_name,
-                    'content': content
-
+                    'cls_name': self.workflow_library,
+                    'content': content,
+                    'url': url
                 }
             }
 
@@ -649,7 +659,7 @@ class send_output():
                 Payload=json.dumps(payload)
             )
 
-            return_value = cls_name
+            return_value = self.workflow_library
 
         # Get input and output word count
         self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
