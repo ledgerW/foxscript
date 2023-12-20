@@ -527,10 +527,11 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None, as_workflow_doc=False, target_doc_input=False):
+    def __init__(self, destination=None, as_workflow_doc=False, target_doc_input=False, as_url_list=False):
         self.destination = destination
         self.as_workflow_doc = as_workflow_doc
         self.target_doc_input = target_doc_input
+        self.as_url_list = as_url_list
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -543,7 +544,7 @@ class send_output():
 
     def __call__(self, input):
         """
-        Input: {'input': "input_val"}
+        Input: {'input': "input_val"} or {'input': 'url\nurl\nurl'}
         or
         Input: {
             'input': "questions",
@@ -627,29 +628,54 @@ class send_output():
         if self.destination == 'Workflow Library':
             lambda_client = boto3.client('lambda')
 
-            # create new workflow library (will be destroyed at end of workflow)
-            name = str(uuid.uuid4()).replace('-', '_')
-            cls_name, account_name = get_wv_class_name(self.email, name)
-            create_library(cls_name)
-            self.workflow_library = cls_name
+            # create new workflow library first time only
+            # (will be destroyed at end of workflow)
+            if not self.workflow_library:
+                name = str(uuid.uuid4()).replace('-', '_')
+                cls_name, account_name = get_wv_class_name(self.email, name)
+                create_library(cls_name)
+                self.workflow_library = cls_name
+            
+            if self.as_url_list:
+                sqs = 'sendoutput{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                queue = SQS(sqs)
+                urls = content.split('\n')
 
-            # load content into workflow library
-            payload = {
-                "body": {
-                    'bucket': BUCKET,
-                    'cls_name': cls_name,
-                    'content': content
+                for url in urls:
+                    print(f'Sending {url} to Workflow Library')
+                    # load content into workflow library
+                    out_body = {
+                        'email': self.email,
+                        'name': name,
+                        'doc_url': url,
+                        'sqs': sqs
+                    }
 
+                    _ = lambda_client.invoke(
+                        FunctionName=f'foxscript-api-{STAGE}-upload_to_s3',
+                        InvocationType='Event',
+                        Payload=json.dumps({"body": out_body})
+                    )
+
+                results = queue.collect(len(urls), max_wait=600)
+                return_value = self.workflow_library
+            else:
+                # load content into workflow library
+                payload = {
+                    "body": {
+                        'bucket': BUCKET,
+                        'cls_name': self.workflow_library,
+                        'content': content
+                    }
                 }
-            }
 
-            _ = lambda_client.invoke(
-                FunctionName=f'foxscript-data-{STAGE}-load_data',
-                InvocationType='RequestResponse',
-                Payload=json.dumps(payload)
-            )
+                _ = lambda_client.invoke(
+                    FunctionName=f'foxscript-data-{STAGE}-load_data',
+                    InvocationType='RequestResponse',
+                    Payload=json.dumps(payload)
+                )
 
-            return_value = cls_name
+                return_value = self.workflow_library
 
         # Get input and output word count
         self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
