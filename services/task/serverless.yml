@@ -12,7 +12,7 @@ plugins:
 custom:
   stage: ${opt:stage, self:provider.stage}
 
-  bucket_name: foxscript-content-${self:custom.stage}
+  bucket_name: foxscript-${self:custom.stage}
 
   serverless-offline:
     httpPort: 3007
