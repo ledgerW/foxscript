@@ -133,10 +133,22 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {'input': input_vals[0]}
         
         if input_type == 'Library Research':
-            input_vals = {
-                input_vars[0]: input_vals[0].split('\n'),
-                input_vars[1]: input_vals[1]
-            }
+            if len(input_vars) == 1:
+                try:
+                    input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+                except:
+                    input_vals = {input_vars[0]: input_vals[0]}
+            else:
+                try:
+                    input_vals = {
+                        input_vars[0]: [input_vals[0].split('\n')],
+                        input_vars[1]: input_vals[1]
+                    }
+                except:
+                    input_vals = {
+                        input_vars[0]: input_vals[0],
+                        input_vars[1]: input_vars[1]
+                    }
 
         if input_type == 'Analyze CSV':
             input_vals = {'input': input_vals[0].split('\n')}
