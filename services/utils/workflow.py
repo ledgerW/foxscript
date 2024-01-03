@@ -1,6 +1,5 @@
 import sys
 sys.path.append('..')
-sys.path.append('services')
 
 import os
 import json

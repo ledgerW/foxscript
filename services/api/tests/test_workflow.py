@@ -1,7 +1,9 @@
 import unittest
 from unittest_parametrize import param, parametrize, ParametrizedTestCase
 
-from services.utils import workflow
+import sys
+sys.path.append('..')
+from utils import workflow
 
 class TestWorkflow(ParametrizedTestCase):
     @parametrize(
