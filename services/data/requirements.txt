@@ -14,3 +14,4 @@ boto3
 tenacity
 pyyaml
 pandas
+unittest-parametrize
