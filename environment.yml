@@ -23,4 +23,5 @@ dependencies:
     - tabulate
     - unstructured
     - newspaper3k
+    - unittest-parametrize
     

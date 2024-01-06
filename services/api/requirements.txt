@@ -6,6 +6,6 @@ tabulate
 openai==0.28.1
 tiktoken
 python-dotenv
-pydantic
 requests
 urllib3<2
+unittest-parametrize
