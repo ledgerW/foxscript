@@ -56,7 +56,10 @@ def get_init(body, email):
         }
 
     if body['type'] == 'Subtopics':
-        init = {'top_n': int(body['init_number'])}
+        init = {
+            'top_n': int(body['init_number']),
+            'by_source': False if 'subtopic_by_source' not in body else body['subtopic_by_source']
+        }
 
     if body['type'] == 'Library Research':
         class_name, account = get_wv_class_name(email, body['init_text'])

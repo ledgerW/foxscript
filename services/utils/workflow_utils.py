@@ -160,8 +160,6 @@ def get_cluster_results(topic_df, LLM):
         n_samples = this_cluster_df.shape[0]
 
         if n_samples > 0:
-            #return_n_samples = min(100, n_samples)
-            #sample_cluster_rows = topic_df[topic_df.cluster == i].sample(return_n_samples)
             sentences = ''
             for url in this_cluster_df.url.unique():
                 sentences = sentences + f"\nSource: {url}\n"
@@ -169,13 +167,11 @@ def get_cluster_results(topic_df, LLM):
                 for j in range(this_url_df.shape[0]):
                     sentences = sentences + '- ' + this_url_df.chunk.values[j] + '\n'
             
-            #sentences = "\n".join(this_cluster_df.sample(min(samples, n_samples)).chunk)
-            
-            prompt = f"""Sentences:
-    {sentences}
+            prompt = """Sentences:
+    {}
 
     Existing Themes:
-    {existing_themes}
+    {}
     
     You have two jobs.
     1) Come up with a short, descriptive, specific theme name for the sentences provided above. But you can't reuse an Existing Theme name.
@@ -190,7 +186,7 @@ def get_cluster_results(topic_df, LLM):
     [distilation of sentences]
     
     Sources:
-    [list of source urls]"""
+    [list of source urls]""".format(sentences, existing_themes)
 
             # FoxLLM fallbacks, if necessary
             res = None
@@ -219,6 +215,108 @@ def get_cluster_results(topic_df, LLM):
 
             all_subtopics = all_subtopics + subtopic
             input_word_cnt = input_word_cnt + len(prompt.replace('\n', ' ').split(' '))
+            output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
+
+    return all_subtopics, input_word_cnt, output_word_cnt
+
+
+def get_cluster_results_by_source(topic_df, LLM):
+    print('Getting subtopic themes')
+    input_word_cnt = 0
+    output_word_cnt = 0
+
+    all_subtopics = ""
+    clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
+    existing_themes = ''
+    for idx, i in enumerate(clusters):
+        print(f"Cluster: {idx}")
+        this_cluster_df = topic_df[topic_df.cluster == i]
+        n_samples = this_cluster_df.shape[0]
+
+        if n_samples > 0:
+            theme_url_statements = ''
+            for url in this_cluster_df.url.unique():
+                sentences = f"\nSource: {url}\n"
+                this_url_df = this_cluster_df.query('url == @url').reset_index(drop=True)
+                for j in range(this_url_df.shape[0]):
+                    sentences = sentences + '- ' + this_url_df.chunk.values[j] + '\n'
+
+                # Prompt for Subtopic URL Source
+                url_prompt = """Sentences:
+    {}
+    
+    Your job is to write a thorough, detail-oriented distilation of the sentences above. Be sure to capture any specific numbers or figures.
+    The details are important! Think of this task as distilling all the information without leaving out any important details.
+    Prefer thoughness over brevity here.
+
+    Follow the template below for your output...
+    
+    Source: [url source from above]
+    Key Elements:
+    - detailed distillation of
+    - of sentences above
+    
+    Output:""".format(sentences)
+                
+                # FoxLLM fallbacks, if necessary
+                res = None
+                try:
+                    res = LLM.llm.invoke(url_prompt)
+                except:
+                    for llm in LLM.fallbacks:
+                        print(f'fallback to {llm}')
+                        LLM.llm = llm
+                        try:
+                            res = LLM.llm.invoke(url_prompt)
+                            if res:
+                                break
+                        except:
+                            continue
+
+                theme_url_statements = theme_url_statements + res.content + '\n\n'
+                    
+            
+            # Prompt for Cluster/Subtopic Theme
+            theme_prompt = """Statements:
+    {}
+
+    Existing Themes:
+    {}
+    
+    You have two jobs.
+    1) Come up with a short, descriptive, specific theme name for the statements provided above. But you can't reuse an Existing Theme name.
+    You should ignore the Source URLs. Return only the Theme Name.
+    
+    Theme Name:""".format(theme_url_statements, existing_themes)
+
+            # FoxLLM fallbacks, if necessary
+            res = None
+            try:
+                res = LLM.llm.invoke(theme_prompt)
+            except:
+                for llm in LLM.fallbacks:
+                    print(f'fallback to {llm}')
+                    LLM.llm = llm
+                    try:
+                        res = LLM.llm.invoke(theme_prompt)
+                        if res:
+                            break
+                    except:
+                        continue
+            
+            theme_name = res.content
+            existing_themes = existing_themes + f"\n{theme_name}"
+
+            subtopic = f"Subtopic {idx+1}\n"
+            subtopic = subtopic + f"Sections of text found: {n_samples}\n"
+            subtopic = subtopic + f"{theme_name}\n"
+            subtopic = subtopic + f"{theme_url_statements}"
+
+            subtopic = subtopic + '\n' + ("_" * 3) + '\n'
+
+            all_subtopics = all_subtopics + subtopic
+            input_word_cnt = input_word_cnt + len(url_prompt.replace('\n', ' ').split(' '))
+            input_word_cnt = input_word_cnt + len(theme_prompt.replace('\n', ' ').split(' '))
             output_word_cnt = output_word_cnt + len(subtopic.replace('\n', ' ').split(' '))
 
     return all_subtopics, input_word_cnt, output_word_cnt

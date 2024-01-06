@@ -32,7 +32,7 @@ from langchain.agents.agent_types import AgentType
 from langchain.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
-from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results
+from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results, get_cluster_results_by_source
 from utils.weaviate_utils import wv_client, get_wv_class_name, create_library, to_json_doc
 from utils.cloud_funcs import cloud_research, cloud_scrape
 from utils.general import SQS
@@ -380,8 +380,9 @@ class get_library_retriever():
     
 
 class get_subtopics():
-    def __init__(self, top_n=10):
+    def __init__(self, top_n=10, by_source=False):
         self.top_n = top_n
+        self.by_source = by_source
         self.input_word_cnt = 0
         self.output_word_cnt = 0
 
@@ -398,7 +399,10 @@ class get_subtopics():
 
         topic_df = get_topic_clusters(topic, self.top_n)
 
-        subtopic_results, input_word_cnt, output_word_cnt = get_cluster_results(topic_df, self.LLM)
+        if self.by_source:
+            subtopic_results, input_word_cnt, output_word_cnt = get_cluster_results_by_source(topic_df, self.LLM)
+        else:
+            subtopic_results, input_word_cnt, output_word_cnt = get_cluster_results(topic_df, self.LLM)
 
         self.input_word_cnt = input_word_cnt + len(topic.split(' '))
         self.output_word_cnt = output_word_cnt
