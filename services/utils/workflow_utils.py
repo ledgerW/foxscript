@@ -132,6 +132,7 @@ def cluster(embeddings, n_clusters):
 def get_topic_clusters(topic, top_n=10):
     search_results = get_top_n_search(topic, top_n)
     urls = [res['link'] for res in search_results]
+    print("Length of urls: {}".format(len(urls)))
 
     topic_df = get_content_embeddings(urls)
 
@@ -150,7 +151,6 @@ def get_cluster_results(topic_df, LLM):
     print('Getting subtopic themes')
     input_word_cnt = 0
     output_word_cnt = 0
-    samples = 100
 
     all_subtopics = ""
     clusters = topic_df.groupby('cluster', as_index=False).count().sort_values(by='chunk', ascending=False).cluster.values
@@ -249,13 +249,15 @@ def get_cluster_results_by_source(topic_df, LLM):
     The details are important! Think of this task as distilling all the information without leaving out any important details.
     Prefer thoughness over brevity here.
 
-    Follow the template below for your output...
+    Follow the example below for your output...
     
+    Example Output:
     Source: [url source from above]
     Key Elements:
     - detailed distillation of
-    - of sentences above
+    - of sentences above in bullet format
     
+
     Output:""".format(sentences)
                 
                 # FoxLLM fallbacks, if necessary
