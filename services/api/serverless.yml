@@ -22,6 +22,19 @@ custom:
     pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
     noDeploy:
       - unittest-parametrize
+      - weaviate-client
+      - langchain
+      - langchain-experimental
+      - pandas
+      - tabulate
+      - openai
+      - python-dotenv
+      - requests
+      - urllib3
+      - google-api-python-client
+      - google-auth-httplib2
+      - google-auth-oauthlib
+      - pypandoc
     layer:
       name: ${self:service}
       
