@@ -22,7 +22,10 @@ class TestWorkflow(ParametrizedTestCase):
                     'destination': 'Project',
                     'as_workflow_doc': True,
                     'target_doc_input': "This is the document content",
-                    'as_url_list': False
+                    'as_url_list': False,
+                    'empty_doc': False,
+                    'csv_doc': False,
+                    'delimiter': ','
                 }, 
                 "ledger.west@gmail.com",
                 id="Send_Output"
@@ -38,7 +41,7 @@ class TestWorkflow(ParametrizedTestCase):
     def test_get_init(self, body, email):
         init_lengths = {
             'LLM Prompt': 2,
-            'Send Output': 4,
+            'Send Output': 7,
             'Fetch Input': 1,
             'Combine': 0,
             'Analyze CSV': 1,
@@ -70,11 +73,3 @@ class TestWorkflow(ParametrizedTestCase):
     def test_get_init_missing_param(self, body, email):
         with self.assertRaises(KeyError):
             init = workflow.get_init(body, email)
-
-    #def test_isupper(self):
-    #    self.assertTrue('FOO'.isupper())
-    #    self.assertFalse('Foo'.isupper())
-
-
-#if __name__ == '__main__':
-#    unittest.main()
