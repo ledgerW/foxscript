@@ -115,6 +115,8 @@ provider:
     BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
     BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
     BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+    GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
+    GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
 
   iam:
     role:
@@ -167,6 +169,8 @@ fargate:
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
         BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
         BUCKET: ${self:custom.bucket_name}
+        GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
+        GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
       schedule: 'rate(365 days)'
       vpc:
         assignPublicIp: true
@@ -189,6 +193,8 @@ fargate:
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
         BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
         BUCKET: ${self:custom.bucket_name}
+        GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
+        GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
       schedule: 'rate(365 days)'
       vpc:
         assignPublicIp: true

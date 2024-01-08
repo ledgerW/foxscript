@@ -20,6 +20,8 @@ custom:
   pythonRequirements:
     dockerizePip: true
     pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
+    noDeploy:
+      - unittest-parametrize
     layer:
       name: ${self:service}
       
