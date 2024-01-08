@@ -8,7 +8,6 @@ newspaper3k
 PyPDF2
 beautifulsoup4
 lxml==4.9.2
-tiktoken
 pycryptodome
 boto3
 tenacity

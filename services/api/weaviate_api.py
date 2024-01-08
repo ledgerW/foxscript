@@ -10,18 +10,9 @@ except:
 import os
 import json
 import boto3
-import weaviate as wv
-from datetime import datetime
 
 from utils.response_lib import *
-from utils.weaviate_utils import get_wv_class_name, create_library, delete_library, to_json_doc
-from utils.bubble import get_bubble_doc
-from utils.cloud_funcs import cloud_scrape
 
-try:
-    from utils.general import SQS
-except:
-    pass
 
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
@@ -37,6 +28,8 @@ else:
 
 # Lambda Handler
 def data_class(event, context):
+    from utils.weaviate_utils import get_wv_class_name, create_library, delete_library
+
     try:
         action = event['body']['action']
         email = event['body']['email']
@@ -60,6 +53,15 @@ def data_class(event, context):
 # Lambda Handler
 def upload_to_s3(event, context):
     print(event)
+    from utils.weaviate_utils import get_wv_class_name, to_json_doc
+    from utils.bubble import get_bubble_doc
+    from utils.cloud_funcs import cloud_scrape
+
+    try:
+        from utils.general import SQS
+    except:
+        pass
+
     try:
         email = event['body']['email']
         name = event['body']['name']

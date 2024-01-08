@@ -10,7 +10,7 @@ from unstructured.partition.html import partition_html
 from newspaper import Article
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
-from utils.content import text_splitter
+from utils.content import text_splitter, handle_pdf
 from utils.response_lib import *
 from utils.scrapers.base import Scraper
 from utils.workflow_utils import get_ephemeral_vecdb, get_context
@@ -26,11 +26,6 @@ try:
   load_dotenv()
 except:
   pass
-
-from utils.content import handle_pdf
-
-import tiktoken
-tokenizer = tiktoken.get_encoding("cl100k_base")
 
 
 STAGE = os.getenv('STAGE')
@@ -76,17 +71,17 @@ class GeneralScraper(Scraper):
         return text
 
 
-def scrape_and_chunk_pdf(url, n, tokenizer):
+def scrape_and_chunk_pdf(url, n):
   r = requests.get(url, timeout=10)
   with open(LAMBDA_DATA_DIR + '/tmp.pdf', 'wb') as pdf:
     pdf.write(r.content)
 
-  return handle_pdf(pathlib.Path(LAMBDA_DATA_DIR, 'tmp.pdf'), n, tokenizer)
+  return handle_pdf(pathlib.Path(LAMBDA_DATA_DIR, 'tmp.pdf'), n)
 
 
-def scrape_and_chunk(url, token_size, tokenizer, sentences=False, chunk_overlap=10):
+def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10):
   try:
-    chunks, pages, meta = scrape_and_chunk_pdf(url, 100, tokenizer)
+    chunks, pages, meta = scrape_and_chunk_pdf(url, 100)
     
     return chunks
   except:
@@ -110,7 +105,7 @@ def scrape_and_chunk(url, token_size, tokenizer, sentences=False, chunk_overlap=
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     results = "\n".join(chunk for chunk in chunks if chunk)
 
-    return text_splitter(results, token_size, tokenizer, sentences, chunk_overlap=chunk_overlap)
+    return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
   
 
 def scrape(event, context):
@@ -134,7 +129,7 @@ def scrape(event, context):
         chunk_overlap = 10
 
     # Scrape
-    chunks = scrape_and_chunk(url, 100, tokenizer, chunk_overlap=chunk_overlap)
+    chunks = scrape_and_chunk(url, 100, chunk_overlap=chunk_overlap)
     
     chunks = '<SPLIT>'.join(chunks)
     result = {'url': url, 'chunks': chunks}
@@ -171,7 +166,7 @@ def research(event, context):
     try:
       LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=1.0)
 
-      chunks = scrape_and_chunk(url, 100, tokenizer)
+      chunks = scrape_and_chunk(url, 100)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})
 
       try:
@@ -207,21 +202,3 @@ def research(event, context):
             'input_word_cnt': len(query.split(' ')),
             'output_word_cnt': len(result.split(' '))
         })
-
-
-
-if __name__ == "__main__":
-  import argparse
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--url', default=None, type=str)
-  parser.add_argument('--query', default=None, type=str)
-  args, _ = parser.parse_known_args()
-
-  print(args)
-
-  #llm = ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=1.0)
-  chunks = scrape_and_chunk(args.url, 100, tokenizer)
-  vec_db = get_ephemeral_vecdb(chunks, {'source': args.url})
-  research_results = get_context(args.query, llm, vec_db.as_retriever())
-
-  print(research_results)

@@ -47,6 +47,11 @@ provider:
       'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-restApiId
     restApiRootResourceId:
       'Fn::ImportValue': foxscript-${self:custom.stage}-ApiGateway-rootResourceId
+  ecr:
+    images:
+      api_image:
+        path: ../..
+        file: api.Dockerfile
  
   environment:
     STAGE: ${self:custom.stage}
@@ -60,6 +65,8 @@ provider:
     SERPER_API_KEY: ${env:SERPER_API_KEY}
     BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
     BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+    GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
+    GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
     LOCAL_ENDPOINT: ${env:LOCAL_ENDPOINT}
     LOCAL_INVOKE_ENDPOINT: ${env:LOCAL_INVOKE_ENDPOINT}
 
@@ -92,29 +99,57 @@ provider:
           Resource: '*'
 
 functions:
-  data_class:
+  data_class_local:
     handler: weaviate_api.data_class
     memorySize: 512
     timeout: 120
     maximumRetryAttempts: 0
-    layers:
-      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
-          path: data_class
+          path: data_class_local
           method: post
           cors: true
 
-  upload_to_s3:
+  data_class_cloud:
+    image:
+      name: api_image
+      command:
+        - weaviate_api.data_class
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 512
+    timeout: 120
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: data_class_cloud
+          method: post
+          cors: true
+
+  upload_to_s3_local:
     handler: weaviate_api.upload_to_s3
     memorySize: 2048
     timeout: 300
     maximumRetryAttempts: 0
-    layers:
-      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
-          path: upload_to_s3
+          path: upload_to_s3_local
+          method: post
+          cors: true
+
+  upload_to_s3_cloud:
+    image:
+      name: api_image
+      command:
+        - weaviate_api.upload_to_s3
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 2048
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: upload_to_s3_cloud
           method: post
           cors: true
 
@@ -131,16 +166,30 @@ functions:
           method: post
           cors: true
 
-  run_workflow:
+  run_workflow_local:
     handler: workflow_api.run_workflow
     memorySize: 1024
     timeout: 900
     maximumRetryAttempts: 0
-    layers:
-      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
-          path: run_workflow
+          path: run_workflow_local
+          method: post
+          cors: true
+
+  run_workflow_cloud:
+    image:
+      name: api_image
+      command:
+        - workflow_api.run_workflow
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 1024
+    timeout: 900
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: run_workflow_cloud
           method: post
           cors: true
 
@@ -157,16 +206,30 @@ functions:
           method: post
           cors: true
 
-  run_step:
+  run_step_local:
     handler: workflow_api.run_step
     memorySize: 512
     timeout: 900
     maximumRetryAttempts: 0
-    layers:
-      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
-          path: run_step
+          path: run_step_local
+          method: post
+          cors: true
+
+  run_step_cloud:
+    image:
+      name: api_image
+      command:
+        - workflow_api.run_step
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 512
+    timeout: 900
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: run_step_cloud
           method: post
           cors: true
       
