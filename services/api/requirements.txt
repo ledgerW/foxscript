@@ -9,3 +9,7 @@ python-dotenv
 requests
 urllib3<2
 unittest-parametrize
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+pypandoc

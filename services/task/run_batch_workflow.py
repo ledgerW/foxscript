@@ -44,9 +44,6 @@ def main(task_args):
     batch_url = task_args['batch_input_url']
     batch_doc_id = task_args['batch_doc_id']
 
-    # load and run workflow
-    workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
-
     # get project id for output docs using dummy temp doc id provided in initial call
     res = get_bubble_object('document', doc_id)
     project_id = res.json()['response']['project']
@@ -71,12 +68,10 @@ def main(task_args):
         splitter = "<SPLIT>"
     else:
         splitter = "\n"
-    
-    print('batch_list top 10:')
-    print(batch_list.split(splitter)[:10])
 
     for input_val in batch_list.split(splitter):
-        print(input_val)
+        workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
+        print(f"batch item input: {input_val}")
         # get workflow inputs
         input_vals = prep_input_vals([input_vars], [input_val], workflow)
         print('prepped input val:')

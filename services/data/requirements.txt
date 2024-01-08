@@ -15,3 +15,6 @@ tenacity
 pyyaml
 pandas
 unittest-parametrize
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

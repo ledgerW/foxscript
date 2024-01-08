@@ -31,7 +31,10 @@ def get_init(body, email):
             'destination': body['destination'],
             'as_workflow_doc': body['as_workflow_doc'],
             'target_doc_input': body['target_doc_input'],
-            'as_url_list': False if 'as_url_list' not in body else body['as_url_list']
+            'as_url_list': False if 'as_url_list' not in body else body['as_url_list'],
+            'empty_doc': False if 'empty_doc' not in body else body['empty_doc'],
+            'csv_doc': False if 'csv_doc' not in body else body['csv_doc'],
+            'delimiter': ',' if 'delimiter' not in body else body['delimiter']
         }
 
     if body['type'] == 'Fetch Input':
@@ -210,6 +213,7 @@ def get_workflow_from_bubble(workflow_id, email=None, doc_id=None):
         'name': bubble_workflow['name'],
         'steps': step_configs,
         'workflow_id': workflow_id,
+        'user_id': bubble_workflow['Created By'],
         'email': email,
         'doc_id': doc_id
     }
@@ -223,6 +227,7 @@ class Workflow():
         self.steps = []
         self.output = {}
         self.user_inputs = {}
+        self.user_id = None
         self.email = None
         self.doc_id = None
         self.bubble_id = None
@@ -243,6 +248,7 @@ class Workflow():
 
         try:
             self.bubble_id = config['workflow_id']
+            self.user_id = config['user_id']
             self.email = config['email']
             self.doc_id = config['doc_id']
         except:
@@ -338,9 +344,11 @@ class Workflow():
             # Attach Workflow Items to Step and Step func
             step.doc_id = self.doc_id
             step.workflow_name = self.name
+            step.user_id = self.user_id
             step.email = self.email
             step.func.doc_id = self.doc_id
             step.func.workflow_name = self.name
+            step.func.user_id = self.user_id
             step.func.email = self.email
 
 

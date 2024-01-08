@@ -16,7 +16,6 @@ import uuid
 import boto3
 import pandas as pd
 from datetime import datetime
-#from youtubesearchpython import VideosSearch
 
 from tenacity import (
     retry,
@@ -33,10 +32,11 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results, get_cluster_results_by_source
-from utils.weaviate_utils import wv_client, get_wv_class_name, create_library, to_json_doc
+from utils.weaviate_utils import wv_client, get_wv_class_name, create_library
 from utils.cloud_funcs import cloud_research, cloud_scrape
 from utils.general import SQS
 from utils.bubble import create_bubble_object, update_bubble_object, get_bubble_object
+from utils.google import convert_text, get_creds, create_google_doc, create_google_sheet, upload_to_google_drive
 
 
 if os.getenv('IS_OFFLINE'):
@@ -531,16 +531,20 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None, as_workflow_doc=False, target_doc_input=False, as_url_list=False):
+    def __init__(self, destination=None, as_workflow_doc=False, empty_doc=False, target_doc_input=False, as_url_list=False):
         self.destination = destination
         self.as_workflow_doc = as_workflow_doc
+        self.empty_doc = empty_doc
         self.target_doc_input = target_doc_input
         self.as_url_list = as_url_list
+        self.csv_doc = False
+        self.delimiter = ','
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
         self.step_name = None
         self.doc_id = None
+        self.user_id = None
         self.email = None
         self.workflow_library = None
         self.workflow_document = None
@@ -551,8 +555,12 @@ class send_output():
         Input: {'input': "input_val"} or {'input': 'url\nurl\nurl'}
         or
         Input: {
-            'input': "questions",
+            'input': "content",
             'Target Doc': '1234xIOS9erereoi'
+        }
+        Input: {
+            'input': "content",
+            'Title': 'doc title'
         }
 
         Returns: string
@@ -564,6 +572,7 @@ class send_output():
         print(f'As Workflow Doc: {self.as_workflow_doc}')
         print(f'Workflow Doc: {self.workflow_document}')
 
+        # SEND TO FOXSCRIPT PROJECT
         if self.destination == 'Project':
             try:
                 # get project id for output docs using dummy temp doc id provided in initial call
@@ -580,6 +589,7 @@ class send_output():
                     new_doc_id = input['Target Doc']
                 else:
                     try:
+                        # Workflow Doc already exists and we're updating it
                         res = update_bubble_object('document', self.workflow_document, {'text': content})
                         resp = res.json()['response']
                         new_doc_id = self.workflow_document
@@ -588,7 +598,7 @@ class send_output():
 
                         body = {
                             'name': new_doc_name,
-                            'text': content,
+                            'text': '' if self.empty_doc else content,
                             'user_email': self.email,
                             'project': project_id
                         }
@@ -606,7 +616,7 @@ class send_output():
 
                         _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]}) 
             else:
-                new_doc_name = f"{self.step_name} - {content[:30]}"
+                new_doc_name = f"{self.step_name} - {input['Title']}"
 
                 body = {
                     'name': new_doc_name,
@@ -629,6 +639,7 @@ class send_output():
             return_value = new_doc_id
 
 
+        # SEND TO FOXSCRIPT WEAVIATE
         if self.destination == 'Workflow Library':
             lambda_client = boto3.client('lambda')
 
@@ -681,6 +692,26 @@ class send_output():
 
                 return_value = self.workflow_library
 
+        if self.destination == 'Google Drive':
+            res = get_bubble_object('user', self.user_id)
+            goog_token = res.json()['response']['DriveAccessToken']
+            goog_refresh_token = res.json()['response']['DriveRefreshToken']
+            
+            creds = get_creds(goog_token, goog_refresh_token)
+
+            title = input['Title'].replace(' ', '_')
+            if self.csv_doc:
+                sheet_id = create_google_sheet(title, content=content, delimiter=self.delimiter, creds=creds)
+                drive_file_id = sheet_id
+            else:
+                rtf_content = convert_text(content, from_format='md', to_format='rtf')
+                file_id = upload_to_google_drive(title, 'rtf', content=rtf_content, path=None, creds=creds)
+                doc_id = create_google_doc(title, content=content, creds=creds)
+                drive_file_id = f"{file_id},{doc_id}"
+
+
+            return_value = drive_file_id
+
         # Get input and output word count
         self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
         self.output_word_cnt = len(content.replace('\n\n', ' ').split(' '))
@@ -696,7 +727,6 @@ class fetch_input():
         self.output_word_cnt = 0
         self.workflow_name = None
         self.step_name = None
-        self.doc_id = None
         self.email = None
 
 
