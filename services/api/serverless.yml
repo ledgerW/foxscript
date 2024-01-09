@@ -28,7 +28,6 @@ custom:
       - pandas
       - tabulate
       - openai
-      - python-dotenv
       - requests
       - urllib3
       - google-api-python-client
