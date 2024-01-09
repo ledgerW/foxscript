@@ -2,6 +2,7 @@ weaviate-client
 openai==0.28.1
 faiss-cpu
 langchain==0.0.327
+tiktoken
 selenium
 unstructured
 newspaper3k
