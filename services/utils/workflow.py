@@ -34,7 +34,9 @@ def get_init(body, email):
             'as_url_list': False if 'as_url_list' not in body else body['as_url_list'],
             'empty_doc': False if 'empty_doc' not in body else body['empty_doc'],
             'csv_doc': False if 'csv_doc' not in body else body['csv_doc'],
-            'delimiter': ',' if 'delimiter' not in body else body['delimiter']
+            'delimiter': ',' if 'delimiter' not in body else body['delimiter'],
+            'drive_folder': 'root' if 'drive_folder' not in body else body['drive_folder'],
+            'to_rtf': False if 'to_rtf' not in body else body['to_rtf']
         }
 
     if body['type'] == 'Fetch Input':

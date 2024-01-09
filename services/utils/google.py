@@ -75,11 +75,12 @@ def search_drive_folders(parent_id=None, creds=None):
     return files
 
 
-def create_google_doc(title, content='', creds=None):
+def create_google_doc(title, content='', folder_id='root', creds=None):
     service = build("docs", "v1", credentials=creds)
 
     body = {
-        'title': title
+        'title': title,
+        'parents': [folder_id]
     }
     doc = service.documents()\
         .create(body=body)\
@@ -120,7 +121,7 @@ def get_csv_lines(content=None, path=None, delimiter=','):
     return data
 
 
-def create_google_sheet(title, content=None, path=None, delimiter=',', creds=None):
+def create_google_sheet(title, content=None, path=None, delimiter=',', folder_id='root', creds=None):
     service = build('sheets', 'v4', credentials=creds)
 
     # Create a new spreadsheet
@@ -140,7 +141,8 @@ def create_google_sheet(title, content=None, path=None, delimiter=',', creds=Non
 
     # Prepare data for Google Sheets
     body = {
-        'values': csv_lines
+        'values': csv_lines,
+        'parents': [folder_id]
     }
     range = 'A1' # Starting cell for data upload
     value_input_option = 'RAW' # 'RAW' or 'USER_ENTERED'
@@ -157,10 +159,13 @@ def create_google_sheet(title, content=None, path=None, delimiter=',', creds=Non
     return spreadsheet_id
 
 
-def upload_to_google_drive(title, file_type, content=None, path=None, creds=None):
+def upload_to_google_drive(title, file_type, content=None, path=None, folder_id='root', creds=None):
     service = build("drive", "v3", credentials=creds)
 
-    file_metadata = {'name': title}
+    file_metadata = {
+        'name': title,
+        'parents': [folder_id]
+    }
 
     if content:
         path = f"{title}.{file_type}"

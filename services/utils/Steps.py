@@ -534,6 +534,8 @@ class send_output():
     def __init__(
             self,
             destination=None,
+            drive_folder='root',
+            to_rtf=False,
             as_workflow_doc=False,
             empty_doc=False,
             target_doc_input=False,
@@ -542,6 +544,8 @@ class send_output():
             delimiter=','
         ):
         self.destination = destination
+        self.drive_folder = drive_folder
+        self.to_rtf = to_rtf
         self.as_workflow_doc = as_workflow_doc
         self.empty_doc = empty_doc
         self.target_doc_input = target_doc_input
@@ -703,6 +707,7 @@ class send_output():
 
                 return_value = self.workflow_library
 
+        # GOOGLE DRIVE
         if self.destination == 'Google Drive':
             res = get_bubble_object('user', self.user_id)
             goog_token = res.json()['response']['DriveAccessToken']
@@ -712,14 +717,34 @@ class send_output():
 
             title = input['Title'].replace(' ', '_')
             if self.csv_doc:
-                sheet_id = create_google_sheet(title, content=content, delimiter=self.delimiter, creds=creds)
+                sheet_id = create_google_sheet(
+                    title,
+                    content=content,
+                    delimiter=self.delimiter,
+                    folder_id=self.drive_folder,
+                    creds=creds
+                )
                 drive_file_id = sheet_id
             else:
-                rtf_content = convert_text(content, from_format='md', to_format='rtf')
-                file_id = upload_to_google_drive(title, 'rtf', content=rtf_content, path=None, creds=creds)
-                doc_id = create_google_doc(title, content=content, creds=creds)
-                drive_file_id = f"{file_id},{doc_id}"
-
+                if self.to_rtf:
+                    rtf_content = convert_text(content, from_format='md', to_format='rtf')
+                    file_id = upload_to_google_drive(
+                        title,
+                        'rtf',
+                        content=rtf_content,
+                        path=None,
+                        folder_id=self.drive_folder,
+                        creds=creds
+                    )
+                    drive_file_id = file_id
+                else:
+                    doc_id = create_google_doc(
+                        title,
+                        content=content,
+                        folder_id=self.drive_folder,
+                        creds=creds
+                    )
+                    drive_file_id = doc_id
 
             return_value = drive_file_id
 
