@@ -531,14 +531,23 @@ class combine_output():
     
 
 class send_output():
-    def __init__(self, destination=None, as_workflow_doc=False, empty_doc=False, target_doc_input=False, as_url_list=False):
+    def __init__(
+            self,
+            destination=None,
+            as_workflow_doc=False,
+            empty_doc=False,
+            target_doc_input=False,
+            as_url_list=False,
+            csv_doc=False,
+            delimiter=','
+        ):
         self.destination = destination
         self.as_workflow_doc = as_workflow_doc
         self.empty_doc = empty_doc
         self.target_doc_input = target_doc_input
         self.as_url_list = as_url_list
-        self.csv_doc = False
-        self.delimiter = ','
+        self.csv_doc = csv_doc
+        self.delimiter = delimiter
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -616,6 +625,7 @@ class send_output():
 
                         _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]}) 
             else:
+                # Saving As Output
                 new_doc_name = f"{self.step_name} - {input['Title']}"
 
                 body = {

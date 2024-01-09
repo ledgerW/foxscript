@@ -5,7 +5,6 @@ except:
     pass
 
 import os
-import pypandoc
 import csv
 
 from google.auth.transport.requests import Request
@@ -28,6 +27,52 @@ def get_creds(goog_token, goog_refresh_token):
         creds.refresh(Request())
 
     return creds
+
+
+def create_drive_folder(name, parents=None, creds=None):
+    service = build("drive", "v3", credentials=creds)
+    
+    folder_metadata = {
+        "name": name,
+        "parents": [parents],
+        "mimeType": "application/vnd.google-apps.folder",
+    }
+
+    folder = service.files().create(body=folder_metadata, fields="id").execute()
+    folder_id = folder.get("id")
+    print(f'Folder ID: "{folder_id}".')
+    
+    return folder_id
+
+
+def search_drive_folders(parent_id=None, creds=None):
+    service = build("drive", "v3", credentials=creds)
+
+    if parent_id:
+        parent_q = f"'{parent_id}' in parents"
+        q = "trashed = false and mimeType = 'application/vnd.google-apps.folder' and " + parent_q
+    else:
+        q = "trashed = false and mimeType = 'application/vnd.google-apps.folder'"
+    
+    files = []
+    page_token = None
+    while True:
+        response = (
+            service.files()
+            .list(
+                q=q,
+                spaces="drive",
+                fields="nextPageToken, files(id, name)",
+                pageToken=page_token,
+            )
+            .execute()
+        )
+        files.extend(response.get("files", []))
+        page_token = response.get("nextPageToken", None)
+        if page_token is None:
+            break
+
+    return files
 
 
 def create_google_doc(title, content='', creds=None):
@@ -136,6 +181,8 @@ def upload_to_google_drive(title, file_type, content=None, path=None, creds=None
 
 
 def convert_text(text, from_format='md', to_format='rtf'):
+    import pypandoc
+
     output = pypandoc.convert_text(text, to_format, format=from_format, extra_args=['-s'])
     #_ = pypandoc.convert_file('TestAPI.md', 'rtf', outputfile="TestAPI.rtf", extra_args=['-s'])
 

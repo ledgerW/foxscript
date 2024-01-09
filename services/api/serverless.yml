@@ -30,9 +30,6 @@ custom:
       - openai
       - requests
       - urllib3
-      - google-api-python-client
-      - google-auth-httplib2
-      - google-auth-oauthlib
       - pypandoc
     layer:
       name: ${self:service}
@@ -111,6 +108,32 @@ provider:
           Resource: '*'
 
 functions:
+  get_drive_folders:
+    handler: google_api.get_drive_folders
+    memorySize: 256
+    timeout: 120
+    maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - http:
+          path: get_drive_folders
+          method: post
+          cors: true
+  
+  create_drive_folder:
+    handler: google_api.create_drive_folder
+    memorySize: 256
+    timeout: 120
+    maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - http:
+          path: create_drive_folder
+          method: post
+          cors: true
+
   data_class_local:
     handler: weaviate_api.data_class
     memorySize: 512
