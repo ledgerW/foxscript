@@ -122,7 +122,7 @@ functions:
           cors: true
   
   create_drive_folder:
-    handler: google_api.create_drive_folder
+    handler: google_api.make_drive_folder
     memorySize: 256
     timeout: 120
     maximumRetryAttempts: 0
@@ -130,7 +130,7 @@ functions:
       - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
-          path: create_drive_folder
+          path: make_drive_folder
           method: post
           cors: true
 
