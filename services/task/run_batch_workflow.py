@@ -89,24 +89,25 @@ def main(task_args):
         else:
             workflow.run_all(input_vals, bubble=False)
 
-            # send result to Bubble Document
-            body = {
-                'name': list(input_vals.values())[0].replace('\n','_').replace(' ','_')[:50],
-                'text': workflow.steps[-1].output,
-                'user_email': email,
-                'project': project_id
-            }
-            res = create_bubble_object('document', body)
-            new_doc_id = res.json()['id']
+            if task_args['to_project']:
+                # send result to Bubble Document
+                body = {
+                    'name': list(input_vals.values())[0].replace('\n','_').replace(' ','_')[:50],
+                    'text': workflow.steps[-1].output,
+                    'user_email': email,
+                    'project': project_id
+                }
+                res = create_bubble_object('document', body)
+                new_doc_id = res.json()['id']
 
-            # add new doc to project
-            res = get_bubble_object('project', project_id)
-            try:
-                project_docs = res.json()['response']['documents']
-            except:
-                project_docs = []
+                # add new doc to project
+                res = get_bubble_object('project', project_id)
+                try:
+                    project_docs = res.json()['response']['documents']
+                except:
+                    project_docs = []
 
-            _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+                _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
 
             # Send usage to Bubble Workflow Runs
             body = {

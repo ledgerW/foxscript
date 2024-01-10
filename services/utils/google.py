@@ -79,8 +79,7 @@ def create_google_doc(title, content='', folder_id='root', creds=None):
     service = build("docs", "v1", credentials=creds)
 
     body = {
-        'title': title,
-        'parents': [folder_id]
+        'title': title
     }
     doc = service.documents()\
         .create(body=body)\
@@ -99,6 +98,19 @@ def create_google_doc(title, content='', folder_id='root', creds=None):
         }
     ]
     service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
+
+    # Move the file to the new folder
+    service = build("drive", "v3", credentials=creds)
+    file = (
+        service.files()
+        .update(
+            fileId=doc_id,
+            addParents=folder_id,
+            removeParents='root',
+            fields="id, parents",
+        )
+        .execute()
+    )
     print('Created Google Doc with title: {}'.format(doc.get('title')))
     
     return doc_id
@@ -141,8 +153,7 @@ def create_google_sheet(title, content=None, path=None, delimiter=',', folder_id
 
     # Prepare data for Google Sheets
     body = {
-        'values': csv_lines,
-        'parents': [folder_id]
+        'values': csv_lines
     }
     range = 'A1' # Starting cell for data upload
     value_input_option = 'RAW' # 'RAW' or 'USER_ENTERED'
@@ -154,7 +165,20 @@ def create_google_sheet(title, content=None, path=None, delimiter=',', folder_id
         valueInputOption=value_input_option,
         body=body
     ).execute()
-    print('Spreadsheet ID: {0}'.format(spreadsheet_id))
+
+    # Move the file to the new folder
+    service = build("drive", "v3", credentials=creds)
+    file = (
+        service.files()
+        .update(
+            fileId=spreadsheet_id,
+            addParents=folder_id,
+            removeParents='root',
+            fields="id, parents",
+        )
+        .execute()
+    )
+    print('Spreadsheet ID: {}'.format(spreadsheet_id))
     
     return spreadsheet_id
 

@@ -71,7 +71,8 @@ def workflow(event, context):
             'run_id': run_id,
             'input_vars': input_vars,
             'input_vals': input_vals,
-            'sqs': body['sqs']
+            'sqs': body['sqs'],
+            'to_project': True if 'to_project' not in body else body['to_project']
         }
     else:
         out_body = {
@@ -80,7 +81,8 @@ def workflow(event, context):
             'doc_id': doc_id,
             'run_id': run_id,
             'input_vars': input_vars,
-            'input_vals': input_vals
+            'input_vals': input_vals,
+            'to_project': True if 'to_project' not in body else body['to_project']
         }
     
     # run step as lambda Event so we can return immediately and free frontend
@@ -92,7 +94,8 @@ def workflow(event, context):
             'run_id': run_id,
             'input_vars': input_vars,
             'batch_input_url': input_vals[0],
-            'batch_doc_id': input_vals[1]
+            'batch_doc_id': input_vals[1],
+            'to_project': True if 'to_project' not in body else body['to_project']
         }
 
         print('BATCH RUN:')
@@ -170,12 +173,13 @@ def run_workflow(event, context):
         workflow.run_all(input_vals, bubble=True)
 
     if doc_id:
-        # send result to Bubble Document
-        body = {
-            'name': workflow.steps[-1].output[:25],
-            'text': workflow.steps[-1].output
-        }
-        _ = update_bubble_object('document', doc_id, body)
+        if body['to_project']:
+            # send result to Bubble Document
+            body = {
+                'name': workflow.steps[-1].output[:25],
+                'text': workflow.steps[-1].output
+            }
+            _ = update_bubble_object('document', doc_id, body)
 
         # send word usage to Bubble run history table
         body = {
