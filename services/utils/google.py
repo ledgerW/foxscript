@@ -48,11 +48,12 @@ def create_drive_folder(name, parents=None, creds=None):
 def search_drive_folders(parent_id=None, creds=None):
     service = build("drive", "v3", credentials=creds)
 
-    if parent_id:
+    if parent_id and parent_id != 'root':
         parent_q = f"'{parent_id}' in parents"
-        q = "trashed = false and mimeType = 'application/vnd.google-apps.folder' and " + parent_q
+        q = f"(trashed = false and mimeType = 'application/vnd.google-apps.folder' and {parent_q}) "
     else:
-        q = "trashed = false and mimeType = 'application/vnd.google-apps.folder'"
+        q = ("(trashed = false and mimeType = 'application/vnd.google-apps.folder' and 'root' in parents) " +
+            "or (sharedWithMe and trashed = false and mimeType = 'application/vnd.google-apps.folder')")
     
     files = []
     page_token = None
