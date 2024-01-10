@@ -41,7 +41,7 @@ class TestWorkflow(ParametrizedTestCase):
     def test_get_init(self, body, email):
         init_lengths = {
             'LLM Prompt': 2,
-            'Send Output': 7,
+            'Send Output': 9,
             'Fetch Input': 1,
             'Combine': 0,
             'Analyze CSV': 1,
