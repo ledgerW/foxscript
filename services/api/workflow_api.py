@@ -8,11 +8,8 @@ load_dotenv()
 import json
 import boto3
 
-from utils.workflow import prep_input_vals, get_workflow_from_bubble, get_step_from_bubble
+from utils.response_lib import success
 
-from utils.bubble import update_bubble_object
-from utils.general import SQS
-from utils.response_lib import *
 
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
@@ -74,7 +71,8 @@ def workflow(event, context):
             'run_id': run_id,
             'input_vars': input_vars,
             'input_vals': input_vals,
-            'sqs': body['sqs']
+            'sqs': body['sqs'],
+            'to_project': True if 'to_project' not in body else body['to_project']
         }
     else:
         out_body = {
@@ -83,7 +81,8 @@ def workflow(event, context):
             'doc_id': doc_id,
             'run_id': run_id,
             'input_vars': input_vars,
-            'input_vals': input_vals
+            'input_vals': input_vals,
+            'to_project': True if 'to_project' not in body else body['to_project']
         }
     
     # run step as lambda Event so we can return immediately and free frontend
@@ -95,7 +94,8 @@ def workflow(event, context):
             'run_id': run_id,
             'input_vars': input_vars,
             'batch_input_url': input_vals[0],
-            'batch_doc_id': input_vals[1]
+            'batch_doc_id': input_vals[1],
+            'to_project': True if 'to_project' not in body else body['to_project']
         }
 
         print('BATCH RUN:')
@@ -107,17 +107,31 @@ def workflow(event, context):
             Payload=json.dumps({"body": out_body})
         ) 
     else:
-        _ = lambda_client.invoke(
-            FunctionName=f'foxscript-api-{STAGE}-run_workflow',
-            InvocationType='Event',
-            Payload=json.dumps({"body": out_body})
-        ) 
+        if os.getenv('IS_OFFLINE', 'false') == 'true':
+            print('RUNNING LOCAL')
+            _ = lambda_client.invoke(
+                FunctionName=f'foxscript-api-{STAGE}-run_workflow_local',
+                InvocationType='Event',
+                Payload=json.dumps({"body": out_body})
+            )
+        else:
+            print('RUNNING CLOUD')
+            _ = lambda_client.invoke(
+                FunctionName=f'foxscript-api-{STAGE}-run_workflow_cloud',
+                InvocationType='Event',
+                Payload=json.dumps({"body": out_body})
+            ) 
 
     return success({'SUCCESS': True})
 
 
 def run_workflow(event, context):
     print(event)
+
+    from utils.workflow import prep_input_vals, get_workflow_from_bubble
+
+    from utils.bubble import update_bubble_object
+    from utils.general import SQS
 
     try:
         workflow_id = event['body']['workflow_id']
@@ -159,12 +173,13 @@ def run_workflow(event, context):
         workflow.run_all(input_vals, bubble=True)
 
     if doc_id:
-        # send result to Bubble Document
-        body = {
-            'name': workflow.steps[-1].output[:25],
-            'text': workflow.steps[-1].output
-        }
-        _ = update_bubble_object('document', doc_id, body)
+        if body['to_project']:
+            # send result to Bubble Document
+            body = {
+                'name': workflow.steps[-1].output[:25],
+                'text': workflow.steps[-1].output
+            }
+            _ = update_bubble_object('document', doc_id, body)
 
         # send word usage to Bubble run history table
         body = {
@@ -172,7 +187,7 @@ def run_workflow(event, context):
             'output_word_cnt': workflow.output_word_cnt
         }
         _ = update_bubble_object('workflow-runs', run_id, body)
-       
+        
     return success({'SUCCESS': True})
 
 
@@ -203,23 +218,42 @@ def step(event, context):
 
     
     # run step as lambda Event so we can return immediately and free frontend
-    _ = lambda_client.invoke(
-        FunctionName=f'foxscript-api-{STAGE}-run_step',
-        InvocationType='Event',
-        Payload=json.dumps({"body": {
-            'step_id': step_id,
-            'run_id': run_id,
-            'email': email,
-            'input_vars': input_vars,
-            'input_vals': input_vals
-        }})
-    ) 
+    if os.getenv('IS_OFFLINE', 'false') == 'true':
+        print('RUNNING LOCAL')
+        _ = lambda_client.invoke(
+            FunctionName=f'foxscript-api-{STAGE}-run_step_local',
+            InvocationType='Event',
+            Payload=json.dumps({"body": {
+                'step_id': step_id,
+                'run_id': run_id,
+                'email': email,
+                'input_vars': input_vars,
+                'input_vals': input_vals
+            }})
+        )
+    else:
+        print('RUNNING CLOUD')
+        _ = lambda_client.invoke(
+            FunctionName=f'foxscript-api-{STAGE}-run_step_cloud',
+            InvocationType='Event',
+            Payload=json.dumps({"body": {
+                'step_id': step_id,
+                'run_id': run_id,
+                'email': email,
+                'input_vars': input_vars,
+                'input_vals': input_vals
+            }})
+        ) 
        
     return success({'SUCCES': True})
 
 
 def run_step(event, context):
     print(event)
+
+    from utils.workflow import prep_input_vals, get_step_from_bubble
+
+    from utils.bubble import update_bubble_object
 
     try:
         step_id = event['body']['step_id']

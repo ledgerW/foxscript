@@ -10,8 +10,8 @@ import pathlib
 import boto3
 
 from utils.workflow import prep_input_vals, get_workflow_from_bubble
-
 from utils.bubble import create_bubble_object, get_bubble_object, update_bubble_object, get_bubble_doc, delete_bubble_object
+from utils.google import get_csv_lines
 from utils.general import SQS
 from utils.response_lib import *
 
@@ -44,9 +44,6 @@ def main(task_args):
     batch_url = task_args['batch_input_url']
     batch_doc_id = task_args['batch_doc_id']
 
-    # load and run workflow
-    workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
-
     # get project id for output docs using dummy temp doc id provided in initial call
     res = get_bubble_object('document', doc_id)
     project_id = res.json()['response']['project']
@@ -63,20 +60,24 @@ def main(task_args):
         pass
 
     # load batch list
-    batch_input_path = pathlib.Path(local_batch_path)
-    with open(batch_input_path, encoding="utf-8") as f:
-        batch_list = f.read()
-
-    if "<SPLIT>" in batch_list:
-        splitter = "<SPLIT>"
+    if local_batch_path.endswith('.csv'):
+        batch_list = get_csv_lines(content=None, path=local_batch_path, delimiter=',', as_input=True)
     else:
-        splitter = "\n"
-    
-    print('batch_list top 10:')
-    print(batch_list.split(splitter)[:10])
+        batch_input_path = pathlib.Path(local_batch_path)
+        with open(batch_input_path, encoding="utf-8") as f:
+            batch_list = f.read()
 
-    for input_val in batch_list.split(splitter):
-        print(input_val)
+        if "<SPLIT>" in batch_list:
+            splitter = "<SPLIT>"
+        else:
+            splitter = "\n"
+
+        batch_list = batch_list.split(splitter)
+
+    
+    for input_val in batch_list:
+        workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
+        print(f"batch item input: {input_val}")
         # get workflow inputs
         input_vals = prep_input_vals([input_vars], [input_val], workflow)
         print('prepped input val:')
@@ -94,24 +95,25 @@ def main(task_args):
         else:
             workflow.run_all(input_vals, bubble=False)
 
-            # send result to Bubble Document
-            body = {
-                'name': list(input_vals.values())[0].replace('\n','_').replace(' ','_')[:50],
-                'text': workflow.steps[-1].output,
-                'user_email': email,
-                'project': project_id
-            }
-            res = create_bubble_object('document', body)
-            new_doc_id = res.json()['id']
+            if task_args['to_project']:
+                # send result to Bubble Document
+                body = {
+                    'name': list(input_vals.values())[0].replace('\n','_').replace(' ','_')[:50],
+                    'text': workflow.steps[-1].output,
+                    'user_email': email,
+                    'project': project_id
+                }
+                res = create_bubble_object('document', body)
+                new_doc_id = res.json()['id']
 
-            # add new doc to project
-            res = get_bubble_object('project', project_id)
-            try:
-                project_docs = res.json()['response']['documents']
-            except:
-                project_docs = []
+                # add new doc to project
+                res = get_bubble_object('project', project_id)
+                try:
+                    project_docs = res.json()['response']['documents']
+                except:
+                    project_docs = []
 
-            _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+                _ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
 
             # Send usage to Bubble Workflow Runs
             body = {

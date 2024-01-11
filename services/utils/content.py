@@ -4,7 +4,6 @@ import json
 import re
 from datetime import datetime
 from langchain.text_splitter import TokenTextSplitter
-import tiktoken
 from PyPDF2 import PdfReader
 from tenacity import (
     retry,
@@ -64,7 +63,7 @@ def update_source(report_source, latest_post_date, wv_client):
     )
 
 
-def text_splitter(text, n, tokenizer=None, return_sentences=False, chunk_overlap=10):
+def text_splitter(text, n, return_sentences=False, chunk_overlap=10):
     text_splitter = TokenTextSplitter(chunk_size=n, chunk_overlap=chunk_overlap)
     texts = text_splitter.split_text(text)
     texts = [t.strip() for t in texts]
@@ -72,7 +71,7 @@ def text_splitter(text, n, tokenizer=None, return_sentences=False, chunk_overlap
     return texts
 
 
-def multi_page_text_splitter(pages, n, tokenizer):
+def multi_page_text_splitter(pages, n):
     all_chunks = []
     page_nums = []
     chunk = ''
@@ -84,13 +83,13 @@ def multi_page_text_splitter(pages, n, tokenizer):
     return all_chunks, page_nums
 
 
-def handle_pdf(report_path, n, tokenizer):
+def handle_pdf(report_path, n):
     reader = PdfReader(report_path)
     print(report_path.name)
     print('Found {} pages'.format(len(reader.pages)))
 
     pages = [p.extract_text() for p in reader.pages]
-    chunks, pages = multi_page_text_splitter(pages, n, tokenizer)
+    chunks, pages = multi_page_text_splitter(pages, n)
 
     # add metadata to chunk
     if '/CreationDate' in reader.metadata:
@@ -140,11 +139,11 @@ def handle_pdf(report_path, n, tokenizer):
     return chunks, pages, meta
 
 
-def handle_json(report_path, n, tokenizer):
+def handle_json(report_path, n):
     with open(report_path, 'r') as file:
         report_json = json.load(file)
     
-    chunks = text_splitter(report_json['content'], n, tokenizer)
+    chunks = text_splitter(report_json['content'], n)
     pages = [0 for _ in range(len(chunks))]
 
     title = report_json['title']
@@ -183,16 +182,15 @@ def load_openai_embedding(data_props, class_name, uuid, wv_client):
 
 
 def load_content(path, data_class=None, source=None, chunk_size=100, wv_client=None):
-    tokenizer = tiktoken.get_encoding("cl100k_base")
     report_path = pathlib.Path(path)
 
     content_cls = f'{data_class}Content'
     chunk_cls = f'{data_class}Chunk'
 
     if report_path.name.endswith('.pdf'):
-        chunks, pages, meta = handle_pdf(report_path, chunk_size, tokenizer)
+        chunks, pages, meta = handle_pdf(report_path, chunk_size)
     elif report_path.name.endswith('.json'):
-        chunks, pages, meta = handle_json(report_path, chunk_size, tokenizer)
+        chunks, pages, meta = handle_json(report_path, chunk_size)
         source = meta['source']
 
     print('Getting embeddings for {} chunks'.format(len(chunks)))

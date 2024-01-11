@@ -30,9 +30,6 @@ except:
 
 from langchain.utilities import GoogleSerperAPIWrapper
 
-import tiktoken
-tokenizer = tiktoken.get_encoding("cl100k_base")
-
 STAGE = os.getenv('STAGE')
 WP_API_KEY = os.getenv('WP_API_KEY')
 

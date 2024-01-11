@@ -11,6 +11,9 @@ RUN python3.10 -m pip install -r Docker.requirements.txt
 RUN mkdir utils
 COPY services/utils ./utils
 
+RUN mkdir weaviate
+COPY weaviate ./weaviate
+
 COPY services/api/weaviate_api.py ./
 COPY services/api/workflow_api.py ./
 

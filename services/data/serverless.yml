@@ -50,6 +50,8 @@ provider:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
     SERPER_API_KEY: ${env:SERPER_API_KEY}
+    GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
+    GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
 
   iam:
     role:
@@ -125,37 +127,4 @@ functions:
           path: researcher
           method: post
           cors: true
-  
-  #scrape_data_master:
-  #  image:
-  #    name: load_data_image
-  #    command:
-  #      - scrape_data.master
-  #    entryPoint:
-  #      - '/lambda-entrypoint.sh'
-  #  memorySize: 256
-  #  timeout: 300
-  #  maximumRetryAttempts: 0
-  #  events:
-  #    - http:
-  #        path: scrape_data_master
-  #        method: post
-  #        cors: true
-  #    - schedule: rate(24 hours)
-  
-  #scrape_data_worker:
-  #  image:
-  #    name: load_data_image
-  #    command:
-  #      - scrape_data.worker
-  #    entryPoint:
-  #      - '/lambda-entrypoint.sh'
-  #  memorySize: 1024
-  #  timeout: 300
-  #  maximumRetryAttempts: 0
-  #  events:
-  #    - http:
-  #        path: scrape_data_worker
-  #        method: post
-  #        cors: true
 
