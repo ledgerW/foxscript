@@ -58,7 +58,7 @@ class get_chain():
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
-        self.input_vars = re.findall('{(.+?)}', prompt)
+        self.input_vars = re.findall('(?<!\{)\{([^{}]+)\}(?!\})', prompt)
 
         _prompt = PromptTemplate(
             input_variables=self.input_vars,
