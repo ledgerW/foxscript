@@ -6,6 +6,7 @@ except:
 
 import os
 import csv
+import json
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -117,7 +118,7 @@ def create_google_doc(title, content='', folder_id='root', creds=None):
     return doc_id
 
 
-def get_csv_lines(content=None, path=None, delimiter=','):
+def get_csv_lines(content=None, path=None, delimiter=',', as_input=False):
     if path:
         data = []
         with open(path, 'r') as file:
@@ -130,6 +131,9 @@ def get_csv_lines(content=None, path=None, delimiter=','):
         reader = csv.reader(content.splitlines(), delimiter=delimiter)
         for row in reader:
             data.append(row)
+
+    if as_input:
+        data = [json.dumps({h: v for h, v in zip(data[0], row)}) for row in data[1:]]
 
     return data
 

@@ -10,8 +10,8 @@ import pathlib
 import boto3
 
 from utils.workflow import prep_input_vals, get_workflow_from_bubble
-
 from utils.bubble import create_bubble_object, get_bubble_object, update_bubble_object, get_bubble_doc, delete_bubble_object
+from utils.google import get_csv_lines
 from utils.general import SQS
 from utils.response_lib import *
 
@@ -60,16 +60,22 @@ def main(task_args):
         pass
 
     # load batch list
-    batch_input_path = pathlib.Path(local_batch_path)
-    with open(batch_input_path, encoding="utf-8") as f:
-        batch_list = f.read()
-
-    if "<SPLIT>" in batch_list:
-        splitter = "<SPLIT>"
+    if local_batch_path.endswith('.csv'):
+        batch_list = get_csv_lines(content=None, path=local_batch_path, delimiter=',', as_input=True)
     else:
-        splitter = "\n"
+        batch_input_path = pathlib.Path(local_batch_path)
+        with open(batch_input_path, encoding="utf-8") as f:
+            batch_list = f.read()
 
-    for input_val in batch_list.split(splitter):
+        if "<SPLIT>" in batch_list:
+            splitter = "<SPLIT>"
+        else:
+            splitter = "\n"
+
+        batch_list = batch_list.split(splitter)
+
+    
+    for input_val in batch_list:
         workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
         print(f"batch item input: {input_val}")
         # get workflow inputs
