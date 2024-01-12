@@ -776,15 +776,21 @@ class fetch_input():
 
         if self.source == 'Workflow Document':
             # get project id for output docs using dummy temp doc id provided in initial call
-            res = get_bubble_object('document', self.workflow_document)
-            content = res.json()['response']['text']
+            try:
+                res = get_bubble_object('document', self.workflow_document)
+                content = res.json()['response']['text']
+            except:
+                content = ''
             
             return_value = content
 
         if self.source == 'Document From Input':
             # get project id for output docs using dummy temp doc id provided in initial call
-            res = get_bubble_object('document', input)
-            content = res.json()['response']['text']
+            try:
+                res = get_bubble_object('document', input)
+                content = res.json()['response']['text']
+            except:
+                content = ''
             
             return_value = content
 
