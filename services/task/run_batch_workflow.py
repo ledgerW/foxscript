@@ -62,6 +62,7 @@ def main(task_args):
     # load batch list
     if local_batch_path.endswith('.csv'):
         batch_list = get_csv_lines(content=None, path=local_batch_path, delimiter=',', as_input=True)
+        batch_list = [item for item in batch_list if item != '']
     else:
         batch_input_path = pathlib.Path(local_batch_path)
         with open(batch_input_path, encoding="utf-8") as f:
@@ -73,6 +74,7 @@ def main(task_args):
             splitter = "\n"
 
         batch_list = batch_list.split(splitter)
+        batch_list = [item for item in batch_list if item != '']
 
     
     for input_val in batch_list:
