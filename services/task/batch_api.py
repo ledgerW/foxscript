@@ -3,16 +3,41 @@ sys.path.append('..')
 
 import os
 import json
+import time
 import boto3
+import pandas as pd
+import numpy as np
 
+from utils.bubble import get_bubble_doc, upload_bubble_file
 from utils.response_lib import *
 
 
-lambda_data_dir = '/tmp'
+STAGE = os.getenv('STAGE')
+BUCKET = os.getenv('BUCKET')
+SERVICE = os.getenv('SERVICE')
 
-STAGE = os.environ['STAGE']
-SERVICE = os.environ['SERVICE']
+if os.getenv('IS_OFFLINE'):
+   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
+   LAMBDA_DATA_DIR = '.'
+else:
+   lambda_client = boto3.client('lambda')
+   LAMBDA_DATA_DIR = '/tmp'
 
+
+
+def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
+    batch_df_list = np.array_split(batch_df, concurrent_runs)
+    batch_df_list = [df.reset_index(drop=True) for df in batch_df_list]
+
+    if as_csv:
+        batch_df_paths = []
+        for idx, df in enumerate(batch_df_list):
+            batch_path = f'batch{idx}.csv'
+            batch_df_paths.append(batch_path)
+            df.to_csv(batch_path, index=False)
+            batch_df_list = batch_df_paths
+
+    return batch_df_list
 
 
 def run_cloud(task_name, task_args={}):
@@ -86,7 +111,6 @@ def run_local(task_name, task_args={}):
     main(task_args)
 
 
-
 def batch_workflow(event, context):
     print(event)
     try:
@@ -99,12 +123,32 @@ def batch_workflow(event, context):
     print(task_args)
     print('')
 
-    if os.getenv('IS_OFFLINE', 'false') == 'true':
-        print('RUNNING LOCAL')
-        run_local('run_batch_workflow', task_args=task_args)
-    else:
-        print('RUNNING CLOUD')
-        run_cloud('run_batch_workflow', task_args=task_args)
+    # Prep batches according to concurrency
+    batch_url = task_args['batch_input_url']
+    batch_concurrent_runs = task_args['batch_concurrent_runs']
+
+    # Fetch primary batch input file from bubble
+    batch_input_file_name = batch_url.split('/')[-1]
+    local_batch_path = f'{LAMBDA_DATA_DIR}/{batch_input_file_name}'
+    get_bubble_doc(batch_url, local_batch_path)
+    
+    batch_df = pd.read_csv(local_batch_path)
+    batch_files = make_batch_files(batch_df, concurrent_runs=batch_concurrent_runs, as_csv=True)
+
+    print(f'Starting {batch_concurrent_runs} batch jobs')
+    for batch_file in batch_files:
+        print(f'Batch_file: {batch_file}')
+        bubble_url = upload_bubble_file(batch_file)
+        task_args['batch_input_url'] = bubble_url
+
+        if os.getenv('IS_OFFLINE', 'false') == 'true':
+            print('RUNNING LOCAL')
+            run_local('run_batch_workflow', task_args=task_args)
+        else:
+            print('RUNNING CLOUD')
+            run_cloud('run_batch_workflow', task_args=task_args)
+
+        time.sleep(1)
 
     return success({'success': True})
 

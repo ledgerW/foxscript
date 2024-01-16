@@ -61,7 +61,7 @@ def main(task_args):
 
     # load batch list
     if local_batch_path.endswith('.csv'):
-        batch_list = get_csv_lines(content=None, path=local_batch_path, delimiter=',', as_input=True)
+        batch_list = get_csv_lines(content=None, path=local_batch_path, delimiter=',', return_as_json=True)
         batch_list = [item for item in batch_list if item != '']
     else:
         batch_input_path = pathlib.Path(local_batch_path)
@@ -126,8 +126,11 @@ def main(task_args):
             }
             _ = create_bubble_object('workflow-runs', body)
     
-    # Delete batch input document
-    _ = delete_bubble_object('batch-doc', batch_doc_id)
+    # Delete batch input document if present
+    try:
+        _ = delete_bubble_object('batch-doc', batch_doc_id)
+    except:
+        pass
 
 
 

@@ -6,6 +6,7 @@ useDotenv: true
 plugins:
   - serverless-dotenv-plugin
   - serverless-offline
+  - serverless-python-requirements
   - serverless-fargate
   - serverless-vpc-plugin
 
@@ -16,6 +17,15 @@ custom:
 
   serverless-offline:
     httpPort: 3007
+
+  # Lambda Layers
+  pythonRequirements:
+    dockerizePip: true
+    pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
+    noDeploy:
+      - unittest-parametrize
+    layer:
+      name: ${self:service}
 
   # VPC
   vpcConfig:
@@ -203,9 +213,11 @@ functions:
   batch_workflow:
     runtime: python3.9
     handler: batch_api.batch_workflow
-    memorySize: 256
+    memorySize: 512
     timeout: 300
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: batch_workflow
