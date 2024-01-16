@@ -125,7 +125,7 @@ def batch_workflow(event, context):
 
     # Prep batches according to concurrency
     batch_url = task_args['batch_input_url']
-    batch_concurrent_runs = task_args['batch_concurrent_runs']
+    batch_concurrent_runs = int(task_args['batch_concurrent_runs'])
 
     # Fetch primary batch input file from bubble
     batch_input_file_name = batch_url.split('/')[-1]
