@@ -33,6 +33,7 @@ def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
         batch_df_paths = []
         for idx, df in enumerate(batch_df_list):
             batch_path = f'batch{idx}.csv'
+            batch_path = f'{LAMBDA_DATA_DIR}/{batch_path}'
             batch_df_paths.append(batch_path)
             df.to_csv(batch_path, index=False)
             batch_df_list = batch_df_paths
