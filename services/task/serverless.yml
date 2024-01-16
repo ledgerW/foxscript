@@ -26,6 +26,8 @@ custom:
       - unittest-parametrize
     layer:
       name: ${self:service}
+      compatibleRuntimes:
+        - python3.9
 
   # VPC
   vpcConfig:
