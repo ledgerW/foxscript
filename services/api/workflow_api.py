@@ -95,7 +95,8 @@ def workflow(event, context):
             'input_vars': input_vars,
             'batch_input_url': input_vals[0],
             'batch_doc_id': input_vals[1],
-            'to_project': True if 'to_project' not in body else body['to_project']
+            'batch_concurrent_runs': input_vals[2],
+            'to_project': False if 'to_project' not in body else body['to_project']
         }
 
         print('BATCH RUN:')

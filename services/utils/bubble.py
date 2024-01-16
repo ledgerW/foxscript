@@ -12,6 +12,23 @@ else:
   LAMBDA_DATA_DIR = '/tmp'
 
 
+def upload_bubble_file(path):
+    file = {'document': open(path,'rb')}
+
+    # https://app.foxscript.ai/version-test/fileupload
+    endpoint = BUBBLE_API_ROOT.split('api')[0] + 'fileupload'
+
+    res = requests.post(
+        endpoint,
+        headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'},
+        files=file
+    )
+    file_id = res.text.split('bubble.io')[-1].replace('"','')
+    bubble_url = endpoint + file_id
+    
+    return bubble_url
+
+
 def get_bubble_doc(url, local_doc_path):
     response = requests.get(url, headers={'Authorization': f'Bearer {BUBBLE_API_KEY}'})
     if response.status_code != 200:
