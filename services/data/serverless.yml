@@ -110,6 +110,11 @@ functions:
           bucket: ${self:custom.plag_checker_bucket}
           event: s3:ObjectCreated:*
           rules:
+            - suffix: .markdown
+      - s3:
+          bucket: ${self:custom.plag_checker_bucket}
+          event: s3:ObjectCreated:*
+          rules:
             - suffix: .docx
       - s3:
           bucket: ${self:custom.plag_checker_bucket}
