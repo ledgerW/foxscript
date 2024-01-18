@@ -93,7 +93,7 @@ functions:
     handler: plag_checker.handler
     memorySize: 256
     timeout: 300
-    maximumRetryAttempts: 1
+    maximumRetryAttempts: 0
     layers:
       - Ref: PythonRequirementsLambdaLayer
     events:
@@ -104,6 +104,18 @@ functions:
       - s3:
           bucket: ${self:custom.plag_checker_bucket}
           event: s3:ObjectCreated:*
+          rules:
+            - suffix: .md
+      - s3:
+          bucket: ${self:custom.plag_checker_bucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .docx
+      - s3:
+          bucket: ${self:custom.plag_checker_bucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .txt
 
   load_data:
     image:
