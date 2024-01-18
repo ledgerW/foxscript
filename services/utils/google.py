@@ -201,7 +201,14 @@ def upload_to_google_drive(title, file_type, content=None, path=None, folder_id=
         with open(path, 'w') as file:
             file.write(content)
 
-    media = MediaFileUpload(path, mimetype=f'application/{file_type}')
+    if file_type == 'md':
+        mimetype = 'text/markdown'
+    elif file_type == 'txt':
+        mimetype = 'text/plain'
+    else:
+        mimetype = f'application/{file_type}'
+
+    media = MediaFileUpload(path, mimetype=mimetype)
 
     # Upload the file
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()

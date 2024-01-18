@@ -6,14 +6,41 @@ useDotenv: true
 plugins:
   - serverless-dotenv-plugin
   - serverless-offline
+  - serverless-python-requirements
 
 custom:
   stage: ${opt:stage, self:provider.stage}
 
   bucket_name: foxscript-${self:custom.stage}
+  plag_checker_bucket: foxscript-${self:custom.stage}-plagchecker
 
   serverless-offline:
     httpPort: 3006
+
+  # Lambda Layers
+  pythonRequirements:
+    dockerizePip: true
+    pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
+    noDeploy:
+      - weaviate-client
+      - openai
+      - faiss-cpu
+      - langchain
+      - tiktoken
+      - selenium
+      - unstructured
+      - newspaper3k
+      - PyPDF2
+      - beautifulsoup4
+      - lxml
+      - pycryptodome
+      - tenacity
+      - pyyaml
+      - unittest-parametrize
+    layer:
+      name: ${self:service}
+      compatibleRuntimes:
+        - python3.9
 
 package:
   individually: true
@@ -21,7 +48,6 @@ package:
     - '!node_modules/**'
     - '!package-lock.json'
     - '!package.json'
-    - data.py
     - researcher.py
     - ../utils/**
 
@@ -52,6 +78,7 @@ provider:
     SERPER_API_KEY: ${env:SERPER_API_KEY}
     GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
     GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
+    ORIGINALITY_PLAG: ${env:ORIGINALITY_PLAG}
 
   iam:
     role:
@@ -76,6 +103,22 @@ provider:
           Resource: '*'
 
 functions:
+  plag_checker:
+    handler: plag_checker.handler
+    memorySize: 256
+    timeout: 300
+    maximumRetryAttempts: 1
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - http:
+          path: plag_checker
+          method: post
+          cors: true
+      - s3:
+          bucket: ${self:custom.plag_checker_bucket}
+          event: s3:ObjectCreated:*
+
   load_data:
     image:
       name: data_image
