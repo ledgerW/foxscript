@@ -738,6 +738,15 @@ class send_output():
                     )
                     drive_file_id = file_id
                 else:
+                    file_id = upload_to_google_drive(
+                        title,
+                        'md',
+                        content=content,
+                        path=None,
+                        folder_id=self.drive_folder,
+                        creds=creds
+                    )
+
                     doc_id = create_google_doc(
                         title,
                         content=content,

@@ -14,10 +14,10 @@ RUN yum install atk cups-libs gtk3 libXcomposite alsa-lib \
   xorg-x11-xauth dbus-glib dbus-glib-devel -y
 
 # Copy the requirements.txt file to the container
-COPY services/data/requirements.txt ./
+COPY services/data/Docker.requirements.txt ./
 
 # Install the python requirements from requirements.txt
-RUN python3.10 -m pip install -r requirements.txt
+RUN python3.10 -m pip install -r Docker.requirements.txt
 
 RUN mkdir nltk_data
 ENV NLTK_DATA="nltk_data"

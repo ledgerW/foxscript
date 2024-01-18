@@ -10,7 +10,13 @@ from utils.content import load_content
 from utils.weaviate_utils import wv_client, to_json_doc
 
 
-lambda_data_dir = '/tmp'
+STAGE = os.getenv('STAGE')
+BUCKET = os.getenv('BUCKET')
+
+if os.getenv('IS_OFFLINE'):
+  LAMBDA_DATA_DIR = '.'
+else:
+  LAMBDA_DATA_DIR = '/tmp'
 
 s3_client = boto3.client('s3')
 
@@ -22,7 +28,7 @@ def handler(event, context):
         doc_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
 
         data_class = doc_name.split('/')[-2]
-        local_content_path = lambda_data_dir + '/{}'.format(doc_name.split('/')[-1])
+        local_content_path = LAMBDA_DATA_DIR + '/{}'.format(doc_name.split('/')[-1])
         s3_client.download_file(bucket, doc_name, local_content_path)
     else:
         # HTTP Trigger
