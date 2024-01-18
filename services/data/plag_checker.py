@@ -121,7 +121,7 @@ def handler(event, context):
 
     # Send each part to plag checker
     for part_num, part in enumerate(doc_parts):
-        title = f"{part_num+1}_{doc_file_name.replace('.docx','').replace('.txt','')}"
+        title = f"{part_num+1}_{doc_file_name.replace('.docx','').replace('.txt','').replace('.md','')}"
         print(f"Getting report for {title}")
         res = get_plagiarism_report(part, title, customer_url)
         
