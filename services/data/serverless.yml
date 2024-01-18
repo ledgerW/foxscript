@@ -22,20 +22,6 @@ custom:
     dockerizePip: true
     pipCmdExtraArgs: ['--platform manylinux2014_x86_64', '--only-binary=:all:']
     noDeploy:
-      - weaviate-client
-      - openai
-      - faiss-cpu
-      - langchain
-      - tiktoken
-      - selenium
-      - unstructured
-      - newspaper3k
-      - PyPDF2
-      - beautifulsoup4
-      - lxml
-      - pycryptodome
-      - tenacity
-      - pyyaml
       - unittest-parametrize
     layer:
       name: ${self:service}
