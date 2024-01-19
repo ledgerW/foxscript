@@ -235,6 +235,8 @@ functions:
     memorySize: 256
     timeout: 300
     maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: batch_upload_to_s3
