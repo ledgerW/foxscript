@@ -28,6 +28,7 @@ custom:
       - pandas
       - tabulate
       - openai
+      - tiktoken
       - requests
       - urllib3
       - pypandoc

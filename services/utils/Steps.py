@@ -328,7 +328,7 @@ class get_library_retriever():
                     results = 'Problem with Step.'
             else:
                 if self.from_similar_docs:
-                    print('Library Research with Similar Docs: {question}')
+                    print(f'Library Research with Similar Docs: {question}')
                     # get docs that are similar overall first
                     nearVector = {
                         "vector": OpenAIEmbeddings().embed_query(question)

@@ -6,6 +6,7 @@ langchain==0.0.327
 langchain-experimental==0.0.36
 pandas
 tabulate
+tiktoken
 openai==0.28.1
 requests
 urllib3<2
