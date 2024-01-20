@@ -336,14 +336,14 @@ class get_library_retriever():
                     if self.ignore_url:
                         url_to_ignore = input['URL To Ignore']
                         url_to_ignore = url_to_ignore[0] if type(url_to_ignore)==list else url_to_ignore
-
-                        where_filter = {
-                            "path": ["url"],
-                            "operator": "NotEqual",
-                            "valueText": url_to_ignore,
-                        }
                     else:
-                        where_filter = {}
+                        url_to_ignore = 'DUMMY'
+
+                    where_filter = {
+                        "path": ["url"],
+                        "operator": "NotEqual",
+                        "valueText": url_to_ignore,
+                    }
 
                     result = wv_client.query\
                         .get(f"{self.class_name}Content", ['title', 'source', 'url'])\
