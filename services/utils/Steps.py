@@ -328,6 +328,7 @@ class get_library_retriever():
                     results = 'Problem with Step.'
             else:
                 if self.from_similar_docs:
+                    print('Library Research with Similar Docs: {question}')
                     # get docs that are similar overall first
                     nearVector = {
                         "vector": OpenAIEmbeddings().embed_query(question)
@@ -355,6 +356,7 @@ class get_library_retriever():
 
                     articles = [{'source': res['source'], 'url': res['url'], 'id': res['_additional']['id']} for res in result['data']['Get'][f"{self.class_name}Content"]]
                     doc_urls = list(set([doc['url'] for doc in articles]))
+                    print(f"doc urls: {doc_urls}")
 
                     # now get similar chunks only from overall similar docs
                     where_filter = {
@@ -365,6 +367,7 @@ class get_library_retriever():
 
                     chunks = self.get_library_chunks(question, where_filter=where_filter)
                     results = '\n'.join([c.page_content for c in chunks])
+                    print(f"Library Research Results: {results}")
                 else:
                     chunks = self.get_library_chunks(question)
                     results = '\n'.join([c.page_content for c in chunks])
