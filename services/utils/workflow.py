@@ -86,7 +86,7 @@ def get_init(body, email):
 
 
 def prep_input_vals(input_vars, input_vals, input):
-    # prep for a Workflow
+    # prep for a Workflow or Workflow Step
     if hasattr(input, 'steps'):
         input_type = input.steps[0].config['action']
 
@@ -103,6 +103,8 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {input_vars[0]: input_vals[0]}
         
         if input_type == 'Library Research':
+            print('Library Research Prep Input Vals top (workflow)')
+            print(input_vals)
             if len(input_vars) == 1:
                 try:
                     input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
@@ -141,15 +143,17 @@ def prep_input_vals(input_vars, input_vals, input):
             input_vals = {'input': input_vals[0]}
         
         if input_type == 'Library Research':
+            print('Library Research Prep Input Vals')
+            print(input_vals)
             if len(input_vars) == 1:
                 try:
-                    input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
+                    input_vals = {input_vars[0]: [x for x in input_vals]}
                 except:
                     input_vals = {input_vars[0]: input_vals[0]}
             else:
                 try:
                     input_vals = {
-                        input_vars[0]: [input_vals[0].split('\n')],
+                        input_vars[0]: [input_vals[0]],
                         input_vars[1]: input_vals[1]
                     }
                 except:

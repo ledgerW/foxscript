@@ -137,11 +137,13 @@ class analyze_csv():
 
     def __call__(self, input):
         """
-        Input: {'input': ["questions"]}
+        Input: {'input': [["questions"]]}
 
         Returns: string
         """
         questions = input['input']
+        if type(questions) == str:
+            questions = [questions]
     
         all_results = ''
         for question in questions[:5]:
@@ -183,7 +185,7 @@ class do_research():
 
     def __call__(self, input):
         """
-        Input: {'input': ["questions OR URL"]}
+        Input: {'input': [["questions"] OR "URL"]}
 
         Returns string
         """
@@ -200,6 +202,8 @@ class do_research():
             return content
         else:
             questions = input['input']
+            if type(questions) == str:
+                questions = [questions]
 
             urls_to_scrape = []
             queries = []
@@ -277,7 +281,7 @@ class get_library_retriever():
 
     def __call__(self, input):
         """
-        Input: {'input': ["questions"]}
+        Input: {'input': [["questions"]]}
         or
         Input: {
             'input': ["questions"],
@@ -291,6 +295,8 @@ class get_library_retriever():
 
         Returns: string
         """
+        print('Library Step Input')
+        print(input)
         if 'Workflow library' in self.class_name:
             print('Attempting to use Workflow Library')
 
@@ -306,6 +312,8 @@ class get_library_retriever():
 
 
         questions = input['input']
+        if type(questions) == str:
+            questions = [questions]
 
         all_results = ''
         for question in questions:
