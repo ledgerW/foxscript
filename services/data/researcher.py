@@ -71,41 +71,46 @@ class GeneralScraper(Scraper):
         return text
 
 
-def scrape_and_chunk_pdf(url, n):
+def scrape_and_chunk_pdf(url, n, return_raw=False):
   r = requests.get(url, timeout=10)
-  with open(LAMBDA_DATA_DIR + '/tmp.pdf', 'wb') as pdf:
+  file_name = url.split('/')[-1].replace('.pdf', '')
+  path_name = LAMBDA_DATA_DIR + f'/{file_name}.pdf'
+  with open(path_name, 'wb') as pdf:
     pdf.write(r.content)
 
-  return handle_pdf(pathlib.Path(LAMBDA_DATA_DIR, 'tmp.pdf'), n)
+  return handle_pdf(pathlib.Path(path_name), n, url=url, return_raw=return_raw)
 
 
-def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10):
-  try:
-    chunks, pages, meta = scrape_and_chunk_pdf(url, 100)
-    
-    return chunks
+def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10, return_raw=False):
+  try:  
+      if return_raw:
+          pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=return_raw)
+          return '\n'.join([meta['url'], meta['title'], meta['author']]) + '\n\n'.join(pages) 
+      else:
+          chunks, pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=return_raw)
+          return chunks
   except:
-    if is_news_source(url):
-        print('processing news source')
-        article = Article(url=url)
-        try:
-            article.download()
-            article.parse()
-            text = article.text
-        except:
-            print('issue with news source - processing as non-news source')
-            scraper = GeneralScraper()
-            text = scraper.scrape_post(url)
-    else:
-        print('processing non-news source')
-        scraper = GeneralScraper()
-        text = scraper.scrape_post(url)
-    
-    lines = (line.strip() for line in text.splitlines())
-    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-    results = "\n".join(chunk for chunk in chunks if chunk)
+      if is_news_source(url):
+          print('processing news source')
+          article = Article(url=url)
+          try:
+              article.download()
+              article.parse()
+              text = article.text
+          except:
+              print('issue with news source - processing as non-news source')
+              scraper = GeneralScraper()
+              text = scraper.scrape_post(url)
+      else:
+          print('processing non-news source')
+          scraper = GeneralScraper()
+          text = scraper.scrape_post(url)
+      
+      lines = (line.strip() for line in text.splitlines())
+      chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+      results = "\n".join(chunk for chunk in chunks if chunk)
 
-    return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
+      return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
   
 
 def scrape(event, context):
@@ -128,10 +133,17 @@ def scrape(event, context):
     else:
         chunk_overlap = 10
 
+    if 'return_raw' in body:
+        return_raw = body['return_raw']
+    else:
+        return_raw = False
+
     # Scrape
-    chunks = scrape_and_chunk(url, 100, chunk_overlap=chunk_overlap)
+    chunks = scrape_and_chunk(url, 100, chunk_overlap=chunk_overlap, return_raw=return_raw)
     
-    chunks = '<SPLIT>'.join(chunks)
+    if not return_raw:
+        chunks = '<SPLIT>'.join(chunks)
+
     result = {'url': url, 'chunks': chunks}
 
     if sqs:
