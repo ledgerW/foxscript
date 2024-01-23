@@ -192,7 +192,7 @@ class do_research():
         if not self.web_qa:
             url = input['input'][0]
 
-            res = cloud_scrape(url, sqs=None, invocation_type='RequestResponse', chunk_overlap=0)
+            res = cloud_scrape(url, sqs=None, invocation_type='RequestResponse', chunk_overlap=0, return_raw=True)
             res_body = json.loads(res['Payload'].read().decode("utf-8"))
             content = json.loads(res_body['body'])['chunks'].replace('<SPLIT>', ' ')
 

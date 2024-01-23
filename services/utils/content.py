@@ -2,6 +2,7 @@ import weaviate as wv
 import pathlib
 import json
 import re
+from urllib.parse import unquote
 from datetime import datetime
 from langchain.text_splitter import TokenTextSplitter
 from PyPDF2 import PdfReader
@@ -83,13 +84,13 @@ def multi_page_text_splitter(pages, n):
     return all_chunks, page_nums
 
 
-def handle_pdf(report_path, n):
+def handle_pdf(report_path, n, url=None, return_raw=False):
     reader = PdfReader(report_path)
     print(report_path.name)
     print('Found {} pages'.format(len(reader.pages)))
 
     pages = [p.extract_text() for p in reader.pages]
-    chunks, pages = multi_page_text_splitter(pages, n)
+    chunks, page_nums = multi_page_text_splitter(pages, n)
 
     # add metadata to chunk
     if '/CreationDate' in reader.metadata:
@@ -116,27 +117,33 @@ def handle_pdf(report_path, n):
     else:
         title = ''
 
-    for idx, chunk in enumerate(chunks):
-        use_title = title if title != '' else report_path.name
-        
-        chunk_with_meta = f"""Source: {use_title}
-        Author: {author}
-        Date: {short_date}
-        {chunk}
-        """
-        
-        chunk_with_meta = re.sub(' +', ' ', chunk_with_meta)
-        chunks[idx] = chunk_with_meta
-
+    use_title = title if title != '' else report_path.name
+    use_title = unquote(use_title)
+    use_url = use_title if not url else url.split('/')[-1]
+    use_url = unquote(use_url)
     meta = {
         'date': date,
-        'url': use_title,
+        'url': use_url,
         'title': use_title,
         'author': author,
         'source': use_title
     }
-        
-    return chunks, pages, meta
+
+    if return_raw:
+        return pages, meta
+    else:
+        chunks, _ = multi_page_text_splitter(pages, n)
+        for idx, chunk in enumerate(chunks):
+            chunk_with_meta = f"""Source: {use_title}
+            Author: {author}
+            Date: {short_date}
+            {chunk}
+            """
+            
+            chunk_with_meta = re.sub(' +', ' ', chunk_with_meta)
+            chunks[idx] = chunk_with_meta
+
+        return chunks, page_nums, meta
 
 
 def handle_json(report_path, n):
