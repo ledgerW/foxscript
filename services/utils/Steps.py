@@ -277,6 +277,19 @@ class get_library_retriever():
         chunks = self.retriever.get_relevant_documents(query, where_filter=where_filter)
 
         return chunks
+    
+
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(3))
+    def get_similar_content(self, nearVector, where_filter=None):
+        result = wv_client.query\
+            .get(f"{self.class_name}Content", ['title', 'source', 'url'])\
+            .with_additional(["distance", 'id'])\
+            .with_where(where_filter)\
+            .with_near_vector(nearVector)\
+            .with_limit(self.k)\
+            .do()
+        
+        return result
 
 
     def __call__(self, input):
@@ -354,13 +367,7 @@ class get_library_retriever():
                         "valueText": url_to_ignore,
                     }
 
-                    result = wv_client.query\
-                        .get(f"{self.class_name}Content", ['title', 'source', 'url'])\
-                        .with_additional(["distance", 'id'])\
-                        .with_where(where_filter)\
-                        .with_near_vector(nearVector)\
-                        .with_limit(self.k)\
-                        .do()
+                    result = self.get_similar_content(nearVector, where_filter=where_filter)
 
                     articles = [{'source': res['source'], 'url': res['url'], 'id': res['_additional']['id']} for res in result['data']['Get'][f"{self.class_name}Content"]]
                     doc_urls = list(set([doc['url'] for doc in articles]))
