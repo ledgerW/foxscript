@@ -541,6 +541,57 @@ class combine_output():
         return combined
     
 
+class run_code():
+    def __init__(self, py_code='', code_from_input=False):
+        def exec_py_code(input, py_code):
+            """py_code is python code to be exectued.
+            It assumes an input value called 'input' and
+            it returns a value called 'output' that must be
+            defined in py_code.
+            """
+            py_code = f"""{py_code}"""
+            exec_vals = {'input': input}
+            
+            try:
+                exec(py_code, globals(), exec_vals)
+                print(exec_vals)
+                return exec_vals['output']
+            except Exception as e:
+                print(f'Error running py_code:\n{py_code}')
+                print(e)
+                return input
+            
+        
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.code_from_input = code_from_input
+        self.py_code = py_code
+        self.py_func = exec_py_code
+            
+        
+    def __call__(self, input):
+        """
+        Input: {'input': "text output from a previous Step"}
+        OR
+        Input: {
+            'input': "text output from a previous Step",
+            'py_code': "py code to execute from input source"
+        }
+
+        Returns: string
+        """
+        if self.code_from_input:
+            output = self.py_func(input['input'], input['py_code'])
+        else:
+            output = self.py_func(input['input'], self.py_code)
+
+        # Get input and output word count
+        self.input_word_cnt = len(input['input'].split(' '))
+        self.output_word_cnt = len(output.replace('\n\n', ' ').split(' '))
+
+        return output
+    
+
 class send_output():
     def __init__(
             self,
@@ -819,24 +870,7 @@ class fetch_input():
         self.output_word_cnt = len(content.replace('\n\n', ' ').split(' '))
 
         return return_value
-        
-
-#class get_yt_url():
-#  def __init__(self, n=1):
-#    self.n = n
-#    self.input_vars = ['query']
-  
-#  def __call__(self, input):
-#    """
-#    Input: {'input': "query"}
-
-#    Returns: string
-#    """
-#    query = input['input']
-
-#    vid_search = VideosSearch(query, limit=self.n)
-
-#    return vid_search.result()['result'][0]['link']
+    
   
 
 # Step Actions.
@@ -860,6 +894,10 @@ ACTIONS = {
     },
     'Workflow': {
         'func': get_workflow,
+        'returns': 'string'
+    },
+    'Run Code': {
+        'func': run_code,
         'returns': 'string'
     },
     'Combine': {

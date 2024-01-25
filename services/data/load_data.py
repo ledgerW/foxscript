@@ -22,6 +22,7 @@ s3_client = boto3.client('s3')
 
 
 def handler(event, context):
+    print(event)
     # S3 Trigger
     if 'Records' in event:
         bucket = urllib.parse.unquote_plus(event['Records'][0]['s3']['bucket']['name'], encoding='utf-8')

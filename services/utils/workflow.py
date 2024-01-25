@@ -26,6 +26,12 @@ def get_init(body, email):
             'as_list': body['as_list']
         }
 
+    if body['type'] == 'Run Code':
+        init = {
+            'py_code': body['py_code'],
+            'code_from_input': body['code_from_input']
+        }
+
     if body['type'] == 'Send Output':
         init = {
             'destination': body['destination'],
@@ -161,6 +167,15 @@ def prep_input_vals(input_vars, input_vals, input):
                         input_vars[0]: input_vals[0],
                         input_vars[1]: input_vars[1]
                     }
+
+        if input_type == 'Run Code':
+            if len(input_vars) == 1:
+                input_vals = {input_vars[0]: input_vals[0]}
+            else:
+                input_vals = {
+                    input_vars[0]: input_vals[0],
+                    input_vars[1]: input_vars[1]
+                }
 
         if input_type == 'Analyze CSV':
             input_vals = {'input': input_vals[0].split('\n')}
