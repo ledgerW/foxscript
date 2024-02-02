@@ -157,7 +157,10 @@ class analyze_csv():
 
     def prep_input(self, input):
         if self.split_on:
-            input = input.split(self.split_on)
+            input['input'] = input['input'].split(self.split_on)
+            input['input'] = [i for i in input['input'] if i]
+        else:
+            input['input'] = [input['input']]
 
         return input
     
@@ -224,6 +227,7 @@ class do_research():
         '''
         if self.split_on:
             input['input'] = input['input'].split(self.split_on)
+            input['input'] = [i for i in input['input'] if i]
         else:
             input['input'] = [input['input']]
 
@@ -363,6 +367,7 @@ class get_library_retriever():
         '''
         if self.split_on:
             input['input'] = input['input'].split(self.split_on)
+            input['input'] = [i for i in input['input'] if i]
         else:
             input['input'] = [input['input']]
 
@@ -542,15 +547,11 @@ class get_workflow():
         '''
         input: {'input': str}
         '''
-        print(f'split_on: {self.split_on}')
-        print(f'input: {input}')
         input_key = list(input.keys())[0]
-        print(f'input_key: {input_key}')
-        print(f'input_val: {input[input_key]}')
-        print(input[input_key].split(self.split_on))
         if self.split_on:
             print('SPLITTING')
-            input[input_key] = input[input_key].split(self.split_on)
+            input['input'] = input['input'].split(self.split_on)
+            input['input'] = [i for i in input['input'] if i]
         else:
             input[input_key] = [input[input_key]]
 
