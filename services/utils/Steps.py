@@ -550,8 +550,8 @@ class get_workflow():
         input_key = list(input.keys())[0]
         if self.split_on:
             print('SPLITTING')
-            input['input'] = input['input'].split(self.split_on)
-            input['input'] = [i for i in input['input'] if i]
+            input[input_key] = input[input_key].split(self.split_on)
+            input[input_key] = [i for i in input[input_key] if i]
         else:
             input[input_key] = [input[input_key]]
 
