@@ -1,75 +1,24 @@
 import unittest
-from unittest_parametrize import param, parametrize, ParametrizedTestCase
+from unittest_parametrize import parametrize, ParametrizedTestCase
 
 import sys
 sys.path.append('..')
-from utils import workflow
 
-class TestWorkflow(ParametrizedTestCase):
+from fixtures import workflow_params
+
+
+class TestWorkflowIO(ParametrizedTestCase):
     @parametrize(
-        ("body", "email"),
-        [
-            param({
-                    'type': "LLM Prompt",
-                    'init_text': "This is the prompt",
-                    'as_list': True
-                }, 
-                "ledger.west@gmail.com",
-                id="LLM_Prompt"
-            ),
-            param({
-                    'type': "Send Output",
-                    'destination': 'Project',
-                    'as_workflow_doc': True,
-                    'target_doc_input': "This is the document content",
-                    'as_url_list': False,
-                    'empty_doc': False,
-                    'csv_doc': False,
-                    'delimiter': ','
-                }, 
-                "ledger.west@gmail.com",
-                id="Send_Output"
-            ),
-            param({
-                    'type': "Combine"
-                }, 
-                "ledger.west@gmail.com",
-                id="Combine"
-            ),
-        ],
+        workflow_params.io_fixture['params'],
+        workflow_params.io_fixture['values']
     )
-    def test_get_init(self, body, email):
-        init_lengths = {
-            'LLM Prompt': 2,
-            'Send Output': 9,
-            'Fetch Input': 1,
-            'Combine': 0,
-            'Analyze CSV': 1,
-            'Web Research': 2,
-            'Subtopics': 1,
-            'Library Research': 5,
-            'Workflow': 2
-        }
+    def test_workflow_input(self, workflow, input_var: [str], input_val: [str]):
+        """
+        Testing the post prep_input input to a Step's function.
+        """
+        self.maxDiff = None
 
-        init = workflow.get_init(body, email)
+        workflow.run_all(input_var, input_val, bubble=False)
         
-        self.assertEqual(len(init), init_lengths[body['type']])
-
-
-    @parametrize(
-        ("body", "email"),
-        [
-            param({
-                    'type': "Send Output",
-                    'destination': 'Project',
-                    'target_doc_input': "This is the document content",
-                    'as_url_list': False
-                }, 
-                "ledger.west@gmail.com",
-                id="Send_Output_missing_param"
-            ),
-        ],
-    )
-    def test_get_init_missing_param(self, body, email):
-        with self.assertRaises(KeyError):
-            init = workflow.get_init(body, email)
+        for num, step in enumerate(workflow.steps):
+            self.assertEqual(step.TEST_STEP_INPUT, step.TEST_EXPECTED_INPUT, f"{num+1}-{step.name}")

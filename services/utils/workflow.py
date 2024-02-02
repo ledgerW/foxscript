@@ -22,18 +22,21 @@ BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
 def get_init(body, email):
     if body['type'] == 'LLM Prompt':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'prompt': body['init_text'],
             'as_list': body['as_list']
         }
 
     if body['type'] == 'Run Code':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'py_code': body['py_code'],
             'code_from_input': body['code_from_input']
         }
 
     if body['type'] == 'Send Output':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'destination': body['destination'],
             'as_workflow_doc': body['as_workflow_doc'],
             'target_doc_input': body['target_doc_input'],
@@ -47,27 +50,33 @@ def get_init(body, email):
 
     if body['type'] == 'Fetch Input':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'source': body['source']
         }
 
     if body['type'] == 'Combine':
-        init = {}
+        init = {'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape')}
 
     if body['type'] == 'Analyze CSV':
         doc_url = body['init_text']
         doc_file_name = doc_url.split('/')[-1]
         local_doc_path = f'{LAMBDA_DATA_DIR}/{doc_file_name}'
         get_bubble_doc(doc_url, local_doc_path)
-        init = {'path': local_doc_path}
+        init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
+            'path': local_doc_path
+        }
 
     if body['type'] == 'Web Research':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'top_n': int(body['init_number']),
             'web_qa': body['web_qa']
         }
 
     if body['type'] == 'Subtopics':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'top_n': int(body['init_number']),
             'by_source': False if 'subtopic_by_source' not in body else body['subtopic_by_source']
         }
@@ -75,6 +84,7 @@ def get_init(body, email):
     if body['type'] == 'Library Research':
         class_name, account = get_wv_class_name(email, body['init_text'])
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'class_name': class_name,
             'k': int(body['init_number']),
             'as_qa': body['as_qa'],
@@ -84,106 +94,12 @@ def get_init(body, email):
 
     if body['type'] == 'Workflow':
         init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
             'workflow': get_workflow_from_bubble(body['init_text'], email=email),
             'in_parallel': body['in_parallel']
         }
 
     return init
-
-
-def prep_input_vals(input_vars, input_vals, input):
-    # prep for a Workflow or Workflow Step
-    if hasattr(input, 'steps'):
-        input_type = input.steps[0].config['action']
-
-        if input_type == 'LLM Prompt':
-            input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
-
-        if input_type == 'Web Research':
-            try:
-                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
-            except:
-                input_vals = {input_vars[0]: input_vals[0]}
-
-        if input_type == 'Subtopics':
-            input_vals = {input_vars[0]: input_vals[0]}
-        
-        if input_type == 'Library Research':
-            print('Library Research Prep Input Vals top (workflow)')
-            print(input_vals)
-            if len(input_vars) == 1:
-                try:
-                    input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
-                except:
-                    input_vals = {input_vars[0]: input_vals[0]}
-            else:
-                try:
-                    input_vals = {
-                        input_vars[0]: [input_vals[0].split('\n')],
-                        input_vars[1]: input_vals[1]
-                    }
-                except:
-                    input_vals = {
-                        input_vars[0]: input_vals[0],
-                        input_vars[1]: input_vars[1]
-                    }
-
-        if input_type == 'Analyze CSV':
-            try:
-                input_vals = {input_vars[0]: [x.split('\n') for x in input_vals]}
-            except:
-                input_vals = {input_vars[0]: input_vals[0]}
-
-        if input_type == 'Workflow':
-            input_vals = {input_vars[0]: input_vals[0]}
-    # prep for Step
-    else:
-        input_type = input.config['action']
-        if input_type == 'LLM Prompt' or input_type == 'Combine':
-            input_vals = {var: source for var, source in zip(input_vars, input_vals)}  
-
-        if input_type == 'Web Research':
-            input_vals = {'input': input_vals[0].split('\n')}
-
-        if input_type == 'Subtopics':
-            input_vals = {'input': input_vals[0]}
-        
-        if input_type == 'Library Research':
-            print('Library Research Prep Input Vals')
-            print(input_vals)
-            if len(input_vars) == 1:
-                try:
-                    input_vals = {input_vars[0]: [x for x in input_vals]}
-                except:
-                    input_vals = {input_vars[0]: input_vals[0]}
-            else:
-                try:
-                    input_vals = {
-                        input_vars[0]: [input_vals[0]],
-                        input_vars[1]: input_vals[1]
-                    }
-                except:
-                    input_vals = {
-                        input_vars[0]: input_vals[0],
-                        input_vars[1]: input_vars[1]
-                    }
-
-        if input_type == 'Run Code':
-            if len(input_vars) == 1:
-                input_vals = {input_vars[0]: input_vals[0]}
-            else:
-                input_vals = {
-                    input_vars[0]: input_vals[0],
-                    input_vars[1]: input_vars[1]
-                }
-
-        if input_type == 'Analyze CSV':
-            input_vals = {'input': input_vals[0].split('\n')}
-
-        if input_type == 'Workflow':
-            input_vals = {'input': input_vals[0].split('\n')}
-
-    return input_vals
 
 
 def step_config_from_bubble(bubble_step, email):
@@ -199,7 +115,7 @@ def step_config_from_bubble(bubble_step, email):
         "init": get_init(bubble_step, email),
         "inputs": {var: src for var, src in zip(bubble_step['input_vars'], bubble_step['input_vars_sources']) if var},
         "bubble_id": bubble_step['_id'],
-        "output_type": "string" if bubble_step['type'] != 'Extract From Text' else 'list'
+        'output_type': None
     }
 
     return step_config
@@ -243,7 +159,8 @@ def get_workflow_from_bubble(workflow_id, email=None, doc_id=None):
 
 
 class Workflow():
-    def __init__(self, name=None):
+    def __init__(self, name=None, TEST_MODE=False):
+        self.TEST_MODE = TEST_MODE
         self.name = name
         self.steps = []
         self.output = {}
@@ -264,8 +181,8 @@ class Workflow():
     def add_step(self, step):
         self.steps.append(step)
 
-    def load_from_config(self, config):
-        self.__init__(config['name'])
+    def load_from_config(self, config, TEST_MODE=False):
+        self.__init__(config['name'], TEST_MODE=TEST_MODE)
 
         try:
             self.bubble_id = config['workflow_id']
@@ -276,7 +193,7 @@ class Workflow():
             pass
         
         for step_config in config['steps']:
-            self.add_step(Step(step_config))
+            self.add_step(Step(step_config, TEST_MODE=TEST_MODE))
 
         return self
 
@@ -292,44 +209,17 @@ class Workflow():
         if "User Input" in input_source:
             input = self.user_inputs[input_source]
 
-            if input_type == "Web Research":
-                input = input[0]
-
-            if input_type == "Library Research":
-                input = input[0]
-
-            if input_type == "Analyze CSV":
-                input = input[0]
-
             return input
         else:
             step = [s for s in self.steps if s.name == input_source][0]
             return step.output
 
-            
-    def run_step(self, step_number, user_inputs={}):
-        """
-        input (str or list(str)): the input to the step (not in dictionary form) 
-        """
-        self.user_inputs = user_inputs
-        
-        # Get Step
-        step = self.steps[step_number-1]
-        print('\n')
-        print('{} - {} - {}'.format(step_number, step.config['step'], step.name))
 
-        step_input = {
-            input_var: self.get_input_from_source(input_source, step.config['action']) for input_var, input_source in step.config['inputs'].items()
-        }
-
-        step.run_step(step_input)
-
-
-    def run_all(self, user_inputs, bubble=False):
+    def run_all(self, input_vars: [str], input_vals: [str], bubble: bool=False):
         """
-        user_inputs (dict)
+        user_inputs (dict): {'User Input - input': "text input"}
         """
-        self.user_inputs = user_inputs
+        self.user_inputs = {var: val for var, val in zip(input_vars, input_vals)}  
 
         print('user_inputs')
         print(self.user_inputs)
@@ -340,10 +230,10 @@ class Workflow():
 
             if is_workflow_step:
                 print('doing Workflow Step')
-                input_var, input_source = list(step.config['inputs'].items())[0]
-                step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
+                input_var, input_source = list(step.config['inputs'].items())[0] # the Workflow Step inputs
+                step_workflow_input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0] # the Workflow Step's first step's input
                 step_workflow_input_val = self.get_input_from_source(input_source, step.config['action'])
-                step_input = prep_input_vals([step_workflow_input_var], [step_workflow_input_val], step.func.workflow)
+                step_input = {step_workflow_input_var: step_workflow_input_val}  
             else:
                 print('doing Normal Step')
                 print('input_var and source: {}'.format(step.config['inputs'].items()))
@@ -429,7 +319,10 @@ class Workflow():
 
 
 class Step():
-    def __init__(self, config):
+    def __init__(self, config, TEST_MODE=False):
+        self.TEST_MODE = TEST_MODE
+        self.output = None if not TEST_MODE else config['output']
+        self.TEST_EXPECTED_INPUT = None if not TEST_MODE else config['expected_input']
         self.name = config['name']
         self.config = config
         self.func = ACTIONS[config['action']]['func'](**config['init'])
@@ -437,7 +330,6 @@ class Step():
         self.doc_id = None
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
-        self.output = None
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.email = None
@@ -449,7 +341,10 @@ class Step():
 
     def run_step(self, inputs):
         # Run it
-        self.output = self.func(inputs)
+        if self.TEST_MODE:
+            self.TEST_STEP_INPUT = self.func(inputs, TEST_MODE=True)
+        else:
+            self.output = self.func(inputs)
 
         try:
             self.workflow_library = self.func.workflow_library

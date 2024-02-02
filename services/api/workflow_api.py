@@ -129,7 +129,7 @@ def workflow(event, context):
 def run_workflow(event, context):
     print(event)
 
-    from utils.workflow import prep_input_vals, get_workflow_from_bubble
+    from utils.workflow import get_workflow_from_bubble
 
     from utils.bubble import update_bubble_object
     from utils.general import SQS
@@ -155,14 +155,11 @@ def run_workflow(event, context):
     # load and run workflow
     workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
 
-    # get workflow inputs
-    input_vals = prep_input_vals(input_vars, input_vals, workflow)
-
     if 'sqs' in body:
         # running as a distributed step, send output back to master
         # there is no doc_id because output returns to the calling step
         queue = SQS(body['sqs'])
-        workflow.run_all(input_vals, bubble=False)
+        workflow.run_all(input_vars, input_vals, bubble=False)
         queue.send({
             'order': body['order'],
             'output': workflow.steps[-1].output,
@@ -171,7 +168,7 @@ def run_workflow(event, context):
         })
     else:
         # write individual step results to bubble as they complete
-        workflow.run_all(input_vals, bubble=True)
+        workflow.run_all(input_vars, input_vals, bubble=True)
 
     if doc_id:
         if body['to_project']:
@@ -252,7 +249,7 @@ def step(event, context):
 def run_step(event, context):
     print(event)
 
-    from utils.workflow import prep_input_vals, get_step_from_bubble
+    from utils.workflow import get_step_from_bubble
 
     from utils.bubble import update_bubble_object
 
@@ -280,12 +277,11 @@ def run_step(event, context):
     _ = update_bubble_object('step', step.bubble_id, bubble_body)
 
     if step.config['action'] == 'Workflow':
-        input_var = list(step.func.workflow.steps[0].config['inputs'].values())[0]
-        inputs = prep_input_vals([input_var], input_vals, step.func.workflow)
-        step.func.workflow.run_all(inputs, bubble=False)
+        input_vars = list(step.func.workflow.steps[0].config['inputs'].values())
+        step.func.workflow.run_all(input_vars, input_vals, bubble=False)
         output = step.func.workflow.steps[-1].output
     else:
-        inputs = prep_input_vals(input_vars, input_vals, step)
+        inputs = {var: val for var, val in zip(input_vars, input_vals)}  
 
         print('\nInputs:')
         print(inputs)

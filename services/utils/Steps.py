@@ -50,8 +50,15 @@ STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
 
+"""
+ALL STEP INPUT SHOULD BE DICT WITH 'input' AS STRING
+OTHER KEY/VALUE PAIRS ALLOWED
+"""
+
+
 class get_chain():
-    def __init__(self, prompt=None, as_list=False):
+    def __init__(self, prompt=None, as_list=False, split_on=None):
+        self.split_on = split_on
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.as_list = as_list
@@ -67,8 +74,22 @@ class get_chain():
 
         self.chain = LLMChain(llm=self.LLM.llm, prompt=_prompt, verbose=True)
 
-    def __call__(self, input):
+
+    def prep_input(self, input):
+        '''
+        input: {
+            'input_var_name': "input_var_val",
+            'input_var2_name': "input_var2_val",
+            ...
+        }
+        '''
+        return input
+
+
+    def __call__(self, input, TEST_MODE=False):
         """
+        TESTING: Expect Prompt
+
         Input: {
             'input_var_name': "input_var_val",
             'input_var2_name': "input_var2_val",
@@ -77,6 +98,11 @@ class get_chain():
 
         Returns: string
         """
+        input = self.prep_input(input)
+        
+        if TEST_MODE:
+            return input
+
         res = None
         try:
             res = self.chain(input)
@@ -99,21 +125,14 @@ class get_chain():
         self.input_word_cnt = len(full_prompt.split(' '))
         self.output_word_cnt = len(res['text'].split(' '))
 
-        if self.as_list:
-            if "<SPLIT>" in res['text']:
-                splitter = "<SPLIT>"
-            else:
-                splitter = "\n"
-            return_items = res['text'].split(splitter)
-            return [item for item in return_items if item != '']
-        else:
-            return res['text']
+        return res['text']
     
 
 class analyze_csv():
-    def __init__(self, path=None):
+    def __init__(self, path=None, split_on=None):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.split_on = split_on
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
         df = pd.read_csv(path)
@@ -135,12 +154,27 @@ class analyze_csv():
             agent_type=AgentType.OPENAI_FUNCTIONS,
         )
 
-    def __call__(self, input):
+
+    def prep_input(self, input):
+        if self.split_on:
+            input = input.split(self.split_on)
+
+        return input
+    
+
+    def __call__(self, input, TEST_MODE=False):
         """
+        TESTING: Expect List of Prompts
+
         Input: {'input': [["questions"]]}
 
         Returns: string
         """
+        input = self.prep_input(input)
+        
+        if TEST_MODE:
+            return input
+
         questions = input['input']
         if type(questions) == str:
             questions = [questions]
@@ -176,19 +210,39 @@ class analyze_csv():
   
 
 class do_research():
-    def __init__(self, top_n=3, web_qa=True):
+    def __init__(self, top_n=3, web_qa=True, split_on=None):
+        self.split_on = split_on
         self.top_n = top_n
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.web_qa = web_qa
+
+
+    def prep_input(self, input):
+        '''
+        input: {'input' (str): "questions OR url"}
+        '''
+        if self.split_on:
+            input['input'] = input['input'].split(self.split_on)
+        else:
+            input['input'] = [input['input']]
+
+        return input
   
 
-    def __call__(self, input):
+    def __call__(self, input, TEST_MODE=False):
         """
+        TESTING: Expect List of Prompts or URL
+
         Input: {'input': [["questions"] OR "URL"]}
 
         Returns string
         """
+        input = self.prep_input(input)
+
+        if TEST_MODE:
+            return input
+        
         if not self.web_qa:
             url = input['input'][0]
 
@@ -245,9 +299,10 @@ class do_research():
   
 
 class get_library_retriever():
-    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False, ignore_url=False):
+    def __init__(self, class_name=None, k=3, as_qa=True, from_similar_docs=False, ignore_url=False, split_on=None):
         self.input_word_cnt = 0
         self.output_word_cnt = 0
+        self.split_on = split_on
         self.class_name = class_name
         self.k = k
         self.as_qa = as_qa
@@ -290,11 +345,35 @@ class get_library_retriever():
             .do()
         
         return result
+    
+
+    def prep_input(self, input):
+        '''
+        input: {'input': str}
+        OR
+        input: {
+            'input': str,
+            'URL To Ignore': 'https://urltoignore.com'
+        }
+        OR
+        input: {
+            'input': str,
+            'Library From Input': 'Libraryname'
+        }
+        '''
+        if self.split_on:
+            input['input'] = input['input'].split(self.split_on)
+        else:
+            input['input'] = [input['input']]
+
+        return input
 
 
-    def __call__(self, input):
+    def __call__(self, input, TEST_MODE=False):
         """
-        Input: {'input': [["questions"]]}
+        TESTING: Expect List of Prompts
+
+        Input: {'input': ["questions"]}
         or
         Input: {
             'input': ["questions"],
@@ -308,6 +387,11 @@ class get_library_retriever():
 
         Returns: string
         """
+        input = self.prep_input(input)
+        
+        if TEST_MODE:
+            return input
+
         print('Library Step Input')
         print(input)
         if 'Workflow library' in self.class_name:
@@ -398,21 +482,36 @@ class get_library_retriever():
     
 
 class get_subtopics():
-    def __init__(self, top_n=10, by_source=False):
+    def __init__(self, top_n=10, by_source=False, split_on=None):
+        self.split_on = split_on
         self.top_n = top_n
         self.by_source = by_source
         self.input_word_cnt = 0
         self.output_word_cnt = 0
 
         self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
+
+
+    def prep_input(self, input):
+        '''
+        input: {'input': str}
+        '''
+        return input
   
 
-    def __call__(self, input):
+    def __call__(self, input, TEST_MODE=False):
         """
+        TESTING: Expect Keyword string
+
         Input: {'input': "topic"}
 
         Returns string
         """
+        input = self.prep_input(input)
+
+        if TEST_MODE:
+            return input
+        
         topic = input['input']
 
         topic_df = get_topic_clusters(topic, self.top_n)
@@ -429,7 +528,8 @@ class get_subtopics():
   
 
 class get_workflow():
-    def __init__(self, workflow=None, in_parallel=True):
+    def __init__(self, workflow=None, in_parallel=True, split_on=None):
+        self.split_on = split_on
         self.in_parallel = in_parallel
         self.input_word_cnt = 0
         self.output_word_cnt = 0
@@ -437,23 +537,69 @@ class get_workflow():
             self.workflow = workflow
             self.clean_workflow = workflow
 
-    def __call__(self, inputs):
+
+    def prep_input(self, input):
+        '''
+        input: {'input': str}
+        '''
+        print(f'split_on: {self.split_on}')
+        print(f'input: {input}')
+        input_key = list(input.keys())[0]
+        print(f'input_key: {input_key}')
+        print(f'input_val: {input[input_key]}')
+        print(input[input_key].split(self.split_on))
+        if self.split_on:
+            print('SPLITTING')
+            input[input_key] = input[input_key].split(self.split_on)
+        else:
+            input[input_key] = [input[input_key]]
+
+        return input
+    
+
+    def __call__(self, input, TEST_MODE=False):
         """
         Input: {
-            'input_var_name': "input_var_val",
-            'input_var2_name': "input_var2_val",
-            ...
+            'input_var': "input_var_val"
         }
 
         Returns: string
         """
-        input_key = list(inputs.keys())[0]
-        input_vals = list(inputs.values())[0]
+        input = self.prep_input(input)
+        print(f'input: {input}')
+
+        if TEST_MODE:
+            return input
+        
+        input_key = list(input.keys())[0]
+        input_vals = list(input.values())[0]
         print('workflow step input vals:')
         print(input_vals)
-        if type(input_vals) == list:
-            if os.getenv('IS_OFFLINE'):
+        if os.getenv('IS_OFFLINE'):
+            sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+            for order, input in enumerate(input_vals):
+                payload = {
+                    "body": {
+                        'workflow_id': self.workflow.bubble_id,
+                        'email': self.workflow.email,
+                        'doc_id': '',
+                        'run_id': '',
+                        'input_vars': input_key,
+                        'input_vals': input,
+                        'sqs': sqs,
+                        'order': order
+                    }
+                }
+
+                print('\nWorkflow payload would be:')
+                print(payload)
+                print('\n')
+
+            return 'Dummy OFFLINE Output'
+        else:
+            if self.in_parallel:
                 sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                queue = SQS(sqs)
                 for order, input in enumerate(input_vals):
                     payload = {
                         "body": {
@@ -468,69 +614,53 @@ class get_workflow():
                         }
                     }
 
-                    print('\nWorkflow payload would be:')
-                    print(payload)
-                    print('\n')
+                    _ = lambda_client.invoke(
+                        FunctionName=f'foxscript-api-{STAGE}-workflow',
+                        InvocationType='Event',
+                        Payload=json.dumps(payload)
+                    )
+                    time.sleep(0.5)
+            
+                results = queue.collect(len(input_vals), max_wait=780)
 
-                return 'Dummy OFFLINE Output'
+                outputs = [result['output'] for result in results]
+                self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
+                self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
+                return '\n\n'.join(outputs)
             else:
-                if self.in_parallel:
-                    sqs = 'workflow{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-                    queue = SQS(sqs)
-                    for order, input in enumerate(input_vals):
-                        payload = {
-                            "body": {
-                                'workflow_id': self.workflow.bubble_id,
-                                'email': self.workflow.email,
-                                'doc_id': '',
-                                'run_id': '',
-                                'input_vars': input_key,
-                                'input_vals': input,
-                                'sqs': sqs,
-                                'order': order
-                            }
-                        }
+                output = ''
+                for order, input in enumerate(input_vals):
+                    print(f'IN SEQUENCE WORKFLOW: {order}')
+                    self.workflow.run_all([input_key], [input], bubble=False)
+                    self.input_word_cnt = self.input_word_cnt + self.workflow.input_word_cnt
+                    self.output_word_cnt = self.output_word_cnt + self.workflow.output_word_cnt
+                    output = output + self.workflow.steps[-1].output + '\n\n'
 
-                        _ = lambda_client.invoke(
-                            FunctionName=f'foxscript-api-{STAGE}-workflow',
-                            InvocationType='Event',
-                            Payload=json.dumps(payload)
-                        )
-                        time.sleep(0.5)
+                    # reset workflow
+                    self.workflow = self.clean_workflow
                 
-                    results = queue.collect(len(input_vals), max_wait=780)
-
-                    outputs = [result['output'] for result in results]
-                    self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
-                    self.output_word_cnt = sum([result['output_word_cnt'] for result in results])
-                    return '\n\n'.join(outputs)
-                else:
-                    output = ''
-                    for order, input in enumerate(input_vals):
-                        print(f'IN SEQUENCE WORKFLOW: {order}')
-                        self.workflow.run_all({input_key: input}, bubble=False)
-                        self.input_word_cnt = self.input_word_cnt + self.workflow.input_word_cnt
-                        self.output_word_cnt = self.output_word_cnt + self.workflow.output_word_cnt
-                        output = output + self.workflow.steps[-1].output + '\n\n'
-
-                        # reset workflow
-                        self.workflow = self.clean_workflow
-                    
-                    return output
-
-        else:
-            self.workflow.run_all(inputs, bubble=False)
-            self.input_word_cnt = self.workflow.input_word_cnt
-            self.output_word_cnt = self.workflow.output_word_cnt
-            return self.workflow.steps[-1].output
+                return output
         
 
 class combine_output():
-    def __init__(self):
+    def __init__(self, split_on=None):
+        self.split_on = split_on
         self.input_word_cnt = 0
         self.output_word_cnt = 0
 
-    def __call__(self, input):
+
+    def prep_input(self, input):
+        '''
+        input: {
+            'input1': str,
+            'input2': str
+        }
+        
+        '''
+        return input
+    
+
+    def __call__(self, input, TEST_MODE=False):
         """
         Input: {
             'input_var_name': "input_var_val",
@@ -539,6 +669,11 @@ class combine_output():
 
         Returns: string
         """
+        self.prep_input(input)
+
+        if TEST_MODE:
+            return input
+
         combined = '\n\n'.join([txt for txt in input.values()])
 
         # Get input and output word count
@@ -549,7 +684,7 @@ class combine_output():
     
 
 class run_code():
-    def __init__(self, py_code='', code_from_input=False):
+    def __init__(self, py_code='', code_from_input=False, split_on=None):
         def exec_py_code(input, py_code):
             """py_code is python code to be exectued.
             It assumes an input value called 'input' and
@@ -569,14 +704,27 @@ class run_code():
                 return input
             
         
+        self.split_on=split_on
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.code_from_input = code_from_input
         self.py_code = py_code
         self.py_func = exec_py_code
+
+
+    def prep_input(self, input):
+        '''
+        Input: {'input': "text output from a previous Step"}
+        OR
+        Input: {
+            'input': "text output from a previous Step",
+            'py_code': "py code to execute from input source"
+        }
+        '''
+        return input
             
         
-    def __call__(self, input):
+    def __call__(self, input, TEST_MODE=False):
         """
         Input: {'input': "text output from a previous Step"}
         OR
@@ -587,6 +735,10 @@ class run_code():
 
         Returns: string
         """
+        input = self.prep_input(input)
+        if TEST_MODE:
+            return input
+        
         if self.code_from_input:
             output = self.py_func(input['input'], input['py_code'])
         else:
@@ -610,8 +762,10 @@ class send_output():
             target_doc_input=False,
             as_url_list=False,
             csv_doc=False,
-            delimiter=','
+            delimiter=',',
+            split_on=None
         ):
+        self.split_on = split_on
         self.destination = destination
         self.drive_folder = drive_folder
         self.to_rtf = to_rtf
@@ -632,7 +786,23 @@ class send_output():
         self.workflow_document = None
 
 
-    def __call__(self, input):
+    def prep_input(self, input):
+        '''
+        Input: {'input': "input_val"} or {'input': 'url\nurl\nurl'}
+        or
+        Input: {
+            'input': "content",
+            'Target Doc': '1234xIOS9erereoi'
+        }
+        Input: {
+            'input': "content",
+            'Title': 'doc title'
+        }
+        '''
+        return input
+
+
+    def __call__(self, input, TEST_MODE=False):
         """
         Input: {'input': "input_val"} or {'input': 'url\nurl\nurl'}
         or
@@ -647,6 +817,11 @@ class send_output():
 
         Returns: string
         """
+        input = self.prep_input(input)
+
+        if TEST_MODE:
+            return input
+        
         content = input['input']
         content = '\n'.join(content) if type(content)==list else content
 
@@ -737,7 +912,7 @@ class send_output():
             if self.as_url_list:
                 sqs = 'sendoutput{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
                 queue = SQS(sqs)
-                urls = content.split('\n')
+                urls = [url for url in content.split('\n') if url]
 
                 for url in urls:
                     print(f'Sending {url} to Workflow Library')
@@ -834,7 +1009,8 @@ class send_output():
     
 
 class fetch_input():
-    def __init__(self, source=None):
+    def __init__(self, source=None, split_on=None):
+        self.split_on = split_on
         self.source = source
         self.workflow_document = None
         self.input_word_cnt = 0
@@ -844,12 +1020,25 @@ class fetch_input():
         self.email = None
 
 
-    def __call__(self, input):
+    def prep_input(self, input):
+        '''
+        input: {'input': str}
+        '''
+
+        return input
+
+
+    def __call__(self, input, TEST_MODE=False):
         """
         Input: {'input': "input_val"}
 
         Returns: string
         """
+        input = self.prep_input(input)
+
+        if TEST_MODE:
+            return input
+        
         input = input['input']
 
         if self.source == 'Workflow Document':
