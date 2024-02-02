@@ -14,6 +14,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 
+if os.getenv('IS_OFFLINE'):
+   LAMBDA_DATA_DIR = '.'
+else:
+   LAMBDA_DATA_DIR = '/tmp'
+
+
 def get_creds(goog_token, goog_refresh_token):
     creds = Credentials(
         token=goog_token,
@@ -198,7 +204,7 @@ def upload_to_google_drive(title, file_type, content=None, path=None, folder_id=
 
     if content:
         path = f"{title}.{file_type}"
-        with open(path, 'w') as file:
+        with open(os.path.join(LAMBDA_DATA_DIR, path), 'w') as file:
             file.write(content)
 
     if file_type == 'md':
