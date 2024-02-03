@@ -109,6 +109,7 @@ def step_config_from_bubble(bubble_step, email):
     except:
         pass
     step_config = {
+        'user_id': bubble_step['Created By'],
         "name": bubble_step['name'],
         "step": bubble_step['step_number'],
         "action": bubble_step['type'],
@@ -320,13 +321,17 @@ class Workflow():
 
 class Step():
     def __init__(self, config, TEST_MODE=False):
+        # For Testing
         self.TEST_MODE = TEST_MODE
         self.output = None if not TEST_MODE else config['output']
         self.TEST_EXPECTED_INPUT = None if not TEST_MODE else config['expected_input']
+
+        self.user_id = config['user_id']
         self.name = config['name']
         self.config = config
         self.func = ACTIONS[config['action']]['func'](**config['init'])
         self.func.step_name = self.name
+        self.func.user_id = self.user_id
         self.doc_id = None
         self.output_type = config['output_type']
         self.bubble_id = config['bubble_id']
