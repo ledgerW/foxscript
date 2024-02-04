@@ -9,7 +9,7 @@ import argparse
 import pathlib
 import boto3
 
-from utils.workflow import prep_input_vals, get_workflow_from_bubble
+from utils.workflow import get_workflow_from_bubble
 from utils.bubble import create_bubble_object, get_bubble_object, update_bubble_object, get_bubble_doc, delete_bubble_object
 from utils.google import get_csv_lines
 from utils.general import SQS
@@ -37,8 +37,7 @@ def main(task_args):
     workflow_id = task_args['workflow_id']
     email = task_args['email']
     
-    input_vars = task_args['input_vars']
-    input_vars = input_vars[0] if type(input_vars) == list else input_vars
+    input_var = task_args['input_vars']
 
     doc_id = task_args['doc_id']
     batch_url = task_args['batch_input_url']
@@ -80,14 +79,10 @@ def main(task_args):
     for input_val in batch_list:
         workflow = get_workflow_from_bubble(workflow_id, email=email, doc_id=doc_id)
         print(f"batch item input: {input_val}")
-        # get workflow inputs
-        input_vals = prep_input_vals([input_vars], [input_val], workflow)
-        print('prepped input val:')
-        print(input_vals)
 
         if 'sqs' in task_args:
             queue = SQS(task_args['sqs'])
-            workflow.run_all(input_vals, bubble=False)
+            workflow.run_all(input_var, [input_val], bubble=False)
             queue.send({
                 'order': 0,
                 'output': workflow.steps[-1].output,
@@ -95,12 +90,12 @@ def main(task_args):
                 'output_word_cnt': workflow.output_word_cnt
             })
         else:
-            workflow.run_all(input_vals, bubble=False)
+            workflow.run_all(input_var, [input_val], bubble=False)
 
             if task_args['to_project']:
                 # send result to Bubble Document
                 body = {
-                    'name': list(input_vals.values())[0].replace('\n','_').replace(' ','_')[:50],
+                    'name': input_val.replace('\n','_').replace(' ','_')[:50],
                     'text': workflow.steps[-1].output,
                     'user_email': email,
                     'project': project_id
