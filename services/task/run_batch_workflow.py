@@ -82,7 +82,7 @@ def main(task_args):
 
         if 'sqs' in task_args:
             queue = SQS(task_args['sqs'])
-            workflow.run_all([input_var], [input_val], bubble=False)
+            workflow.run_all(input_var, [input_val], bubble=False)
             queue.send({
                 'order': 0,
                 'output': workflow.steps[-1].output,
@@ -90,7 +90,7 @@ def main(task_args):
                 'output_word_cnt': workflow.output_word_cnt
             })
         else:
-            workflow.run_all([input_var], [input_val], bubble=False)
+            workflow.run_all(input_var, [input_val], bubble=False)
 
             if task_args['to_project']:
                 # send result to Bubble Document
