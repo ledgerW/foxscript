@@ -11,10 +11,11 @@ except:
 import requests
 from datetime import datetime
 import time
+import json
 import pandas as pd
 import numpy as np
 from utils.Kmeans import KMeans
-from utils.cloud_funcs import cloud_scrape
+from utils.cloud_funcs import cloud_scrape, cloud_google_search
 from utils.general import SQS
 
 from langchain.utilities import GoogleSerperAPIWrapper
@@ -28,19 +29,24 @@ try:
 except:
   pass
 
-from langchain.utilities import GoogleSerperAPIWrapper
-
 STAGE = os.getenv('STAGE')
 WP_API_KEY = os.getenv('WP_API_KEY')
 
   
 
-def get_top_n_search(query, n):
-  search = GoogleSerperAPIWrapper()
-  search_result = search.results(query)
-  results = [res for res in search_result['organic'] if 'youtube.com' not in res['link']]
-  
-  return results[:n]
+def get_top_n_search(query, n, sqs=None):
+    try:
+        res = cloud_google_search(q=query, n=None, sqs=sqs)
+        res_body = json.loads(res['Payload'].read().decode("utf-8"))
+        results = json.loads(res_body['body'])['results']
+        results = [res for res in results if 'youtube.com' not in res['link']]
+    except:
+        print('Issue with Cloud Google Search. Using Serper API')
+        search = GoogleSerperAPIWrapper()
+        results = search.results(query)
+        results = [res for res in results['organic'] if 'youtube.com' not in res['link']]
+
+    return results[:n]
 
 
 def get_ephemeral_vecdb(chunks, metadata):

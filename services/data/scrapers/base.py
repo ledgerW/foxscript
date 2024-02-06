@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.service import Service
+from fake_useragent import UserAgent
 #from webdriver_manager.chrome import ChromeDriverManager
 
 
@@ -14,9 +15,12 @@ class Scraper():
 
   @classmethod
   def get_selenium(self):
+    ua = UserAgent()
+    user_agent = ua.random
     try:
       options = webdriver.ChromeOptions()
       options.add_argument("--headless")
+      options.add_argument(f'--user-agent={user_agent}')
       options.add_argument("--log-level=2")
       options.add_argument("--no-sandbox")
       options.add_argument("--disable-gpu")
@@ -30,6 +34,7 @@ class Scraper():
       options = webdriver.ChromeOptions()
       options.binary_location = '/opt/chrome/chrome'
       options.add_argument('--headless')
+      options.add_argument(f'--user-agent={user_agent}')
       options.add_argument("--log-level=3")
       options.add_argument('--no-sandbox')
       options.add_argument("--disable-gpu")

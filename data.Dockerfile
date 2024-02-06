@@ -30,6 +30,9 @@ COPY --from=build /opt/chromedriver /opt/
 RUN mkdir utils
 COPY services/utils ./utils
 
+RUN mkdir scrapers
+COPY services/data/scrapers ./scrapers
+
 COPY services/data/load_data.py ./
 COPY services/data/researcher.py ./
 COPY services/data/news_sources.txt ./
