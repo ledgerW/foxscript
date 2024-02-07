@@ -280,8 +280,8 @@ class do_research():
                         continue
 
                 # Collect each url for this query
-                for _url in top_n_search_results:
-                    url = _url['link']
+                for url in top_n_search_results['links']:
+                    #url = _url['link']
                     urls_to_scrape.append(url)
                     queries.append(query)
 

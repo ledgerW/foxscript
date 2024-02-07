@@ -34,19 +34,34 @@ WP_API_KEY = os.getenv('WP_API_KEY')
 
   
 
-def get_top_n_search(query, n, sqs=None):
+def get_top_n_search(query, n=50, sqs=None):
+    """
+    When NOT SQS:
+    Returns: {q:str, links:[str]}
+
+    When SQS:
+    Returns [{q:str, links:[str]}] when pulled from SQS.collect()
+    """
     try:
+        # returns in queue as [{q:str, links:[str]}]
         res = cloud_google_search(q=query, n=None, sqs=sqs)
-        res_body = json.loads(res['Payload'].read().decode("utf-8"))
-        results = json.loads(res_body['body'])['results']
-        results = [res for res in results if 'youtube.com' not in res['link']]
+
+        if not sqs:
+            res_body = json.loads(res['Payload'].read().decode("utf-8"))
+            result = json.loads(res_body['body'])  # {q:str, link:[str]}
+            result['links'] = [res for res in result['links'] if 'youtube.com' not in res][:n]
     except:
         print('Issue with Cloud Google Search. Using Serper API')
         search = GoogleSerperAPIWrapper()
         results = search.results(query)
         results = [res for res in results['organic'] if 'youtube.com' not in res['link']]
+        result = {'q': query, 'links': [res['link'] for res in results][:n]}
 
-    return results[:n]
+        if sqs:
+            queue = SQS(sqs)
+            queue.send(result)
+
+    return result
 
 
 def get_ephemeral_vecdb(chunks, metadata):
@@ -134,7 +149,8 @@ def cluster(embeddings, n_clusters):
 
 def get_topic_clusters(topic, top_n=10):
     search_results = get_top_n_search(topic, top_n)
-    urls = [res['link'] for res in search_results]
+    #urls = [res['link'] for res in search_results]
+    urls = search_results['links']
     print("Length of urls: {}".format(len(urls)))
 
     topic_df = get_content_embeddings(urls)

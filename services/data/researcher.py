@@ -93,22 +93,19 @@ class GeneralScraper(Scraper):
         html = self.driver.page_source
         soup = BeautifulSoup(html, 'html.parser')
 
-        results = []
+        all_links = []
         for a in soup.select("a:has(h3)"):
             try:
                 if 'https://' in a['href'] or 'http://' in a['href']:
                     link = a['href'].split('#')[0]
-                    if link not in [r['link'] for r in results]:
-                        results.append({
-                            'q': q,
-                            'link': link
-                        })
+                    if link not in all_links:
+                        all_links.append(link)
             except:
                 pass
 
         self.driver.quit()
 
-        return results
+        return {'q': q, 'links': all_links}
 
 
 def scrape_and_chunk_pdf(url, n, return_raw=False):
@@ -174,9 +171,8 @@ def google_search(event, context):
 
     # Scrape Google Search
     scraper = GeneralScraper()
-    results = scraper.google_search(q)
-    results = results[:n]
-    result = {'results': results}
+    result = scraper.google_search(q)   # returns {q:str, links:[str]}
+    result['links'] = result['links'][:n]
 
     if sqs:
        queue = SQS(sqs)
