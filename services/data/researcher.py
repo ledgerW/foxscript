@@ -57,10 +57,10 @@ class GeneralScraper(Scraper):
     source = None
     base_url = None
 
-    def __init__(self, google_search: bool=False):
-        self.google_search = google_search
+    def __init__(self, is_google_search: bool=False):
+        self.is_google_search = is_google_search
 
-        if not self.google_search:
+        if not self.is_google_search:
             self.driver = self.get_selenium()
             self.driver.set_page_load_timeout(180)
 
@@ -174,7 +174,7 @@ def google_search(event, context):
        sqs = None
 
     # Scrape Google Search
-    scraper = GeneralScraper(google_search=True)
+    scraper = GeneralScraper(is_google_search=True)
     result = scraper.google_search(q)   # returns {q:str, links:[str]}
     result['links'] = result['links'][:n]
 

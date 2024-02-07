@@ -44,10 +44,10 @@ def get_top_n_search(query, n=50, sqs=None):
     """
     try:
         # returns in queue as [{q:str, links:[str]}]
-        res = cloud_google_search(q=query, n=None, sqs=sqs)
+        result = cloud_google_search(q=query, n=None, sqs=sqs)
 
         if not sqs:
-            res_body = json.loads(res['Payload'].read().decode("utf-8"))
+            res_body = json.loads(result['Payload'].read().decode("utf-8"))
             result = json.loads(res_body['body'])  # {q:str, link:[str]}
             result['links'] = [res for res in result['links'] if 'youtube.com' not in res][:n]
     except:
