@@ -57,9 +57,12 @@ class GeneralScraper(Scraper):
     source = None
     base_url = None
 
-    def __init__(self):
-        self.driver = self.get_selenium()
-        self.driver.set_page_load_timeout(180)
+    def __init__(self, google_search: bool=False):
+        self.google_search = google_search
+
+        if not self.google_search:
+            self.driver = self.get_selenium()
+            self.driver.set_page_load_timeout(180)
 
 
     def scrape_post(self, url: str=None):
@@ -87,11 +90,14 @@ class GeneralScraper(Scraper):
     
 
     def google_search(self, q: str):
-        url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
-        self.driver.get(url)
+        from fake_useragent import UserAgent
+        ua = UserAgent()
+        header = {'User-Agent':str(ua.random)}
 
-        html = self.driver.page_source
-        soup = BeautifulSoup(html, 'html.parser')
+        url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
+        html = requests.get(url, headers=header)
+        
+        soup = BeautifulSoup(html.content, 'html.parser')
 
         all_links = []
         for a in soup.select("a:has(h3)"):
@@ -102,8 +108,6 @@ class GeneralScraper(Scraper):
                         all_links.append(link)
             except:
                 pass
-
-        self.driver.quit()
 
         return {'q': q, 'links': all_links}
 
@@ -170,7 +174,7 @@ def google_search(event, context):
        sqs = None
 
     # Scrape Google Search
-    scraper = GeneralScraper()
+    scraper = GeneralScraper(google_search=True)
     result = scraper.google_search(q)   # returns {q:str, links:[str]}
     result['links'] = result['links'][:n]
 

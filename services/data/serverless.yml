@@ -149,7 +149,7 @@ functions:
         - researcher.google_search
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 1028
+    memorySize: 1024
     timeout: 300
     maximumRetryAttempts: 0
     events:
