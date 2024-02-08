@@ -29,9 +29,77 @@ try:
 except:
   pass
 
+
+if os.getenv('IS_OFFLINE'):
+    LAMBDA_DATA_DIR = '.'
+else:
+    LAMBDA_DATA_DIR = '/tmp'
+
 STAGE = os.getenv('STAGE')
 WP_API_KEY = os.getenv('WP_API_KEY')
 
+
+
+def process_new_keyword(new_keyword: dict, existing_keywords: [dict], thresh: float=0.8):
+    if len(existing_keywords) == 0:
+        existing_keywords.append({'keywords': [new_keyword['q']], 'links': new_keyword['links']})
+        return existing_keywords
+
+    for idx, group in enumerate(existing_keywords):
+        # Initialize New Keyword Group List, if necessary
+        if new_keyword['q'] in group['keywords']:
+            # already have keyword / duplicate
+            return existing_keywords
+
+        # Assess Overlap
+        overlap = len(set(group['links']).intersection(set(new_keyword['links'])))
+        
+        group_overlap_pct = round(overlap/len(group['links']), 2)
+        keyword_overlap_pct = round(overlap/len(new_keyword['links']), 2)
+        
+        if (group_overlap_pct >= thresh) or (keyword_overlap_pct >= thresh):
+            # add to this group and move to next new keyword
+            if len(group['links']) >= len(new_keyword['links']):
+                existing_keywords[idx]['keywords'].append(new_keyword['q'])
+            else:
+                #print('Updating group url list to larger list')
+                existing_keywords[idx]['keywords'].append(new_keyword['q'])
+                existing_keywords[idx]['links'] = new_keyword['links']
+
+            return existing_keywords
+        
+    # keyword does not overlap with any existing keyword groups. Make new group.
+    _new_keyword = {'keywords': [new_keyword['q']], 'links': new_keyword['links']}
+    existing_keywords.append(_new_keyword)
+    
+    return existing_keywords
+
+
+def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
+    batch_df_list = np.array_split(batch_df, concurrent_runs)
+    batch_df_list = [df.reset_index(drop=True) for df in batch_df_list]
+
+    if as_csv:
+        batch_df_paths = []
+        for idx, df in enumerate(batch_df_list):
+            batch_path = f'batch{idx}.csv'
+            batch_path = f'{LAMBDA_DATA_DIR}/{batch_path}'
+            batch_df_paths.append(batch_path)
+            df.to_csv(batch_path, index=False)
+            batch_df_list = batch_df_paths
+
+    return batch_df_list
+
+
+def get_keyword_batches(csv_path: str, batch_size: int) -> [[str]]:
+    keywords_df = pd.read_csv(csv_path)[['Keyword']]
+    total_size = keywords_df.shape[0]
+    fake_concurrent_runs = int(total_size/batch_size)
+
+    batch_list = make_batch_files(keywords_df, concurrent_runs=fake_concurrent_runs, as_csv=False)
+    keyword_batches = [batch['Keyword'].to_list() for batch in batch_list]
+
+    return keyword_batches
   
 
 def get_top_n_search(query, n=50, sqs=None):

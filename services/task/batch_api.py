@@ -6,10 +6,10 @@ import json
 import time
 import boto3
 import pandas as pd
-import numpy as np
 
 from utils.bubble import get_bubble_doc, upload_bubble_file
 from utils.response_lib import *
+from utils.workflow_utils import make_batch_files
 
 
 STAGE = os.getenv('STAGE')
@@ -24,21 +24,6 @@ else:
    LAMBDA_DATA_DIR = '/tmp'
 
 
-
-def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
-    batch_df_list = np.array_split(batch_df, concurrent_runs)
-    batch_df_list = [df.reset_index(drop=True) for df in batch_df_list]
-
-    if as_csv:
-        batch_df_paths = []
-        for idx, df in enumerate(batch_df_list):
-            batch_path = f'batch{idx}.csv'
-            batch_path = f'{LAMBDA_DATA_DIR}/{batch_path}'
-            batch_df_paths.append(batch_path)
-            df.to_csv(batch_path, index=False)
-            batch_df_list = batch_df_paths
-
-    return batch_df_list
 
 
 def run_cloud(task_name, task_args={}):

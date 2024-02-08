@@ -81,6 +81,13 @@ def get_init(body, email):
             'by_source': False if 'subtopic_by_source' not in body else body['subtopic_by_source']
         }
 
+    if body['type'] == 'Cluster Keywords':
+        init = {
+            'split_on': None if 'split_on' not in body else bytes(body['split_on'], 'utf-8').decode('unicode_escape'),
+            'batch_size': int(body['keyword_batch_size']),
+            'thresh': float(body['keyword_thresh'])
+        }
+
     if body['type'] == 'Library Research':
         class_name, account = get_wv_class_name(email, body['init_text'])
         init = {
