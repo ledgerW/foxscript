@@ -18,16 +18,14 @@ from utils.Kmeans import KMeans
 from utils.cloud_funcs import cloud_scrape, cloud_google_search
 from utils.general import SQS
 
-from langchain.utilities import GoogleSerperAPIWrapper
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-
 try:
-  from langchain.utilities import WikipediaAPIWrapper
+    from langchain.utilities import GoogleSerperAPIWrapper
+    from langchain.embeddings.openai import OpenAIEmbeddings
+    from langchain.vectorstores import FAISS
+    from langchain.chains import RetrievalQA
+    from langchain.prompts import PromptTemplate
 except:
-  pass
+    pass
 
 
 if os.getenv('IS_OFFLINE'):
@@ -94,6 +92,8 @@ def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
 def get_keyword_batches(csv_path: str, batch_size: int) -> [[str]]:
     keywords_df = pd.read_csv(csv_path)[['Keyword']]
     total_size = keywords_df.shape[0]
+    if batch_size > total_size:
+        batch_size = total_size
     fake_concurrent_runs = int(total_size/batch_size)
 
     batch_list = make_batch_files(keywords_df, concurrent_runs=fake_concurrent_runs, as_csv=False)
