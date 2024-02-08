@@ -604,8 +604,8 @@ class cluster_keywords():
             
             # group keywords form this batch
             for new_keyword in new_keywords:
-                keyword_groups = process_new_keyword(new_keyword, keyword_groups, thresh=self.thresh)
-
+                if len(new_keyword['links']) > 0:
+                    keyword_groups = process_new_keyword(new_keyword, keyword_groups, thresh=self.thresh)
 
         keyword_groups_df = pd.DataFrame(keyword_groups)\
             .assign(group_size=lambda df: df.keywords.apply(len))
