@@ -14,7 +14,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 
-if os.getenv('IS_OFFLINE'):
+if os.getenv('IS_OFFLINE') or not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
    LAMBDA_DATA_DIR = '.'
 else:
    LAMBDA_DATA_DIR = '/tmp'
@@ -203,8 +203,9 @@ def upload_to_google_drive(title, file_type, content=None, path=None, folder_id=
     }
 
     if content:
-        path = f"{title}.{file_type}"
-        with open(os.path.join(LAMBDA_DATA_DIR, path), 'w') as file:
+        file_name = f"{title}.{file_type}"
+        path = os.path.join(LAMBDA_DATA_DIR, file_name)
+        with open(path, 'w') as file:
             file.write(content)
 
     if file_type == 'md':
