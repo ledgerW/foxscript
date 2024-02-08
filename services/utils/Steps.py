@@ -31,11 +31,25 @@ from langchain.agents.agent_types import AgentType
 from langchain.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
-from utils.workflow_utils import get_top_n_search, get_context, get_topic_clusters, get_cluster_results, get_cluster_results_by_source
+from utils.workflow_utils import (
+    get_top_n_search,
+    get_context,
+    get_topic_clusters,
+    get_cluster_results,
+    get_cluster_results_by_source,
+    get_keyword_batches,
+    process_new_keyword
+)
 from utils.weaviate_utils import wv_client, get_wv_class_name, create_library
 from utils.cloud_funcs import cloud_research, cloud_scrape
 from utils.general import SQS
-from utils.bubble import create_bubble_object, update_bubble_object, get_bubble_object
+from utils.bubble import (
+    create_bubble_object,
+    update_bubble_object,
+    get_bubble_object,
+    upload_bubble_file,
+    get_bubble_doc
+)
 from utils.google import convert_text, get_creds, create_google_doc, create_google_sheet, upload_to_google_drive
 
 
@@ -280,8 +294,8 @@ class do_research():
                         continue
 
                 # Collect each url for this query
-                for _url in top_n_search_results:
-                    url = _url['link']
+                for url in top_n_search_results['links']:
+                    #url = _url['link']
                     urls_to_scrape.append(url)
                     queries.append(query)
 
@@ -530,6 +544,80 @@ class get_subtopics():
         self.output_word_cnt = output_word_cnt
         
         return subtopic_results
+    
+
+class cluster_keywords():
+    def __init__(self, batch_size: int=100, thresh: float=0.8, split_on=None):
+        self.split_on = split_on
+        self.input_word_cnt = 0
+        self.output_word_cnt = 0
+        self.batch_size = batch_size
+        self.thresh = thresh
+
+
+    def prep_input(self, input):
+        '''
+        input: {'input': str}
+        '''
+        return input
+  
+
+    def __call__(self, input, TEST_MODE=False):
+        """
+        TESTING: Expect Keyword string
+
+        Input: {'input': "url/to/keyword_csv_name.csv"}
+
+        Returns string
+        """
+        input = self.prep_input(input)
+
+        if TEST_MODE:
+            return input
+        
+        keyword_csv_url = input['input']
+        keyword_csv_name = keyword_csv_url.split('/')[-1]
+        local_keyword_csv_path = os.path.join(LAMBDA_DATA_DIR, keyword_csv_name)
+
+        get_bubble_doc(keyword_csv_url, local_keyword_csv_path)
+        
+        keyword_batches = get_keyword_batches(local_keyword_csv_path, self.batch_size)
+        print(len(keyword_batches))
+
+        keyword_groups = []
+
+        # run through each batch of keywords
+        for i, keyword_batch in enumerate(keyword_batches):
+            print(f"Batch {i+1}")
+            print(f"Batch Size: {len(keyword_batch)}")
+            sqs = 'googsearch{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+            queue = SQS(sqs)
+
+            # do google distributed google search for each keyword in batch
+            for q in keyword_batch:
+                get_top_n_search(q, 10, sqs=sqs)
+                time.sleep(0.01)
+
+            # wait for and collect search results from SQS
+            new_keywords = queue.collect(len(keyword_batch), max_wait=300)
+            print(f"New Keyword Batch Size: {len(new_keywords)}")
+            
+            # group keywords form this batch
+            for new_keyword in new_keywords:
+                if len(new_keyword['links']) > 0:
+                    keyword_groups = process_new_keyword(new_keyword, keyword_groups, thresh=self.thresh)
+
+        keyword_groups_df = pd.DataFrame(keyword_groups)\
+            .assign(group_size=lambda df: df.keywords.apply(len))
+
+        print(f"Keyword Group Size: {keyword_groups_df.shape}")
+
+        local_keyword_name = f"{keyword_csv_name.replace('.csv','')}_{int(self.thresh*100)}.csv"
+        local_keyword_path = os.path.join(LAMBDA_DATA_DIR, local_keyword_name)
+        keyword_groups_df.to_csv(local_keyword_path, index=False)
+        bubble_url = upload_bubble_file(local_keyword_path)
+
+        return bubble_url
   
 
 class get_workflow():
@@ -1111,6 +1199,10 @@ ACTIONS = {
     },
     'Fetch Input': {
         'func': fetch_input,
+        'returns': 'string'
+    },
+    'Cluster Keywords': {
+        'func': cluster_keywords,
         'returns': 'string'
     }
 }

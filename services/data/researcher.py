@@ -6,13 +6,15 @@ import json
 import requests
 import pathlib
 from unstructured.partition.html import partition_html
+from unstructured.staging.base import convert_to_dict
+from bs4 import BeautifulSoup
 
 from newspaper import Article
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.content import text_splitter, handle_pdf
 from utils.response_lib import *
-from utils.scrapers.base import Scraper
+from scrapers.base import Scraper
 from utils.workflow_utils import get_ephemeral_vecdb, get_context
 
 
@@ -55,63 +57,133 @@ class GeneralScraper(Scraper):
     source = None
     base_url = None
 
-    def __init__(self):
-        self.driver = self.get_selenium()
-        self.driver.set_page_load_timeout(180)
+    def __init__(self, is_google_search: bool=False):
+        self.is_google_search = is_google_search
+
+        if not self.is_google_search:
+            self.driver = self.get_selenium()
+            self.driver.set_page_load_timeout(180)
 
 
-    def scrape_post(self, url=None):
+    def scrape_post(self, url: str=None):
         self.driver.get(url)
 
-        page_content = self.driver.page_source
-        elements = partition_html(text=page_content)
-        text = "\n\n".join([str(el) for el in elements])
+        html = self.driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+
+        title = soup.find('title').text
+        raw_elements = partition_html(text=html)
+        text = "\n\n".join([str(el) for el in raw_elements])
+        elements = convert_to_dict(raw_elements)
+        
+
+        output = {
+            'html': html,
+            'elements': elements,
+            'text': text,
+            'title': title
+        }
+        
         self.driver.quit()
 
-        return text
+        return output, raw_elements
+    
+
+    def google_search(self, q: str):
+        from fake_useragent import UserAgent
+        ua = UserAgent()
+        header = {'User-Agent':str(ua.random)}
+
+        url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
+        html = requests.get(url, headers=header)
+        
+        soup = BeautifulSoup(html.content, 'html.parser')
+
+        all_links = []
+        for a in soup.select("a:has(h3)"):
+            try:
+                if 'https://' in a['href'] or 'http://' in a['href']:
+                    link = a['href'].split('#')[0]
+                    if link not in all_links:
+                        all_links.append(link)
+            except:
+                pass
+
+        return {'q': q, 'links': all_links}
 
 
 def scrape_and_chunk_pdf(url, n, return_raw=False):
-  r = requests.get(url, timeout=10)
-  file_name = url.split('/')[-1].replace('.pdf', '')
-  path_name = LAMBDA_DATA_DIR + f'/{file_name}.pdf'
-  with open(path_name, 'wb') as pdf:
-    pdf.write(r.content)
+    r = requests.get(url, timeout=10)
+    file_name = url.split('/')[-1].replace('.pdf', '')
+    path_name = LAMBDA_DATA_DIR + f'/{file_name}.pdf'
+    with open(path_name, 'wb') as pdf:
+        pdf.write(r.content)
 
-  return handle_pdf(pathlib.Path(path_name), n, url=url, return_raw=return_raw)
+    return handle_pdf(pathlib.Path(path_name), n, url=url, return_raw=return_raw)
 
 
 def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10, return_raw=False):
-  try:  
-      if return_raw:
-          pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=return_raw)
-          return '\n'.join([meta['url'], meta['title'], meta['author']]) + '\n\n'.join(pages) 
-      else:
-          chunks, pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=return_raw)
-          return chunks
-  except:
-      if is_news_source(url):
-          print('processing news source')
-          article = Article(url=url)
-          try:
-              article.download()
-              article.parse()
-              text = article.text
-          except:
-              print('issue with news source - processing as non-news source')
-              scraper = GeneralScraper()
-              text = scraper.scrape_post(url)
-      else:
-          print('processing non-news source')
-          scraper = GeneralScraper()
-          text = scraper.scrape_post(url)
-      
-      lines = (line.strip() for line in text.splitlines())
-      chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-      results = "\n".join(chunk for chunk in chunks if chunk)
+    try:  
+        if return_raw:
+            pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=return_raw)
+            return '\n'.join([meta['url'], meta['title'], meta['author']]) + '\n\n'.join(pages) 
+        else:
+            chunks, pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=return_raw)
+            return chunks
+    except:
+        if is_news_source(url):
+            print('processing news source')
+            article = Article(url=url)
+            try:
+                article.download()
+                article.parse()
+                text = article.text
+            except:
+                print('issue with news source - processing as non-news source')
+                scraper = GeneralScraper()
+                text = scraper.scrape_post(url)
+        else:
+            print('processing non-news source')
+            scraper = GeneralScraper()
+            text = scraper.scrape_post(url)
+        
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        results = "\n".join(chunk for chunk in chunks if chunk)
 
-      return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
+        return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
   
+
+def google_search(event, context):
+    print(event)
+    try:
+        body = event['body']
+    except:
+        body = json.loads(event['body'])
+
+    q = body['q']
+
+    if 'n' in body:
+       n = body['n']
+    else:
+       n = 50
+
+    if 'sqs' in body:
+       sqs = body['sqs']
+    else:
+       sqs = None
+
+    # Scrape Google Search
+    scraper = GeneralScraper(is_google_search=True)
+    result = scraper.google_search(q)   # returns {q:str, links:[str]}
+    result['links'] = result['links'][:n]
+
+    if sqs:
+       queue = SQS(sqs)
+       queue.send(result)
+    else:
+       return success(result)
+
 
 def scrape(event, context):
     print(event)

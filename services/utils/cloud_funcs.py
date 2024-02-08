@@ -5,6 +5,20 @@ import boto3
 STAGE = os.getenv('STAGE')
 lambda_client = boto3.client('lambda')
 
+
+def cloud_google_search(q:str, n:int=None, sqs:str=None):
+    res = lambda_client.invoke(
+        FunctionName=f'foxscript-data-{STAGE}-google_search',
+        InvocationType='Event' if sqs else 'RequestResponse',
+        Payload=json.dumps({"body": {
+            'q': q,
+            'n': n,
+            'sqs': sqs
+        }})
+    )
+
+    return res
+
 def cloud_scrape(url, sqs=None, invocation_type='Event', chunk_overlap=10, return_raw=False):
     res = lambda_client.invoke(
         FunctionName=f'foxscript-data-{STAGE}-scraper',

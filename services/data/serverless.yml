@@ -142,6 +142,22 @@ functions:
           event: s3:ObjectCreated:*
           existing: true
 
+  google_search:
+    image:
+      name: data_image
+      command:
+        - researcher.google_search
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 512
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: google_search
+          method: post
+          cors: true
+  
   scraper:
     image:
       name: data_image

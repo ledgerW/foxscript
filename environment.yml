@@ -24,4 +24,5 @@ dependencies:
     - unstructured
     - newspaper3k
     - unittest-parametrize
+    - fake-useragent
     
