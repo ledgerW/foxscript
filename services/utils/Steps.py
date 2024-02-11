@@ -594,12 +594,17 @@ class cluster_keywords():
             queue = SQS(sqs)
 
             # do google distributed google search for each keyword in batch
+            counter = 0
             for q in keyword_batch:
-                get_top_n_search(q, 10, sqs=sqs)
-                time.sleep(0.01)
+                if q:
+                    get_top_n_search(q, 10, sqs=sqs)
+                    time.sleep(0.01)
+                    counter += 1
+                else:
+                    pass
 
             # wait for and collect search results from SQS
-            new_keywords = queue.collect(len(keyword_batch), max_wait=300)
+            new_keywords = queue.collect(counter, max_wait=300)
             print(f"New Keyword Batch Size: {len(new_keywords)}")
             
             # group keywords form this batch
