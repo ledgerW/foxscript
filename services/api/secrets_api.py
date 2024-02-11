@@ -45,7 +45,17 @@ def _get_secret(name: str, version: str=None) -> dict:
     return response
 
 
-def _delete_secret(name: str, without_recovery: bool=False) -> dict:
+def _update_secret(name: str, secret_value: str) -> dict:
+    secrets_client = boto3.client("secretsmanager")
+
+    kwargs = {'SecretId': name}
+    kwargs["SecretString"] = secret_value
+    response = secrets_client.update_secret(**kwargs)
+
+    return response
+
+
+def _delete_secret(name: str, without_recovery: bool=True) -> dict:
     secrets_client = boto3.client("secretsmanager")
     response = secrets_client.delete_secret(
         SecretId=name, ForceDeleteWithoutRecovery=without_recovery)
@@ -72,9 +82,13 @@ def create_secret(event, context):
         user_id = json.loads(event['body'])['user_id']
 
     secret_name = get_secret_name(user_id, integration)
-    res = _create_secret(secret_name, secret_value)
 
-    return success({'result': res})
+    try:
+        res = _create_secret(secret_name, secret_value)
+    except:
+        res = _update_secret(secret_name, secret_value)
+
+    return success({'Name': res['Name']})
 
 
 def get_secret(event, context):
@@ -94,7 +108,7 @@ def get_secret(event, context):
         'SecretString': res['SecretString']
     }
 
-    return success({'result': res})
+    return success(res)
 
 
 def delete_secret(event, context):
@@ -113,4 +127,4 @@ def delete_secret(event, context):
         'Name': res['Name']
     }
 
-    return success({'result': res})
+    return success(res)
