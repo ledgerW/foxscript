@@ -32,6 +32,7 @@ custom:
       - requests
       - urllib3
       - pypandoc
+      - pyjwt
     layer:
       name: ${self:service}
       

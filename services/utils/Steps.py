@@ -51,6 +51,7 @@ from utils.bubble import (
     get_bubble_doc
 )
 from utils.google import convert_text, get_creds, create_google_doc, create_google_sheet, upload_to_google_drive
+from utils.ghost import build_body, call_ghost, get_article_img
 
 
 if os.getenv('IS_OFFLINE'):
@@ -857,6 +858,7 @@ class send_output():
             as_url_list=False,
             csv_doc=False,
             delimiter=',',
+            with_post_image=True,
             split_on=None
         ):
         self.split_on = split_on
@@ -869,6 +871,7 @@ class send_output():
         self.as_url_list = as_url_list
         self.csv_doc = csv_doc
         self.delimiter = delimiter
+        self.with_post_image = with_post_image
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -1094,6 +1097,72 @@ class send_output():
                     drive_file_id = doc_id
 
             return_value = drive_file_id
+
+        # CMS (Ghost)
+        if self.destination.lower() == 'ghost':
+            def get_content_tags(content: str, tags: list[str]) -> list[str]:
+                prompt = f"""Please choose 1-3 tag options for an article we want to publish. The tag is basically a category.
+                Here is a sample of the Article:
+                {content[:250]}
+
+                And here are the Tag options:
+                {tags}
+
+                Please return only the chosen tags (and nothing else), one per line.
+
+                Tags:"""
+
+                llm = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
+                tags = llm.llm.predict(prompt)
+                
+                return tags.split('\n')
+            
+
+            res = get_bubble_object('user', self.user_id)
+            user_email = res.json()['response']['authentication']['email']['email']
+            ghost_domain = res.json()['response']['ghost_domain']
+
+            img_path = None
+            if self.with_post_image:
+                # get image url from google search and save to disk
+                img_path = get_article_img(input['Title'], download=True)
+
+                # upload local image file to ghost and get ghost url
+                res = call_ghost(
+                    user_id=self.user_id,
+                    domain=ghost_domain,
+                    endpoint_type='image',
+                    img_path=img_path
+                )
+                img_path = res['images'][0]['url']
+
+            # get tag options from Ghost Content API
+            res = call_ghost(
+                user_id=self.user_id,
+                domain=ghost_domain,
+                endpoint_type='tags'
+            )
+            tag_options = [tag['name'] for tag in res['tags']]
+            tags = get_content_tags(content, tag_options)
+
+            # get post body
+            body = build_body(
+                title=input['Title'],
+                content=content,
+                tags=tags,
+                author_email=user_email,
+                img_path=img_path
+            )
+
+            # create post
+            res = call_ghost(
+                user_id=self.user_id,
+                domain=ghost_domain,
+                body=body,
+                endpoint_type='post'
+            )
+
+            return_value = res['posts'][0]['id']
 
         # Get input and output word count
         self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))
