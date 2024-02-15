@@ -18,11 +18,11 @@ AZ_GPT_4_TURBO = 'gpt-4-turbo'
 AZ_GPT_4_32K = 'gpt-4-32k'
 AZ_EMBEDDING = 'text-embedding-ada-002'
 
-GPT_35 = 'gpt-3.5-turbo-1106'
-GPT_35_16K = 'gpt-3.5-turbo-1106'
+GPT_35 = 'gpt-3.5-turbo-0125'
+GPT_35_16K = 'gpt-3.5-turbo-0125'
 GPT_4 = 'gpt-4'
-GPT_4_TURBO = 'gpt-4-1106-preview'
-EMBEDDING = 'text-embedding-ada-002'
+GPT_4_TURBO = 'gpt-4-turbo-preview'
+EMBEDDING = 'text-embedding-3-large'
 
 az_openai_kwargs = {
     'openai_api_base': os.getenv('AZURE_OPENAI_BASE'),

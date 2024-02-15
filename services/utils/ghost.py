@@ -70,7 +70,7 @@ def get_article_img(title: str, download: bool=False):
     return local_img_path if local_img_path else img_url
 
 
-def build_body(title: str, content: str, tags: list[str], author_email: str, img_path: str=None) -> dict:
+def build_body(title: str, content: str, tags: list[str], author_email: str, img_path: str=None, status: str='draft') -> dict:
     lexical = {
         'root': {
             'children': [
@@ -98,7 +98,7 @@ def build_body(title: str, content: str, tags: list[str], author_email: str, img
             'title': title,
             'slug': title.lower().replace(' ', '-').replace(':', '-'),
             'lexical': json.dumps(lexical),
-            'status': 'draft',
+            'status': status,
             'tags': tags,
             'authors': [author_email]
         }]

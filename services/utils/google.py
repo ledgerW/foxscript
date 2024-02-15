@@ -212,6 +212,8 @@ def upload_to_google_drive(title, file_type, content=None, path=None, folder_id=
         mimetype = 'text/markdown'
     elif file_type == 'txt':
         mimetype = 'text/plain'
+    elif file_type == 'csv':
+        mimetype = 'text/csv'
     else:
         mimetype = f'application/{file_type}'
 

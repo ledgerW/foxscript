@@ -330,7 +330,7 @@ class get_library_retriever():
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
         self.workflow_library = None
 
-        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
 
     def get_weaviate_retriever(self, class_name=None, k=3):
@@ -859,6 +859,7 @@ class send_output():
             csv_doc=False,
             delimiter=',',
             with_post_image=True,
+            publish_status='draft',
             split_on=None
         ):
         self.split_on = split_on
@@ -872,6 +873,7 @@ class send_output():
         self.csv_doc = csv_doc
         self.delimiter = delimiter
         self.with_post_image = with_post_image
+        self.publish_status = publish_status
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -1151,7 +1153,8 @@ class send_output():
                 content=content,
                 tags=tags,
                 author_email=user_email,
-                img_path=img_path
+                img_path=img_path,
+                status=self.publish_status
             )
 
             # create post

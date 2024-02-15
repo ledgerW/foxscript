@@ -46,7 +46,8 @@ def get_init(body, email):
             'delimiter': ',' if 'delimiter' not in body else body['delimiter'],
             'drive_folder': 'root' if 'drive_folder' not in body else body['drive_folder'],
             'to_rtf': False if 'to_rtf' not in body else body['to_rtf'],
-            'with_post_image': True if 'send_with_post_image' not in body else body['send_with_post_image']
+            'with_post_image': True if 'send_with_post_image' not in body else body['send_with_post_image'],
+            'publish_status': 'draft' if 'send_publish_status' not in body else body['send_publish_status']
         }
 
     if body['type'] == 'Fetch Input':
