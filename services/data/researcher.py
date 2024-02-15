@@ -141,11 +141,13 @@ def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10, return_
             except:
                 print('issue with news source - processing as non-news source')
                 scraper = GeneralScraper()
-                text = scraper.scrape_post(url)
+                output, _ = scraper.scrape_post(url)
+                text = output['text']
         else:
             print('processing non-news source')
             scraper = GeneralScraper()
-            text = scraper.scrape_post(url)
+            output, _ = scraper.scrape_post(url)
+            text = output['text']
         
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
