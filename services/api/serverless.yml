@@ -27,6 +27,7 @@ custom:
       - langchain-experimental
       - langchain-community
       - langchain-openai
+      - faiss-cpu
       - pandas
       - tabulate
       - openai
