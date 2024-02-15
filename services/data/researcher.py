@@ -248,7 +248,7 @@ def research(event, context):
     # Scrape and Research
     research_results = None
     try:
-      LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=1.0)
+      LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
 
       chunks = scrape_and_chunk(url, 100)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})

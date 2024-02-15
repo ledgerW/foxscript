@@ -28,7 +28,7 @@ from langchain.prompts import PromptTemplate
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import (
@@ -126,7 +126,8 @@ class get_chain():
                 print(f'fallback to {llm}')
                 self.chain.llm = llm
                 try:
-                    res = self.chain(input)
+                    #res = self.chain(input)
+                    res = self.chain.invoke(input)
                     if res:
                         break
                 except:
@@ -456,7 +457,7 @@ class get_library_retriever():
                     print(f'Library Research with Similar Docs: {question}')
                     # get docs that are similar overall first
                     nearVector = {
-                        "vector": OpenAIEmbeddings().embed_query(question)
+                        "vector": OpenAIEmbeddings(model="text-embedding-3-large").embed_query(question)
                     }
 
                     if self.ignore_url:
@@ -1115,9 +1116,9 @@ class send_output():
                 Tags:"""
 
                 llm = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
-                tags = llm.llm.predict(prompt)
+                tags = llm.llm.invoke(prompt)
                 
-                return tags.split('\n')
+                return tags.content.split('\n')
             
 
             res = get_bubble_object('user', self.user_id)
@@ -1136,6 +1137,7 @@ class send_output():
                     endpoint_type='image',
                     img_path=img_path
                 )
+                print(res)
                 img_path = res['images'][0]['url']
 
             # get tag options from Ghost Content API

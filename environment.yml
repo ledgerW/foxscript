@@ -1,14 +1,17 @@
-name: foxscript
+name: foxscript311
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.11
   - pip
   - pip:
     - openai
     - weaviate-client
     - langchain
+    - langchain-openai
+    - langchain-experimental
+    - langchain-community
     - tiktoken
     - faiss-cpu
     - selenium
@@ -25,4 +28,10 @@ dependencies:
     - newspaper3k
     - unittest-parametrize
     - fake-useragent
+    - unittest-parametrize
+    - google-api-python-client
+    - google-auth-httplib2
+    - google-auth-oauthlib
+    - pypandoc
+    - pyjwt
     

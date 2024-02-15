@@ -27,7 +27,7 @@ custom:
     layer:
       name: ${self:service}
       compatibleRuntimes:
-        - python3.9
+        - python3.11
 
   # VPC
   vpcConfig:
@@ -122,7 +122,7 @@ provider:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
     AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
-    AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
+    AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
     SERPER_API_KEY: ${env:SERPER_API_KEY}
     BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
     BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
@@ -176,7 +176,7 @@ fargate:
         WEAVIATE_URL: ${env:WEAVIATE_URL}
         WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
         AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
-        AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
+        AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
         SERPER_API_KEY: ${env:SERPER_API_KEY}
         BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
@@ -201,7 +201,7 @@ fargate:
         WEAVIATE_URL: ${env:WEAVIATE_URL}
         WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
         AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
-        AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
+        AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
         SERPER_API_KEY: ${env:SERPER_API_KEY}
         BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
@@ -216,7 +216,7 @@ fargate:
 
 functions:
   batch_workflow:
-    runtime: python3.9
+    runtime: python3.11
     handler: batch_api.batch_workflow
     memorySize: 512
     timeout: 300
@@ -230,7 +230,7 @@ functions:
           cors: true
 
   batch_upload_to_s3:
-    runtime: python3.9
+    runtime: python3.11
     handler: batch_api.batch_upload_to_s3
     memorySize: 256
     timeout: 300

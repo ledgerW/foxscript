@@ -25,6 +25,8 @@ custom:
       - weaviate-client
       - langchain
       - langchain-experimental
+      - langchain-community
+      - langchain-openai
       - pandas
       - tabulate
       - openai
@@ -51,7 +53,7 @@ provider:
   name: aws
   stage: dev
   region: us-east-1
-  runtime: python3.9
+  runtime: python3.11
   lambdaHashingVersion: 20201221
   apiGateway:
     restApiId:
@@ -70,7 +72,7 @@ provider:
     WEAVIATE_URL: ${env:WEAVIATE_URL}
     WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
     AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
-    AZURE_OPENAI_BASE: ${env:AZURE_OPENAI_BASE}
+    AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     OPENAI_ORGANIZATION: ${env:OPENAI_ORGANIZATION}
     SERPER_API_KEY: ${env:SERPER_API_KEY}

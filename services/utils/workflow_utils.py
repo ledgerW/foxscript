@@ -19,9 +19,9 @@ from utils.cloud_funcs import cloud_scrape, cloud_google_search
 from utils.general import SQS
 
 try:
-    from langchain.utilities import GoogleSerperAPIWrapper
-    from langchain.embeddings.openai import OpenAIEmbeddings
-    from langchain.vectorstores import FAISS
+    from langchain_community.utilities import GoogleSerperAPIWrapper
+    from langchain_community.embeddings import OpenAIEmbeddings
+    from langchain_community.vectorstores import FAISS
     from langchain.chains import RetrievalQA
     from langchain.prompts import PromptTemplate
 except:
@@ -38,7 +38,7 @@ WP_API_KEY = os.getenv('WP_API_KEY')
 
 
 
-def process_new_keyword(new_keyword: dict, existing_keywords: [dict], thresh: float=0.8):
+def process_new_keyword(new_keyword: dict, existing_keywords: list[dict], thresh: float=0.8):
     if len(existing_keywords) == 0:
         existing_keywords.append({'keywords': [new_keyword['q']], 'links': new_keyword['links']})
         return existing_keywords
@@ -89,7 +89,7 @@ def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
     return batch_df_list
 
 
-def get_keyword_batches(csv_path: str, batch_size: int) -> [[str]]:
+def get_keyword_batches(csv_path: str, batch_size: int) -> list[list[str]]:
     keywords_df = pd.read_csv(csv_path)[['Keyword']]
     total_size = keywords_df.shape[0]
     if batch_size > total_size:
@@ -133,7 +133,7 @@ def get_top_n_search(query, n=50, sqs=None):
 
 
 def get_ephemeral_vecdb(chunks, metadata):
-  embeddings = OpenAIEmbeddings()
+  embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
   
   return FAISS.from_texts(chunks, embeddings, metadatas=[metadata for _ in range(len(chunks))])
 
@@ -174,7 +174,7 @@ def get_context(query, llm, retriever, library=False):
 
 # Cluster Sub-Topics Helpers
 def get_content_embeddings(urls):
-    embedder = OpenAIEmbeddings()
+    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
     topic_df = pd.DataFrame()
 
     # Distributed Scraping

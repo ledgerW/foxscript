@@ -1,11 +1,11 @@
 # Pull the base image with python 3.10 as a runtime for your Lambda
-FROM public.ecr.aws/lambda/python:3.10
+FROM public.ecr.aws/lambda/python:3.11
 
 # Copy the requirements.txt file to the container
 COPY services/api/Docker.requirements.txt ./
 
 # Install the python requirements from requirements.txt
-RUN python3.10 -m pip install -r Docker.requirements.txt
+RUN python3.11 -m pip install -r Docker.requirements.txt
 
 # Copy lambda source code
 RUN mkdir utils

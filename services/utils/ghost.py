@@ -48,14 +48,14 @@ def get_ghost_jwt(user_id: str, api: str) -> dict:
 
 
 def get_article_img(title: str, download: bool=False):
-    from langchain.utilities import GoogleSerperAPIWrapper
+    from langchain_community.utilities import GoogleSerperAPIWrapper
 
     search = GoogleSerperAPIWrapper(type="images")
     results = search.results(title)
 
     img_url = results['images'][0]['imageUrl']
     for img in results['images']:
-        if (img['imageWidth'] > img['imageHeight']) and ('.jpg' in img['imageUrl']):
+        if (img['imageWidth'] > img['imageHeight']) and (img['imageUrl'].endswith('.jpg')):
             img_url = img['imageUrl']
             break
 
