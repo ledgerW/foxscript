@@ -153,7 +153,10 @@ def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10, return_
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         results = "\n".join(chunk for chunk in chunks if chunk)
 
-        return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
+        if return_raw:
+           return results
+        else:
+           return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
   
 
 def google_search(event, context):

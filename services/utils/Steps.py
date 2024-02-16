@@ -268,7 +268,7 @@ class do_research():
 
             res = cloud_scrape(url, sqs=None, invocation_type='RequestResponse', chunk_overlap=0, return_raw=True)
             res_body = json.loads(res['Payload'].read().decode("utf-8"))
-            content = json.loads(res_body['body'])['chunks'].replace('<SPLIT>', ' ')
+            content = json.loads(res_body['body'])['chunks']
 
             self.input_word_cnt = 1
             self.output_word_cnt = len(content.split(' '))
@@ -595,7 +595,7 @@ class cluster_keywords():
             sqs = 'googsearch{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
             queue = SQS(sqs)
 
-            # do google distributed google search for each keyword in batch
+            # do distributed google search for each keyword in batch
             counter = 0
             for q in keyword_batch:
                 if q:
@@ -717,7 +717,7 @@ class get_workflow():
                     )
                     time.sleep(0.5)
             
-                results = queue.collect(len(input_vals), max_wait=780)
+                results = queue.collect(len(input_vals), max_wait=900)
 
                 outputs = [result['output'] for result in results]
                 self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
