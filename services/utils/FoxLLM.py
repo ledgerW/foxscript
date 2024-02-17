@@ -8,7 +8,7 @@ try:
 except:
     pass
 
-from langchain.chat_models import AzureChatOpenAI, ChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 
 AZ_GPT_35 = 'gpt-35-turbo'
@@ -18,14 +18,14 @@ AZ_GPT_4_TURBO = 'gpt-4-turbo'
 AZ_GPT_4_32K = 'gpt-4-32k'
 AZ_EMBEDDING = 'text-embedding-ada-002'
 
-GPT_35 = 'gpt-3.5-turbo-1106'
-GPT_35_16K = 'gpt-3.5-turbo-1106'
+GPT_35 = 'gpt-3.5-turbo'
+GPT_35_16K = 'gpt-3.5-turbo'
 GPT_4 = 'gpt-4'
-GPT_4_TURBO = 'gpt-4-1106-preview'
-EMBEDDING = 'text-embedding-ada-002'
+GPT_4_TURBO = 'gpt-4-turbo-preview'
+EMBEDDING = 'text-embedding-3-large'
 
 az_openai_kwargs = {
-    'openai_api_base': os.getenv('AZURE_OPENAI_BASE'),
+    'azure_endpoint': os.getenv('AZURE_OPENAI_ENDPOINT'),
     'openai_api_version': "2023-05-15",
     'openai_api_key': os.getenv('AZURE_OPENAI_API_KEY'),
     'openai_api_type': "azure"

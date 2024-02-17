@@ -141,17 +141,22 @@ def scrape_and_chunk(url, token_size, sentences=False, chunk_overlap=10, return_
             except:
                 print('issue with news source - processing as non-news source')
                 scraper = GeneralScraper()
-                text = scraper.scrape_post(url)
+                output, _ = scraper.scrape_post(url)
+                text = output['text']
         else:
             print('processing non-news source')
             scraper = GeneralScraper()
-            text = scraper.scrape_post(url)
+            output, _ = scraper.scrape_post(url)
+            text = output['text']
         
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         results = "\n".join(chunk for chunk in chunks if chunk)
 
-        return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
+        if return_raw:
+           return results
+        else:
+           return text_splitter(results, token_size, sentences, chunk_overlap=chunk_overlap)
   
 
 def google_search(event, context):
@@ -248,7 +253,7 @@ def research(event, context):
     # Scrape and Research
     research_results = None
     try:
-      LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=1.0)
+      LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
 
       chunks = scrape_and_chunk(url, 100)
       vec_db = get_ephemeral_vecdb(chunks, {'source': url})

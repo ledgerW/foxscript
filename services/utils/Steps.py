@@ -28,7 +28,7 @@ from langchain.prompts import PromptTemplate
 from langchain.retrievers.weaviate_hybrid_search import WeaviateHybridSearchRetriever
 from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.workflow_utils import (
@@ -51,6 +51,7 @@ from utils.bubble import (
     get_bubble_doc
 )
 from utils.google import convert_text, get_creds, create_google_doc, create_google_sheet, upload_to_google_drive
+from utils.ghost import build_body, call_ghost, get_article_img
 
 
 if os.getenv('IS_OFFLINE'):
@@ -125,7 +126,8 @@ class get_chain():
                 print(f'fallback to {llm}')
                 self.chain.llm = llm
                 try:
-                    res = self.chain(input)
+                    #res = self.chain(input)
+                    res = self.chain.invoke(input)
                     if res:
                         break
                 except:
@@ -266,7 +268,7 @@ class do_research():
 
             res = cloud_scrape(url, sqs=None, invocation_type='RequestResponse', chunk_overlap=0, return_raw=True)
             res_body = json.loads(res['Payload'].read().decode("utf-8"))
-            content = json.loads(res_body['body'])['chunks'].replace('<SPLIT>', ' ')
+            content = json.loads(res_body['body'])['chunks']
 
             self.input_word_cnt = 1
             self.output_word_cnt = len(content.split(' '))
@@ -329,7 +331,7 @@ class get_library_retriever():
         self.retriever = self.get_weaviate_retriever(class_name=class_name, k=k)
         self.workflow_library = None
 
-        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-35-16k', temp=0.1)
+        self.LLM = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
 
 
     def get_weaviate_retriever(self, class_name=None, k=3):
@@ -455,7 +457,7 @@ class get_library_retriever():
                     print(f'Library Research with Similar Docs: {question}')
                     # get docs that are similar overall first
                     nearVector = {
-                        "vector": OpenAIEmbeddings().embed_query(question)
+                        "vector": OpenAIEmbeddings(model="text-embedding-3-large").embed_query(question)
                     }
 
                     if self.ignore_url:
@@ -593,13 +595,18 @@ class cluster_keywords():
             sqs = 'googsearch{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
             queue = SQS(sqs)
 
-            # do google distributed google search for each keyword in batch
+            # do distributed google search for each keyword in batch
+            counter = 0
             for q in keyword_batch:
-                get_top_n_search(q, 10, sqs=sqs)
-                time.sleep(0.01)
+                if q:
+                    get_top_n_search(q, 10, sqs=sqs)
+                    time.sleep(0.01)
+                    counter += 1
+                else:
+                    pass
 
             # wait for and collect search results from SQS
-            new_keywords = queue.collect(len(keyword_batch), max_wait=300)
+            new_keywords = queue.collect(counter, max_wait=300)
             print(f"New Keyword Batch Size: {len(new_keywords)}")
             
             # group keywords form this batch
@@ -710,7 +717,7 @@ class get_workflow():
                     )
                     time.sleep(0.5)
             
-                results = queue.collect(len(input_vals), max_wait=780)
+                results = queue.collect(len(input_vals), max_wait=900)
 
                 outputs = [result['output'] for result in results]
                 self.input_word_cnt = sum([result['input_word_cnt'] for result in results])
@@ -852,6 +859,8 @@ class send_output():
             as_url_list=False,
             csv_doc=False,
             delimiter=',',
+            with_post_image=True,
+            publish_status='draft',
             split_on=None
         ):
         self.split_on = split_on
@@ -864,6 +873,8 @@ class send_output():
         self.as_url_list = as_url_list
         self.csv_doc = csv_doc
         self.delimiter = delimiter
+        self.with_post_image = with_post_image
+        self.publish_status = publish_status
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -1089,6 +1100,74 @@ class send_output():
                     drive_file_id = doc_id
 
             return_value = drive_file_id
+
+        # CMS (Ghost)
+        if self.destination.lower() == 'ghost':
+            def get_content_tags(content: str, tags: list[str]) -> list[str]:
+                prompt = f"""Please choose 1-3 tag options for an article we want to publish. The tag is basically a category.
+                Here is a sample of the Article:
+                {content[:250]}
+
+                And here are the Tag options:
+                {tags}
+
+                Please return only the chosen tags (and nothing else), one per line.
+
+                Tags:"""
+
+                llm = FoxLLM(az_openai_kwargs, openai_kwargs, model_name='gpt-4', temp=0.1)
+                tags = llm.llm.invoke(prompt)
+                
+                return tags.content.split('\n')
+            
+
+            res = get_bubble_object('user', self.user_id)
+            user_email = res.json()['response']['authentication']['email']['email']
+            ghost_domain = res.json()['response']['ghost_domain']
+
+            img_path = None
+            if self.with_post_image:
+                # get image url from google search and save to disk
+                img_path = get_article_img(input['Title'], download=True)
+
+                # upload local image file to ghost and get ghost url
+                res = call_ghost(
+                    user_id=self.user_id,
+                    domain=ghost_domain,
+                    endpoint_type='image',
+                    img_path=img_path
+                )
+                print(res)
+                img_path = res['images'][0]['url']
+
+            # get tag options from Ghost Content API
+            res = call_ghost(
+                user_id=self.user_id,
+                domain=ghost_domain,
+                endpoint_type='tags'
+            )
+            tag_options = [tag['name'] for tag in res['tags']]
+            tags = get_content_tags(content, tag_options)
+
+            # get post body
+            body = build_body(
+                title=input['Title'],
+                content=content,
+                tags=tags,
+                author_email=user_email,
+                img_path=img_path,
+                status=self.publish_status
+            )
+
+            # create post
+            res = call_ghost(
+                user_id=self.user_id,
+                domain=ghost_domain,
+                body=body,
+                endpoint_type='post'
+            )
+
+            return_value = res['posts'][0]['id']
 
         # Get input and output word count
         self.input_word_cnt = len(content.replace('\n\n', ' ').split(' '))

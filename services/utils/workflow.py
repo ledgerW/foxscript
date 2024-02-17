@@ -45,7 +45,9 @@ def get_init(body, email):
             'csv_doc': False if 'csv_doc' not in body else body['csv_doc'],
             'delimiter': ',' if 'delimiter' not in body else body['delimiter'],
             'drive_folder': 'root' if 'drive_folder' not in body else body['drive_folder'],
-            'to_rtf': False if 'to_rtf' not in body else body['to_rtf']
+            'to_rtf': False if 'to_rtf' not in body else body['to_rtf'],
+            'with_post_image': True if 'send_with_post_image' not in body else body['send_with_post_image'],
+            'publish_status': 'draft' if 'send_publish_status' not in body else body['send_publish_status']
         }
 
     if body['type'] == 'Fetch Input':
@@ -223,7 +225,7 @@ class Workflow():
             return step.output
 
 
-    def run_all(self, input_vars: [str], input_vals: [str], bubble: bool=False):
+    def run_all(self, input_vars: list[str], input_vals: list[str], bubble: bool=False):
         """
         user_inputs (dict): {'User Input - input': "text input"}
         """

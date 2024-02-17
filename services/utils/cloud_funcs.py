@@ -6,6 +6,39 @@ STAGE = os.getenv('STAGE')
 lambda_client = boto3.client('lambda')
 
 
+def cloud_get_secret(integration:str, user_id:str):
+    res = lambda_client.invoke(
+        FunctionName=f'foxscript-api-{STAGE}-get_secret',
+        InvocationType='RequestResponse',
+        Payload=json.dumps({"body": {
+            'integration': integration,
+            'user_id': user_id,
+        }})
+    )
+
+    res_body = json.loads(res['Payload'].read().decode("utf-8"))
+    res = json.loads(res_body['body'])
+
+    return res
+
+
+def cloud_create_secret(secret_vale:str, integration:str, user_id:str):
+    res = lambda_client.invoke(
+        FunctionName=f'foxscript-api-{STAGE}-get_secret',
+        InvocationType='RequestResponse',
+        Payload=json.dumps({"body": {
+            'secret_vale': secret_vale,
+            'integration': integration,
+            'user_id': user_id,
+        }})
+    )
+
+    res_body = json.loads(res['Payload'].read().decode("utf-8"))
+    res = json.loads(res_body['body'])
+
+    return res
+
+
 def cloud_google_search(q:str, n:int=None, sqs:str=None):
     res = lambda_client.invoke(
         FunctionName=f'foxscript-data-{STAGE}-google_search',
