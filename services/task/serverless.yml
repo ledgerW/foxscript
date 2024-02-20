@@ -155,6 +155,10 @@ provider:
             - 'iam:*'
             - 'cloudformation:*'
             - 'sqs:*'
+            # Secrets Manager
+            - 'kms:GenerateDataKey'
+            - 'kms:Decrypt'
+            - 'secretsmanager:*'
           Resource: '*'
         - Effect: Allow
           Action:
