@@ -50,20 +50,35 @@ def get_ghost_jwt(user_id: str, api: str) -> dict:
 def get_article_img(title: str, download: bool=False):
     from langchain_community.utilities import GoogleSerperAPIWrapper
 
+    def get_img_url(results):
+        img_url = results['images'][0]['imageUrl']
+        for img in results['images']:
+            if (img['imageWidth'] > img['imageHeight']) and (img['imageUrl'].endswith('.jpg')):
+                img_url = img['imageUrl']
+                return img_url
+        return img_url
+
     search = GoogleSerperAPIWrapper(type="images")
     results = search.results(title)
 
-    img_url = results['images'][0]['imageUrl']
-    for img in results['images']:
-        if (img['imageWidth'] > img['imageHeight']) and (img['imageUrl'].endswith('.jpg')):
-            img_url = img['imageUrl']
-            break
+    img_url = get_img_url(results)
 
     local_img_path = None
     if download:
-        response = requests.get(img_url)
-        if response.status_code == 200:
+        try:
+            response = requests.get(img_url)
             local_img_path = os.path.join(LAMBDA_DATA_DIR, img_url.split('/')[-1])
+        except:
+            try:
+                new_results = {}
+                new_results['images'] = [img for img in results['images'] if img['imageUrl'] != img_url]
+                img_url = get_img_url(new_results)
+                response = requests.get(img_url)
+                local_img_path = os.path.join(LAMBDA_DATA_DIR, img_url.split('/')[-1])
+            except:
+                pass
+        
+        if local_img_path:
             with open(local_img_path, "wb") as file:
                 file.write(response.content)
 
