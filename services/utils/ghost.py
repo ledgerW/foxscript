@@ -53,13 +53,14 @@ def get_article_img(title: str, download: bool=False):
     def get_img_url(results):
         img_url = results['images'][0]['imageUrl']
         for img in results['images']:
-            if (img['imageWidth'] > img['imageHeight']) and (img['imageUrl'].endswith('.jpg')):
-                img_url = img['imageUrl']
+            if (img['imageWidth'] > img['imageHeight']) and ('.jpg' in img['imageUrl']):
+                img_url = img['imageUrl'].split('.jpg')[0] + '.jpg'
                 return img_url
         return img_url
 
     search = GoogleSerperAPIWrapper(type="images")
     results = search.results(title)
+    results['images'] = sorted(results['images'], key=lambda d: d['imageWidth'], reverse=True) 
 
     img_url = get_img_url(results)
 
@@ -85,7 +86,15 @@ def get_article_img(title: str, download: bool=False):
     return local_img_path if local_img_path else img_url
 
 
-def build_body(title: str, content: str, tags: list[str], author_email: str, img_path: str=None, status: str='draft') -> dict:
+def build_body(
+        title: str,
+        content: str,
+        tags: list[str],
+        author_email: str,
+        img_path: str=None,
+        status: str='draft',
+        template: str=None
+    ) -> dict:
     lexical = {
         'root': {
             'children': [
@@ -115,7 +124,8 @@ def build_body(title: str, content: str, tags: list[str], author_email: str, img
             'lexical': json.dumps(lexical),
             'status': status,
             'tags': tags,
-            'authors': [author_email]
+            'authors': [author_email],
+            "custom_template": template,
         }]
     }
 
