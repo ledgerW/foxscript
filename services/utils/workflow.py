@@ -47,7 +47,8 @@ def get_init(body, email):
             'drive_folder': 'root' if 'drive_folder' not in body else body['drive_folder'],
             'to_rtf': False if 'to_rtf' not in body else body['to_rtf'],
             'with_post_image': True if 'send_with_post_image' not in body else body['send_with_post_image'],
-            'publish_status': 'draft' if 'send_publish_status' not in body else body['send_publish_status']
+            'publish_status': 'draft' if 'send_publish_status' not in body else body['send_publish_status'],
+            'template': 'custom-full-feature-image' if 'template' not in body else body['send_template']
         }
 
     if body['type'] == 'Fetch Input':

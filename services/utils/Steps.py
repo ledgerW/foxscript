@@ -861,6 +861,7 @@ class send_output():
             delimiter=',',
             with_post_image=True,
             publish_status='draft',
+            template='custom-full-feature-image',
             split_on=None
         ):
         self.split_on = split_on
@@ -875,6 +876,7 @@ class send_output():
         self.delimiter = delimiter
         self.with_post_image = with_post_image
         self.publish_status = publish_status
+        self.template = template
         self.input_word_cnt = 0
         self.output_word_cnt = 0
         self.workflow_name = None
@@ -1091,27 +1093,33 @@ class send_output():
                         creds=creds
                     )
 
-                    doc_id = create_google_doc(
-                        title,
-                        content=content,
-                        folder_id=self.drive_folder,
-                        creds=creds
-                    )
-                    drive_file_id = doc_id
+                    #doc_id = create_google_doc(
+                    #    title,
+                    #    content=content,
+                    #    folder_id=self.drive_folder,
+                    #    creds=creds
+                    #)
+                    
+                    drive_file_id = file_id
 
             return_value = drive_file_id
 
         # CMS (Ghost)
         if self.destination.lower() == 'ghost':
             def get_content_tags(content: str, tags: list[str]) -> list[str]:
-                prompt = f"""Please choose 1-3 tag options for an article we want to publish. The tag is basically a category.
+                prompt = f"""Please choose up to 3 tag options that best fit an article we want to publish.
+                The tag is basically a category.
+
                 Here is a sample of the Article:
                 {content[:250]}
 
+                
                 And here are the Tag options:
                 {tags}
 
-                Please return only the chosen tags (and nothing else), one per line.
+                
+                Please return only the chosen tag options (and nothing else). Return one tag option per line.
+                If a tag is a location name, then put that tag at the top of the list.
 
                 Tags:"""
 
@@ -1128,7 +1136,7 @@ class send_output():
             img_path = None
             if self.with_post_image:
                 # get image url from google search and save to disk
-                img_path = get_article_img(input['Title'], download=True)
+                img_path = get_article_img(input['Title'] + 'high quality image', download=True)
 
                 # upload local image file to ghost and get ghost url
                 res = call_ghost(
@@ -1147,7 +1155,7 @@ class send_output():
                 endpoint_type='tags'
             )
             tag_options = [tag['name'] for tag in res['tags']]
-            tags = get_content_tags(content, tag_options)
+            tags = get_content_tags(input['Title'], tag_options)
 
             # get post body
             body = build_body(
@@ -1156,7 +1164,8 @@ class send_output():
                 tags=tags,
                 author_email=user_email,
                 img_path=img_path,
-                status=self.publish_status
+                status=self.publish_status,
+                template=self.template
             )
 
             # create post
