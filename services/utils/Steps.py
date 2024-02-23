@@ -1136,7 +1136,7 @@ class send_output():
             img_path = None
             if self.with_post_image:
                 # get image url from google search and save to disk
-                img_path = get_article_img(input['Title'] + 'high quality image', download=True)
+                img_path = get_article_img(input['Title'] + ' high quality image', download=True)
 
                 # upload local image file to ghost and get ghost url
                 res = call_ghost(
@@ -1146,7 +1146,10 @@ class send_output():
                     img_path=img_path
                 )
                 print(res)
-                img_path = res['images'][0]['url']
+                try:
+                    img_path = res['images'][0]['url']
+                except:
+                    img_path = None
 
             # get tag options from Ghost Content API
             res = call_ghost(
@@ -1156,6 +1159,7 @@ class send_output():
             )
             tag_options = [tag['name'] for tag in res['tags']]
             tags = get_content_tags(input['Title'], tag_options)
+            tags = [tag for tag in tags if tag in tag_options]
 
             # get post body
             body = build_body(
