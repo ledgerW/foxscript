@@ -53,7 +53,7 @@ def get_article_img(title: str, download: bool=False):
     def get_img_url(results):
         img_url = results['images'][0]['imageUrl']
         for img in results['images']:
-            if (img['imageWidth'] > img['imageHeight']) and ('.jpg' in img['imageUrl']):
+            if (img['imageWidth'] > img['imageHeight']) and (img['imageWidth'] < 2000) and ('.jpg' in img['imageUrl']):
                 img_url = img['imageUrl'].split('.jpg')[0] + '.jpg'
                 return img_url
         return img_url
