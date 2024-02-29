@@ -606,7 +606,7 @@ class cluster_keywords():
                     pass
 
             # wait for and collect search results from SQS
-            new_keywords = queue.collect(counter, max_wait=300)
+            new_keywords = queue.collect(counter, max_wait=600)
             print(f"New Keyword Batch Size: {len(new_keywords)}")
             
             # group keywords form this batch
@@ -715,7 +715,7 @@ class get_workflow():
                         InvocationType='Event',
                         Payload=json.dumps(payload)
                     )
-                    time.sleep(0.5)
+                    time.sleep(0.1)
             
                 results = queue.collect(len(input_vals), max_wait=900)
 
@@ -781,18 +781,20 @@ class combine_output():
 
 class run_code():
     def __init__(self, py_code='', code_from_input=False, split_on=None):
-        def exec_py_code(input, py_code):
+        def exec_py_code(input, step, py_code):
             """py_code is python code to be exectued.
             It assumes an input value called 'input' and
             it returns a value called 'output' that must be
             defined in py_code.
             """
             py_code = f"""{py_code}"""
-            exec_vals = {'input': input}
+            exec_vals = {
+                'input': input,
+                'step': step
+            }
             
             try:
                 exec(py_code, globals(), exec_vals)
-                print(exec_vals)
                 return exec_vals['output']
             except Exception as e:
                 print(f'Error running py_code:\n{py_code}')
@@ -835,10 +837,12 @@ class run_code():
         if TEST_MODE:
             return input
         
+        print(vars(self))
+        
         if self.code_from_input:
-            output = self.py_func(input['input'], input['py_code'])
+            output = self.py_func(input['input'], vars(self), input['py_code'])
         else:
-            output = self.py_func(input['input'], self.py_code)
+            output = self.py_func(input['input'], vars(self), self.py_code)
 
         # Get input and output word count
         self.input_word_cnt = len(input['input'].split(' '))

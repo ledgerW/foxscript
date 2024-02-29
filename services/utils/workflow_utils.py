@@ -38,6 +38,57 @@ WP_API_KEY = os.getenv('WP_API_KEY')
 
 
 
+def get_tier(volume):
+    if volume >= 10000:
+        return 1
+    if volume < 10000 and volume >= 1000:
+        return 2
+    if volume < 1000:
+        return 3
+    
+
+
+def unfold_keyword_clusters(keyword_cluster_df: pd.DataFrame):
+    unfolded_df = pd.DataFrame()
+    for i, row in keyword_cluster_df.iterrows():
+        keywords = eval(row['keywords'])
+        tmp_df = pd.DataFrame({
+            'Keyword': keywords,
+            'Links': [eval(row['links'])]*len(keywords),
+            'Group': i+1
+        })
+
+        unfolded_df = pd.concat([unfolded_df, tmp_df], ignore_index=True)
+
+    return unfolded_df
+
+
+
+def get_all_keywords(all_sheet_paths: list[str], as_string: bool=False, save_name: str=None):
+    all_keywords_df = pd.DataFrame()
+
+    for sheet_path in all_sheet_paths:
+        if sheet_path.endswith('.xlsx'):
+            sheet_df = pd.read_excel(sheet_path)
+        if sheet_path.endswith('.csv'):
+            sheet_df = pd.read_csv(sheet_path)
+
+        all_keywords_df = pd.concat([all_keywords_df, sheet_df])
+
+    all_keywords_df.drop_duplicates(subset=['Keyword'], inplace=True)
+    all_keywords_df.sort_values(by='Search Volume', ascending=False, inplace=True)
+
+    if save_name:
+        local_path = os.path.join(LAMBDA_DATA_DIR, save_name)
+        all_keywords_df.to_csv(local_path, index=False)
+    
+    if as_string:
+        all_keywords_df = all_keywords_df.to_csv()
+
+    return all_keywords_df
+
+
+
 def process_new_keyword(new_keyword: dict, existing_keywords: list[dict], thresh: float=0.8):
     if len(existing_keywords) == 0:
         existing_keywords.append({'keywords': [new_keyword['q']], 'links': new_keyword['links']})
