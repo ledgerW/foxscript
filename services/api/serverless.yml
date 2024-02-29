@@ -36,6 +36,7 @@ custom:
       - urllib3
       - pypandoc
       - pyjwt
+      - openpyxl
     layer:
       name: ${self:service}
       
