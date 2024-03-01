@@ -20,7 +20,7 @@ from utils.general import SQS
 
 try:
     from langchain_community.utilities import GoogleSerperAPIWrapper
-    from langchain_community.embeddings import OpenAIEmbeddings
+    from langchain_openai import OpenAIEmbeddings
     from langchain_community.vectorstores import FAISS
     from langchain.chains import RetrievalQA
     from langchain.prompts import PromptTemplate
@@ -184,9 +184,12 @@ def get_top_n_search(query, n=50, sqs=None):
 
 
 def get_ephemeral_vecdb(chunks, metadata):
-  embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-  
-  return FAISS.from_texts(chunks, embeddings, metadatas=[metadata for _ in range(len(chunks))])
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+
+    if type(metadata) == list:
+        return FAISS.from_texts(chunks, embeddings, metadatas=metadata)
+    else:
+        return FAISS.from_texts(chunks, embeddings, metadatas=[metadata for _ in range(len(chunks))])
 
 
 def get_context(query, llm, retriever, library=False):
