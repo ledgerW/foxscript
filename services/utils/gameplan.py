@@ -48,7 +48,7 @@ class PDF(FPDF):
     
     def text_body(self, body, style='', ln=True):
         self.set_font('Arial', style, 12)
-        self.multi_cell(0, 10, body)
+        self.cell(0, 10, text=body, align='L')
         if ln:
             self.ln()
 
@@ -192,25 +192,26 @@ def get_cluster_pivot(data):
     return with_totals_df
 
 
-def make_gameplan_report(category_tier_pivot, plot_paths):
+def make_cluster_report(category_tier_pivot, plot_paths):
     # Create instance of FPDF class with landscape orientation
     pdf = PDF(orientation='L')
 
     # Add a page
     pdf.add_page()
     pdf.text_title('SEO Content Experiment Design')
-    pdf.text_body('Goal', 'B', ln=False)
-    pdf.text_body("""- Select 300 keywords across six high value Categories with a mix of Tier 2 and Tier 3 monthly keyword search volume popularity (med/low search volume and competition)
-- Let run for 30-90 days to measure performance
-- Identify winning Categories generating the most conversions
-- Double down
-""")
+    pdf.text_body('Goal', 'B', ln=True)
+    pdf.text_body("- Select 300 keywords across six high value Categories with a mix of Tier 2 and Tier 3")
+    pdf.text_body("  monthly keyword search volume popularity (med/low search volume and competition)")
+    pdf.text_body("- Let run for 30-90 days to measure performance")
+    pdf.text_body("- Identify winning Categories generating the most conversions")
+    pdf.text_body("- Double down")
+    pdf.text_body("")
     
-    pdf.text_body('KPIs to Track for Success', 'B', ln=False)
-    pdf.text_body("""- Average Traffic per month per Article by Month 1, Month 2, Month 3, etc
-- Conversions by Category per Month
-- Conversion Rate by Category
-""")
+    
+    pdf.text_body('KPIs to Track for Success', 'B', ln=True)
+    pdf.text_body("- Average Traffic per month per Article by Month 1, Month 2, Month 3, etc...")
+    pdf.text_body("- Conversions by Category per Month")
+    pdf.text_body("- Conversion Rate by Category")
 
     # Adding the table of total keywords and total search volume by category and tier
     pdf.add_page()

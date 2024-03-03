@@ -25,4 +25,4 @@ pyjwt
 openpyxl
 matplotlib
 seaborn
-fpdf
+fpdf2
