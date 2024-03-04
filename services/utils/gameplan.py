@@ -61,16 +61,17 @@ class PDF(FPDF):
         # Column titles and widths for landscape orientation
         column_titles = [
             "Category",
-            "T1 Articles", "T1 Volume",
-            "T2 Articles", "T2 Volume",
-            "T3 Articles", "T3 Volume",
-            "Total Articles", "Total Volume"
+            "T1 Pubs", "T1 Vol",
+            "T2 Pubs", "T2 Vol",
+            "T3 Pubs", "T3 Vol",
+            "Total Pubs", "Total Vol",
+            "New Leads"
         ]
-        column_widths = [70, 25]
+        column_widths = [70, 20]
         self.set_font('Arial', 'B', 10)
         for idx, title in enumerate(column_titles):
             width = column_widths[0] if idx==0 else column_widths[1]
-            fill = True if title in ['T2 Volume', 'T3 Volume'] else False
+            fill = True if title in ['T2 Vol', 'T3 Vol', 'New Leads'] else False
             self.cell(width, 10, title, border=1, fill=fill)
         self.ln()
         for index, row in table_data.iterrows():
@@ -80,13 +81,15 @@ class PDF(FPDF):
             for tier in range(1, 4):
                 if index+1 == table_data.shape[0]:
                     self.set_font('Arial', 'B', 10)
-                self.cell(column_widths[1], 10, str(row[f'Total_Keywords_{tier}']), border=1)
+                self.cell(column_widths[1], 10, '{:,.0f}'.format(row[f'Total_Keywords_{tier}']), border=1)
                 
                 fill = False if tier==1 else True
-                self.cell(column_widths[1], 10, str(row[f'Total_Search_Volume_{tier}']), border=1, fill=fill)
+                self.cell(column_widths[1], 10, '{:,.0f}'.format(row[f'Total_Search_Volume_{tier}']), border=1, fill=fill)
             self.set_font('Arial', 'B', 10)
             for total in ['Total_Keywords', 'Total_Search_Volume']:
-                self.cell(column_widths[1], 10, str(row[total]), border=1)
+                self.cell(column_widths[1], 10, '{:,.0f}'.format(row[total]), border=1)
+            for value in ["1pct_Convert"]:
+                self.cell(column_widths[1], 10, '{:,.0f}'.format(row[value]), border=1, fill=fill)
             self.ln()
 
 
@@ -105,7 +108,14 @@ def make_cluster_plots(cluster_csv_path):
     # Visualizations
     # Total Search Volume by Tier
     plt.figure(figsize=(10, 6))
-    sns.barplot(x='Tier', y='Total Search Volume', data=total_volume_by_tier, palette="magma")
+    barplot = sns.barplot(x='Tier', y='Total Search Volume', data=total_volume_by_tier, palette="magma")
+    for p in barplot.patches:
+        height = p.get_height()
+        barplot.annotate('{:,.0f}'.format(height), 
+                        (p.get_x() + p.get_width() / 2., p.get_height()), 
+                        ha = 'center', va = 'center', 
+                        size=10, xytext = (0, 8), 
+                        textcoords = 'offset points')
     plt.title('Total Search Volume by Tier')
     plt.xlabel('Tier')
     plt.ylabel('Total Search Volume')
@@ -115,7 +125,14 @@ def make_cluster_plots(cluster_csv_path):
 
     # Total Articles by Tier
     plt.figure(figsize=(10, 6))
-    sns.barplot(x='Tier', y='Total Articles', data=total_keywords_by_tier, palette="magma")
+    barplot = sns.barplot(x='Tier', y='Total Articles', data=total_keywords_by_tier, palette="magma")
+    for p in barplot.patches:
+        height = p.get_height()
+        barplot.annotate('{:,.0f}'.format(height), 
+                        (p.get_x() + p.get_width() / 2., p.get_height()), 
+                        ha = 'center', va = 'center', 
+                        size=10, xytext = (0, 8), 
+                        textcoords = 'offset points')
     plt.title('Total Articles by Tier')
     plt.xlabel('Tier')
     plt.ylabel('Total Articles')
@@ -126,7 +143,13 @@ def make_cluster_plots(cluster_csv_path):
     # Total Search Volume by Category
     plt.figure(figsize=(10, 6))
     total_volume_by_category_sorted = total_volume_by_category[total_volume_by_category['Category'] != 'Grand Total'].sort_values(by='Total Search Volume', ascending=False)
-    sns.barplot(x='Total Search Volume', y='Category', data=total_volume_by_category_sorted, palette="magma")
+    barplot = sns.barplot(x='Total Search Volume', y='Category', data=total_volume_by_category_sorted, palette="magma")
+    for p in barplot.patches:
+        width = p.get_width()  # Get the width of the bar (which represents the value in a horizontal bar plot)
+        plt.text(x=width + 20,  # Position the text slightly to the right of the bar end
+                y=p.get_y() + p.get_height() / 2,  # Vertically align the text to the middle of the bar
+                s='{:,.0f}'.format(int(width)),  # Format the number with commas
+                va='center')
     plt.title('Total Search Volume by Category')
     plt.xlabel('Total Search Volume')
     plt.ylabel('Category')
@@ -137,7 +160,13 @@ def make_cluster_plots(cluster_csv_path):
     # Total Keywords by Category
     plt.figure(figsize=(10, 6))
     total_keywords_by_category_sorted = total_keywords_by_category[total_keywords_by_category['Category'] != 'Grand Total'].sort_values(by='Total Articles', ascending=False)
-    sns.barplot(x='Total Articles', y='Category', data=total_keywords_by_category_sorted, palette="magma")
+    barplot = sns.barplot(x='Total Articles', y='Category', data=total_keywords_by_category_sorted, palette="magma")
+    for p in barplot.patches:
+        width = p.get_width()  # Get the width of the bar (which represents the value in a horizontal bar plot)
+        plt.text(x=width + 200,  # Position the text slightly to the right of the bar end
+                y=p.get_y() + p.get_height() / 2,  # Vertically align the text to the middle of the bar
+                s='{:,.0f}'.format(int(width)),  # Format the number with commas
+                va='center')
     plt.title('Total Articles by Category')
     plt.xlabel('Total Articles')
     plt.ylabel('Category')
@@ -177,6 +206,8 @@ def get_cluster_pivot(data):
     # Add totals
     category_tier_pivot['Total_Keywords'] = category_tier_pivot['Total_Keywords_1'] + category_tier_pivot['Total_Keywords_2'] + category_tier_pivot['Total_Keywords_3']
     category_tier_pivot['Total_Search_Volume'] = category_tier_pivot['Total_Search_Volume_1'] + category_tier_pivot['Total_Search_Volume_2'] + category_tier_pivot['Total_Search_Volume_3']
+    category_tier_pivot['20pct_Capture'] = (category_tier_pivot['Total_Search_Volume_2'] + category_tier_pivot['Total_Search_Volume_3']) * 0.2
+    category_tier_pivot['1pct_Convert'] = category_tier_pivot['20pct_Capture'] * 0.01
     category_tier_pivot = category_tier_pivot.sort_values(by='Total_Search_Volume', ascending=False)
 
     new_data = {}
@@ -192,12 +223,16 @@ def get_cluster_pivot(data):
     return with_totals_df
 
 
-def make_cluster_report(category_tier_pivot, plot_paths):
+def make_gameplan_report(category_tier_pivot, plot_paths):
     # Create instance of FPDF class with landscape orientation
     pdf = PDF(orientation='L')
 
     # Add a page
     pdf.add_page()
+    pdf.set_font('Arial', 'B', 18)
+    pdf.cell(0, 10, text=f"Potential New Leads per Month: {category_tier_pivot['1pct_Convert'].tolist()[-1]}", align='L')
+    pdf.ln()
+
     pdf.text_title('SEO Content Experiment Design')
     pdf.text_body('Goal', 'B', ln=True)
     pdf.text_body("- Select 300 keywords across six high value Categories with a mix of Tier 2 and Tier 3")
@@ -215,8 +250,10 @@ def make_cluster_report(category_tier_pivot, plot_paths):
 
     # Adding the table of total keywords and total search volume by category and tier
     pdf.add_page()
-    pdf.text_title('Total Articles and Search Volume by Category and Tier')
+    pdf.text_title('Total Publications and Monthly Search Volume by Category and Tier')
     pdf.add_table(category_tier_pivot)
+    pdf.text_body("* New Leads assumes a 20% capture rate from T2/T3 traffic and a 1% conversion rate", 'B')
+
 
     # Add plots
     tables_and_plots = [
@@ -240,7 +277,7 @@ def make_cluster_report(category_tier_pivot, plot_paths):
                 pdf.add_plot(plot_paths[plot_path])
 
     # Save the PDF to a file in landscape orientation
-    report_path = os.path.join(LAMBDA_DATA_DIR, 'seo_keyword_report_category_tier.pdf')
+    report_path = os.path.join(LAMBDA_DATA_DIR, 'gameplan.pdf')
     pdf.output(report_path)
 
     return report_path

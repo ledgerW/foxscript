@@ -13,7 +13,10 @@ else:
 
 
 def upload_bubble_file(path):
-    file = {'document': open(path,'rb')}
+    if path.endswith('.pdf'):
+        file = {path.split('/')[-1]: (path.split('/')[-1], open(path, 'rb'), 'application/pdf')}
+    else:
+        file = {'document': open(path,'rb')}
 
     # https://app.foxscript.ai/version-test/fileupload
     endpoint = BUBBLE_API_ROOT.split('api')[0] + 'fileupload'
