@@ -23,12 +23,14 @@ BUCKET = os.getenv('BUCKET')
 
 
 class PDF(FPDF):
-    def __init__(self, orientation='L', unit='mm', format='A4'):
+    def __init__(self, orientation='L', unit='mm', format='A4', customer=''):
         super().__init__(orientation, unit, format)
+        self.customer = customer
     
     def header(self):
         self.set_font('Arial', 'B', 20)
-        self.cell(0, 10, 'SEO Gameplan', 0, 1, 'C')
+        customer_str = f"SEO Gameplan - {self.customer}" if self.customer else 'SEO Gameplan'
+        self.cell(0, 10, customer_str, 0, 1, 'C')
         self.ln()
     
     def footer(self):
@@ -44,7 +46,7 @@ class PDF(FPDF):
     def text_title(self, title):
         self.set_font('Arial', 'B', 14)
         self.cell(0, 10, title, 0, 1, 'L')
-        self.ln(10)
+        self.ln(5)
     
     def text_body(self, body, style='', ln=True):
         self.set_font('Arial', style, 12)
@@ -57,13 +59,12 @@ class PDF(FPDF):
         self.ln(10)
     
     def add_table(self, table_data):
-        self.set_fill_color(r=255, g=212, b=101)
         # Column titles and widths for landscape orientation
         column_titles = [
             "Category",
-            "T1 Pubs", "T1 Vol",
-            "T2 Pubs", "T2 Vol",
-            "T3 Pubs", "T3 Vol",
+            "Tier1 Pubs", "Tier1 Vol",
+            "Tier2 Pubs", "Tier2 Vol",
+            "Tier3 Pubs", "Tier3 Vol",
             "Total Pubs", "Total Vol",
             "New Leads"
         ]
@@ -71,7 +72,12 @@ class PDF(FPDF):
         self.set_font('Arial', 'B', 10)
         for idx, title in enumerate(column_titles):
             width = column_widths[0] if idx==0 else column_widths[1]
-            fill = True if title in ['T2 Vol', 'T3 Vol', 'New Leads'] else False
+            fill = True if title in ['Tier2 Vol', 'Tier3 Vol', 'New Leads'] else False
+
+            if title == 'New Leads':
+                self.set_fill_color(r=80, g=200, b=120)
+            else:
+                self.set_fill_color(r=255, g=212, b=101)
             self.cell(width, 10, title, border=1, fill=fill)
         self.ln()
         for index, row in table_data.iterrows():
@@ -83,12 +89,14 @@ class PDF(FPDF):
                     self.set_font('Arial', 'B', 10)
                 self.cell(column_widths[1], 10, '{:,.0f}'.format(row[f'Total_Keywords_{tier}']), border=1)
                 
+                self.set_fill_color(r=255, g=212, b=101)
                 fill = False if tier==1 else True
                 self.cell(column_widths[1], 10, '{:,.0f}'.format(row[f'Total_Search_Volume_{tier}']), border=1, fill=fill)
             self.set_font('Arial', 'B', 10)
             for total in ['Total_Keywords', 'Total_Search_Volume']:
                 self.cell(column_widths[1], 10, '{:,.0f}'.format(row[total]), border=1)
             for value in ["1pct_Convert"]:
+                self.set_fill_color(r=80, g=200, b=120)
                 self.cell(column_widths[1], 10, '{:,.0f}'.format(row[value]), border=1, fill=fill)
             self.ln()
 
@@ -223,14 +231,16 @@ def get_cluster_pivot(data):
     return with_totals_df
 
 
-def make_gameplan_report(category_tier_pivot, plot_paths):
+def make_gameplan_report(category_tier_pivot, plot_paths, customer=''):
     # Create instance of FPDF class with landscape orientation
-    pdf = PDF(orientation='L')
+    pdf = PDF(orientation='L', customer=customer)
 
     # Add a page
     pdf.add_page()
     pdf.set_font('Arial', 'B', 18)
-    pdf.cell(0, 10, text=f"Potential New Leads per Month: {category_tier_pivot['1pct_Convert'].tolist()[-1]}", align='L')
+    new_leads = '{:,.0f}'.format(category_tier_pivot['1pct_Convert'].tolist()[-1])
+    pdf.cell(0, 10, text=f"Potential New Leads per Month: {new_leads}", align='L')
+    pdf.ln()
     pdf.ln()
 
     pdf.text_title('SEO Content Experiment Design')
@@ -252,7 +262,7 @@ def make_gameplan_report(category_tier_pivot, plot_paths):
     pdf.add_page()
     pdf.text_title('Total Publications and Monthly Search Volume by Category and Tier')
     pdf.add_table(category_tier_pivot)
-    pdf.text_body("* New Leads assumes a 20% capture rate from T2/T3 traffic and a 1% conversion rate", 'B')
+    pdf.text_body("* New Leads assumes a 20% capture rate from Tier2/Tier3 traffic and a 1% conversion rate", 'B')
 
 
     # Add plots
@@ -271,7 +281,7 @@ def make_gameplan_report(category_tier_pivot, plot_paths):
         if plot_path is not None:
             if 'tier' in plot_path:
                 pdf.add_plot(plot_paths[plot_path], w=230)
-                pdf.text_body("""Tier 1: > 10K search/mo       Tier 2: 1K - 10K search/mo       Tier 3: < 1K search/mo
+                pdf.text_body("""Tier1: > 10K search/mo       Tier2: 1K - 10K search/mo       Tier3: < 1K search/mo
 """, 'B', ln=False)
             else:
                 pdf.add_plot(plot_paths[plot_path])
