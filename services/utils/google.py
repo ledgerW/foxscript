@@ -7,11 +7,13 @@ except:
 import os
 import csv
 import json
+import io
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 
 
 if os.getenv('IS_OFFLINE') or not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
@@ -34,6 +36,78 @@ def get_creds(goog_token, goog_refresh_token):
         creds.refresh(Request())
 
     return creds
+
+
+def list_files_in_drive_folder(folder_id=None, creds=None, include=[]):
+    SUFFIX_TO_MIME = {
+        'csv': 'text/csv',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'txt': 'text/plain',
+        'md': 'text/markdown',
+        'pdf': 'application/pdf',
+        'json': 'application/vnd.google-apps.script+json',
+        'folders': 'application/vnd.google-apps.folder'
+    }
+
+    service = build("drive", "v3", credentials=creds)
+
+    parent_q = f"'{folder_id}' in parents"
+
+    if len(include) > 0:
+        include_mimes = ' or '.join([f"mimeType = '{SUFFIX_TO_MIME[mime_type]}'" for mime_type in include])
+        include_mimes = f"({include_mimes})"
+        q = f"({include_mimes} and {parent_q})"
+    else:
+        q = parent_q
+    
+    files = []
+    page_token = None
+    while True:
+        response = (
+            service.files()
+            .list(
+                q=q,
+                spaces="drive",
+                fields="nextPageToken, files(id, name)",
+                pageToken=page_token,
+            )
+            .execute()
+        )
+        files.extend(response.get("files", []))
+        page_token = response.get("nextPageToken", None)
+        if page_token is None:
+            break
+
+    return files
+
+
+def download_from_drive(file_id: str, local_file_name: str, creds):
+  """Downloads a file
+  Args:
+      real_file_id: ID of the file to download
+  Returns : IO object with location.
+  """
+
+  try:
+      # create drive api client
+      service = build("drive", "v3", credentials=creds)
+
+      # pylint: disable=maybe-no-member
+      request = service.files().get_media(fileId=file_id)
+      file = io.BytesIO()
+      downloader = MediaIoBaseDownload(file, request)
+      done = False
+      while done is False:
+          status, done = downloader.next_chunk()
+
+      with open(local_file_name, "wb") as f:
+          f.write(file.getvalue())
+
+  except HttpError as error:
+      print(f"An error occurred: {error}")
+      file = None
+
+  return
 
 
 def create_drive_folder(name, parents=None, creds=None):
