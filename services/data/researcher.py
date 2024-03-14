@@ -14,7 +14,10 @@ from newspaper import Article
 from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.content import text_splitter, handle_pdf
 from utils.response_lib import *
-from scrapers.base import Scraper
+try:
+    from scrapers.base import Scraper
+except:
+   from data.scrapers.base import Scraper
 from utils.workflow_utils import get_ephemeral_vecdb, get_context
 
 
@@ -109,6 +112,7 @@ class GeneralScraper(Scraper):
             except:
                 pass
 
+        all_links = [url.replace('/url?q=','').split('&sa')[0] for url in all_links]
         return {'q': q, 'links': all_links}
 
 
