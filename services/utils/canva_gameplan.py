@@ -3,6 +3,7 @@ sys.path.append('..')
 
 import os
 import pandas as pd
+import numpy as np
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -18,34 +19,40 @@ STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
 
-def make_canva_plot_csvs(cluster_df: pd.DataFrame):
+def make_canva_plot_csvs(cluster_df: pd.DataFrame, sample_df: pd.DataFrame):
+    sample_size = sample_df.shape[0]
+    total_volume = sample_df.Volume.sum()
+    
     plot_paths = {}
 
     # Human Articles X Category
     plot_paths['human_articles_by_category'] = os.path.join(LAMBDA_DATA_DIR, 'human_articles_by_category.csv')
-    cluster_df\
+    sample_df\
         .query('Tier == 1')\
         .groupby('Category', as_index=False)\
         .agg(Articles=('Cluster', 'count'))\
         .sort_values(by='Articles', ascending=False)\
+        .assign(Articles=lambda df: np.round((df.Articles / sample_size)*100, 2))\
         .to_csv(plot_paths['human_articles_by_category'], index=False)
 
     # AI Articles X Category
     plot_paths['ai_articles_by_category'] = os.path.join(LAMBDA_DATA_DIR, 'ai_articles_by_category.csv')
-    cluster_df\
+    sample_df\
         .query('Tier == [2,3]')\
         .groupby('Category', as_index=False)\
         .agg(Articles=('Cluster', 'count'))\
         .sort_values(by='Articles', ascending=False)\
+        .assign(Articles=lambda df: np.round((df.Articles / sample_size)*100, 2))\
         .to_csv(plot_paths['ai_articles_by_category'], index=False)
     
     # AI Mo Traffic X Category
     plot_paths['ai_traffic_by_category'] = os.path.join(LAMBDA_DATA_DIR, 'ai_traffic_by_category.csv')
-    cluster_df\
+    sample_df\
         .query('Tier == [2,3]')\
         .groupby('Category', as_index=False)\
         .agg(Traffic=('Volume', 'sum'))\
         .sort_values(by='Traffic', ascending=False)\
+        .assign(Traffic=lambda df: np.round((df.Traffic / total_volume)*100, 2))\
         .to_csv(plot_paths['ai_traffic_by_category'], index=False)
     
     # Article Type by Number of Articles
@@ -63,11 +70,11 @@ def make_canva_plot_csvs(cluster_df: pd.DataFrame):
     sorted_cluster_df = cluster_df.sort_values('Volume', ascending=False)[['Cluster', 'Volume']]
     article_counts = [int(pct*sorted_cluster_df.shape[0]) for pct in [0.25, 0.5, 0.75, 1]]
     article_traffics = [sorted_cluster_df.head(cnt).Volume.sum() for cnt in article_counts]
-    new_leads = [int(traffic*0.01) for traffic in article_traffics]
+    new_visits = [int(traffic*0.01) for traffic in article_traffics]
 
     pd.DataFrame({
         'Published Articles': [0] + article_counts,
-        'New Monthly Organic Search Visits': [0] + new_leads
+        'New Monthly Organic Search Visits': [0] + new_visits
     }).to_csv(plot_paths['organic_search_by_articles'], index=False)
 
     # New Organic Search Leads
