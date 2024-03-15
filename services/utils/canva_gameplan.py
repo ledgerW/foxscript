@@ -20,19 +20,21 @@ BUCKET = os.getenv('BUCKET')
 
 
 def make_canva_plot_csvs(cluster_df: pd.DataFrame, sample_df: pd.DataFrame):
-    sample_size = sample_df.shape[0]
+    human_article_sample_cnt = sample_df.query('Tier == 1').shape[0]
+    ai_article_sample_cnt = sample_df.query('Tier == [2,3]').shape[0]
     total_volume = sample_df.Volume.sum()
     
     plot_paths = {}
 
     # Human Articles X Category
+    # !!! UPDATE TO PERCENTAGE OF HUMAN ARTICLES
     plot_paths['human_articles_by_category'] = os.path.join(LAMBDA_DATA_DIR, 'human_articles_by_category.csv')
     sample_df\
         .query('Tier == 1')\
         .groupby('Category', as_index=False)\
         .agg(Articles=('Cluster', 'count'))\
         .sort_values(by='Articles', ascending=False)\
-        .assign(Articles=lambda df: np.round((df.Articles / sample_size)*100, 2))\
+        .assign(Articles=lambda df: np.round((df.Articles / human_article_sample_cnt)*100, 2))\
         .to_csv(plot_paths['human_articles_by_category'], index=False)
 
     # AI Articles X Category
@@ -42,7 +44,7 @@ def make_canva_plot_csvs(cluster_df: pd.DataFrame, sample_df: pd.DataFrame):
         .groupby('Category', as_index=False)\
         .agg(Articles=('Cluster', 'count'))\
         .sort_values(by='Articles', ascending=False)\
-        .assign(Articles=lambda df: np.round((df.Articles / sample_size)*100, 2))\
+        .assign(Articles=lambda df: np.round((df.Articles / ai_article_sample_cnt)*100, 2))\
         .to_csv(plot_paths['ai_articles_by_category'], index=False)
     
     # AI Mo Traffic X Category
@@ -71,9 +73,11 @@ def make_canva_plot_csvs(cluster_df: pd.DataFrame, sample_df: pd.DataFrame):
     article_counts = [int(pct*sorted_cluster_df.shape[0]) for pct in [0.25, 0.5, 0.75, 1]]
     article_traffics = [sorted_cluster_df.head(cnt).Volume.sum() for cnt in article_counts]
     new_visits = [int(traffic*0.01) for traffic in article_traffics]
+    article_counts = [0] + article_counts
+    article_counts = [str(c) for c in article_counts]
 
     pd.DataFrame({
-        'Published Articles': [0] + article_counts,
+        'Published Articles': article_counts,
         'New Monthly Organic Search Visits': [0] + new_visits
     }).to_csv(plot_paths['organic_search_by_articles'], index=False)
 
@@ -84,9 +88,11 @@ def make_canva_plot_csvs(cluster_df: pd.DataFrame, sample_df: pd.DataFrame):
     article_counts = [int(pct*sorted_cluster_df.shape[0]) for pct in [0.25, 0.5, 0.75, 1]]
     article_traffics = [sorted_cluster_df.head(cnt).Volume.sum() for cnt in article_counts]
     new_leads = [int(traffic*0.01*0.03) for traffic in article_traffics]
+    article_counts = [0] + article_counts
+    article_counts = [str(c) for c in article_counts]
 
     pd.DataFrame({
-        'Published Articles': [0] + article_counts,
+        'Published Articles': article_counts,
         'New Monthly Organic Search Leads': [0] + new_leads
     }).to_csv(plot_paths['organic_leads_by_articles'], index=False)
 
@@ -106,7 +112,7 @@ def make_canva_vars_csv(input_vals: dict, cluster_df: pd.DataFrame, cat_dist: pd
     canva_vars["Total Search Market"] = total_search_market
 
     ### Current Mo. Search Traffic (Passed In From SEMRush)
-    canva_vars['Current Monthly Traffic'] = input_vals['monthly_traffic']
+    canva_vars['Current Monthly Traffic'] = '{:,.0f}'.format(input_vals['monthly_traffic'])
 
     ### Current Total Search Market %
     current_search_market_pct = '{:,.2f}'.format(input_vals['monthly_traffic'] / cluster_df.Volume.sum())
@@ -114,7 +120,7 @@ def make_canva_vars_csv(input_vals: dict, cluster_df: pd.DataFrame, cat_dist: pd
 
     ### Current Mo Leads
     current_mo_leads = input_vals['monthly_traffic'] * input_vals['capture_pct'] * input_vals['lead_pct']
-    current_mo_leads = '{:,.2f}'.format(current_mo_leads)
+    current_mo_leads = '{:,.0f}'.format(current_mo_leads)
     canva_vars['Current Monthly Leads'] = current_mo_leads
 
     ### Total Human Articles
