@@ -66,34 +66,50 @@ def make_canva_plot_csvs(cluster_df: pd.DataFrame, sample_df: pd.DataFrame):
         'Article Count': [human_article_cnt, ai_article_cnt]
     }).to_csv(plot_paths['num_articles_by_type'], index=False)
 
+    
+    # Get 1 Year Growth Traffic 
+    #sorted_cluster_df = cluster_df.sort_values('Volume', ascending=False)[['Cluster', 'Volume']]
+    avg_vol_per_article = cluster_df.Volume.mean()
+    growth_rate = [.25, .5, .75, 1]
+    month_number = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    new_articles = [0, 100, 300, 550, 550, 550, 550]
+    article_counts = [0, 100, 400, 950, 1500, 2050, 2600]
+
+    batch1_vol = avg_vol_per_article * 100 * 0.01
+    batch1 = np.array([0] + [batch1_vol*rate for rate in growth_rate] + [batch1_vol]*8)
+
+    batch2_vol = avg_vol_per_article * 300 * 0.01
+    batch2 = np.array([0]*2 + [batch2_vol*rate for rate in growth_rate] + [batch2_vol]*7)
+
+    batch3_vol = avg_vol_per_article * 550 * 0.01
+    batch3 = np.array([0]*3 + [batch3_vol*rate for rate in growth_rate] + [batch3_vol]*6)
+
+    batch4_vol = avg_vol_per_article * 550 * 0.01
+    batch4 = np.array([0]*4 + [batch4_vol*rate for rate in growth_rate] + [batch4_vol]*5)
+
+    batch5_vol = avg_vol_per_article * 550 * 0.01
+    batch5 = np.array([0]*5 + [batch5_vol*rate for rate in growth_rate] + [batch5_vol]*4)
+
+    batch6_vol = avg_vol_per_article * 550 * 0.01
+    batch6 = np.array([0]*6 + [batch6_vol*rate for rate in growth_rate] + [batch6_vol]*3)
+
+    new_visits = batch1 + batch2 + batch3 + batch4 + batch5 + batch6
+    
+    
     # New Organic Search Visits
     plot_paths['organic_search_by_articles'] = os.path.join(LAMBDA_DATA_DIR, 'organic_search_by_articles.csv')
-    
-    sorted_cluster_df = cluster_df.sort_values('Volume', ascending=False)[['Cluster', 'Volume']]
-    article_counts = [int(pct*sorted_cluster_df.shape[0]) for pct in [0.25, 0.5, 0.75, 1]]
-    article_traffics = [sorted_cluster_df.head(cnt).Volume.sum() for cnt in article_counts]
-    new_visits = [int(traffic*0.01) for traffic in article_traffics]
-    article_counts = [0] + article_counts
-    article_counts = [str(c) for c in article_counts]
 
     pd.DataFrame({
-        'Published Articles': article_counts,
-        'New Monthly Organic Search Visits': [0] + new_visits
+        'Month': [str(m) for m in month_number],
+        'New Monthly Organic Search Visits': [int(v) for v in new_visits]
     }).to_csv(plot_paths['organic_search_by_articles'], index=False)
 
     # New Organic Search Leads
     plot_paths['organic_leads_by_articles'] = os.path.join(LAMBDA_DATA_DIR, 'organic_leads_by_articles.csv')
-    
-    sorted_cluster_df = cluster_df.sort_values('Volume', ascending=False)[['Cluster', 'Volume']]
-    article_counts = [int(pct*sorted_cluster_df.shape[0]) for pct in [0.25, 0.5, 0.75, 1]]
-    article_traffics = [sorted_cluster_df.head(cnt).Volume.sum() for cnt in article_counts]
-    new_leads = [int(traffic*0.01*0.03) for traffic in article_traffics]
-    article_counts = [0] + article_counts
-    article_counts = [str(c) for c in article_counts]
 
     pd.DataFrame({
-        'Published Articles': article_counts,
-        'New Monthly Organic Search Leads': [0] + new_leads
+        'Month': [str(m) for m in month_number],
+        'New Monthly Organic Search Leads': [int(v*0.03) for v in new_visits]
     }).to_csv(plot_paths['organic_leads_by_articles'], index=False)
 
     return plot_paths
