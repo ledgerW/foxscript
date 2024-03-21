@@ -135,7 +135,7 @@ def make_canva_vars_csv(input_vals: dict, cluster_df: pd.DataFrame, cat_dist: pd
     canva_vars['Current Share of Search Market'] = current_search_market_pct
 
     ### Current Mo Leads
-    current_mo_leads = input_vals['monthly_traffic'] * input_vals['capture_pct'] * input_vals['lead_pct']
+    current_mo_leads = input_vals['monthly_traffic'] * input_vals['lead_pct']
     current_mo_leads = '{:,.0f}'.format(current_mo_leads)
     canva_vars['Current Monthly Leads'] = current_mo_leads
 
