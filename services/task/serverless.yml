@@ -301,6 +301,6 @@ functions:
     maximumRetryAttempts: 1
     events:
       - http:
-          path: researcher
+          path: ecs
           method: post
           cors: true
