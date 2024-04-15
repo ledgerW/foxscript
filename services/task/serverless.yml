@@ -113,6 +113,9 @@ provider:
       task_image:
         path: ../..
         file: task.Dockerfile
+      data_image:
+        path: ../..
+        file: data.Dockerfile
 
   environment:
     SERVICE: ${self:service}
