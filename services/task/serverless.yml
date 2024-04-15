@@ -218,7 +218,46 @@ fargate:
       vpc:
         assignPublicIp: true
 
+    run_task:
+      name: 'run_task-${self:custom.stage}'
+      image: task_image
+      memory: '4GB'
+      cpu: 1024
+      command:
+        - run_task_ecs.py
+      environment:
+        STAGE: ${self:custom.stage}
+        WEAVIATE_URL: ${env:WEAVIATE_URL}
+        WEAVIATE_API_KEY: ${env:WEAVIATE_API_KEY}
+        AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
+        AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
+        SERPER_API_KEY: ${env:SERPER_API_KEY}
+        BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
+        BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
+        BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
+        BUCKET: ${self:custom.bucket_name}
+        GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
+        GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
+        ORIGINALITY_PLAG: ${env:ORIGINALITY_PLAG}
+      schedule: 'rate(365 days)'
+      vpc:
+        assignPublicIp: true
+
 functions:
+  task:
+    runtime: python3.11
+    handler: task_api.handler
+    memorySize: 256
+    timeout: 300
+    maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - http:
+          path: task_api
+          method: post
+          cors: true
+
   batch_workflow:
     runtime: python3.11
     handler: batch_api.batch_workflow
@@ -244,5 +283,21 @@ functions:
     events:
       - http:
           path: batch_upload_to_s3
+          method: post
+          cors: true
+
+  ecs:
+    image:
+      name: data_image
+      command:
+        - ecs_api.ecs
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 2048
+    timeout: 600
+    maximumRetryAttempts: 1
+    events:
+      - http:
+          path: researcher
           method: post
           cors: true
