@@ -2,6 +2,12 @@ import os
 import json
 import boto3
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass
+
 STAGE = os.getenv('STAGE')
 lambda_client = boto3.client('lambda')
 

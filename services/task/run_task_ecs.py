@@ -46,9 +46,9 @@ def main(task_args):
     print(task_args)
     print('')
 
-    email = task_args['email']
+    email = task_args['user_email']
     ec_lib_name = task_args['ec_lib_name']
-    domain = task_args['domain']
+    domain = task_args['customer_domain']
     top_n_ser = task_args['top_n_ser']
 
     # Fetch batch input file from bubble

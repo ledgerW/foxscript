@@ -202,7 +202,10 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
 def ecs(event, context):
     print(event)
-    body = json.loads(event['body'])
+    try:
+        body = json.loads(event['body'])
+    except:
+        body = event['body']
 
     if 'sqs' in body:
        sqs = body['sqs']
