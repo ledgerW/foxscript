@@ -296,11 +296,23 @@ functions:
         - ecs_api.ecs
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 2048
+    memorySize: 512
     timeout: 600
-    maximumRetryAttempts: 1
+    maximumRetryAttempts: 0
     events:
       - http:
           path: ecs
+          method: post
+          cors: true
+
+  ecs_local:
+    runtime: python3.11
+    handler: ecs_api.ecs
+    memorySize: 256
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: ecs_local
           method: post
           cors: true
