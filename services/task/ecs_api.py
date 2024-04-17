@@ -183,14 +183,14 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         attempt += 1
 
     if not urls:
-        return None
+        return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
     else:
         urls = urls[:2]
 
     try:
         topic_content = scrape_content(urls)
     except:
-        return None
+        return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
 
     print('Getting Embeddings for Topic Results')
     text_embeddings = embedder.embed_documents(topic_content)
