@@ -296,8 +296,8 @@ functions:
         - ecs_api.ecs
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 512
-    timeout: 600
+    memorySize: 1024
+    timeout: 420
     maximumRetryAttempts: 0
     events:
       - http:

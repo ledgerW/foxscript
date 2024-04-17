@@ -31,12 +31,13 @@ from utils.workflow_utils import make_batch_files
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
-if os.getenv('IS_OFFLINE'):
-   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
-   LAMBDA_DATA_DIR = '.'
-else:
-   lambda_client = boto3.client('lambda')
-   LAMBDA_DATA_DIR = '/tmp'
+#if os.getenv('IS_OFFLINE'):
+#   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
+#   LAMBDA_DATA_DIR = '.'
+#else:
+#   lambda_client = boto3.client('lambda')
+#   LAMBDA_DATA_DIR = '/tmp'
+LAMBDA_DATA_DIR = '.'
 
 
 
@@ -80,11 +81,12 @@ def main(task_args):
     # Process the Batch CSV
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
     queue = SQS(sqs)
+    counter = 0
     for idx, topic in enumerate(topics):
-        print(f"Item #{idx}: {topic}")
+        if idx%10 == 0:
+            print(f"Item #{idx}: {topic}")
 
         # do distributed ECS for each topic
-        counter = 0
         if topic:
             cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, sqs=sqs, invocation_type='Event') 
             time.sleep(0.1)
@@ -94,35 +96,30 @@ def main(task_args):
 
     # wait for and collect search results from SQS
     all_ecs = queue.collect(counter, max_wait=600)
-
-        #all_ecs = []
-        #print()
-        #print(topic)
-        #ecs = cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, sqs=None, invocation_type='Event')        
-        
-        #if ecs:
-        #    all_ecs.append(ecs)
+    print(f"all_ecs length: {len(all_ecs)}")
 
     ecs_df = pd.DataFrame(all_ecs)
+    print(f'ECS DF SHAPE: {ecs_df.shape}')
 
     domain_name = domain.split('.')[0]
     ecs_file_name = f'{domain_name}_ecs.csv'
     local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
+    print(local_ecs_path)
     ecs_df.to_csv(local_ecs_path, index=False)
         
-        # send result to Bubble Document
-        #body = {}
-        #res = create_bubble_object('document', body)
-        #new_doc_id = res.json()['id']
+    # send result to Bubble Document
+    #body = {}
+    #res = create_bubble_object('document', body)
+    #new_doc_id = res.json()['id']
 
-        # add new doc to project
-        #res = get_bubble_object('project', project_id)
-        #try:
-        #    project_docs = res.json()['response']['documents']
-        #except:
-        #    project_docs = []
+    # add new doc to project
+    #res = get_bubble_object('project', project_id)
+    #try:
+    #    project_docs = res.json()['response']['documents']
+    #except:
+    #    project_docs = []
 
-        #_ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+    #_ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
 
 
 
