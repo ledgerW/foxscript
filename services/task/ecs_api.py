@@ -159,7 +159,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     urls = []
     n=10
     attempt = 0
-    while not urls or attempt < 3:
+    while not urls and attempt < 3:
         #search_results = get_top_n_search(topic, n=10)
         try:
             scraper = GeneralScraper(is_google_search=True)
