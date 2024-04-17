@@ -15,9 +15,9 @@ from utils.FoxLLM import FoxLLM, az_openai_kwargs, openai_kwargs
 from utils.content import text_splitter, handle_pdf
 from utils.response_lib import *
 try:
-    from scrapers.base import Scraper
+    from scrapers_old.base import Scraper
 except:
-   from data.scrapers.base import Scraper
+   from data.scrapers_old.base import Scraper
 from utils.workflow_utils import get_ephemeral_vecdb, get_context
 
 

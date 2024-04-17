@@ -28,7 +28,7 @@ from utils.general import SQS
 from utils.response_lib import *
 from utils.weaviate_utils import wv_client, get_wv_class_name
 from utils.content import handle_pdf
-from utils.workflow_utils import get_top_n_search
+#from utils.workflow_utils import get_top_n_search
 from scrapers.base import Scraper
 
 

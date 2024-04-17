@@ -3,6 +3,11 @@ from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.service import Service
 from fake_useragent import UserAgent
 
+try:
+  from .headless_chrome import create_driver
+except:
+   from headless_chrome import create_driver
+
 
 class Scraper():
   new_post_url: str = None
@@ -13,7 +18,7 @@ class Scraper():
 
 
   @classmethod
-  def get_selenium(self):
+  def get_selenium_old(self):
       ua = UserAgent()
       user_agent = ua.random
       try:
@@ -57,6 +62,10 @@ class Scraper():
           driver = Chrome(service=service, options=options)
 
       return driver
+  
+
+  def get_selenium(self):
+     return create_driver()
 
 
   def get_latest_post_meta(self):
