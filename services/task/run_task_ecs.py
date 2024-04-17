@@ -132,6 +132,9 @@ if __name__ == "__main__":
 
     task_args = json.loads(args.task_args)
 
+    start = datetime.now()
+    print(start)
     main(task_args)
+    print(datetime.now() - start)
 
   
