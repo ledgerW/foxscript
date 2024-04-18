@@ -29,7 +29,10 @@ from utils.response_lib import *
 from utils.weaviate_utils import wv_client, get_wv_class_name
 from utils.content import handle_pdf
 #from utils.workflow_utils import get_top_n_search
-from scrapers.base import Scraper
+try:
+    from scrapers.base import Scraper
+except:
+    from task.scrapers.base import Scraper
 
 
 from langchain_openai import OpenAIEmbeddings
@@ -142,13 +145,16 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
     topic_content = []
     for url in urls:
         try:
-            pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=True)
-            topic_content.append('\n\n'.join(pages)) 
+            try:
+                pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=True)
+                topic_content.append('\n\n'.join(pages)) 
+            except:
+                scraper = GeneralScraper()
+                print(f'Scraping {url}')
+                output, _ = scraper.scrape_post(url)
+                topic_content.append(output['text'])
         except:
-            scraper = GeneralScraper()
-            print(f'Scraping {url}')
-            output, _ = scraper.scrape_post(url)
-            topic_content.append(output['text'])
+            continue
 
         if len(topic_content) == n:
             break
@@ -190,7 +196,8 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     try:
         topic_content = scrape_content(urls, n=top_n_ser)
-    except:
+    except Exception as e:
+        print(e)
         return {'topic': topic, 'url': ','.join(urls), 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
 
     print('Getting Embeddings for Topic Results')
