@@ -129,9 +129,9 @@ def get_content_near_vector(class_name: str, vector: list[float], n=1) -> dict:
     return result
 
 
-def scrape_content(urls: list[str]) -> list[str]:
+def scrape_content(urls: list[str], n=2) -> list[str]:
     def scrape_and_chunk_pdf(url, n, return_raw=False):
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=10, verify=False)
         file_name = url.split('/')[-1].replace('.pdf', '')
         path_name = LAMBDA_DATA_DIR + f'/{file_name}.pdf'
         with open(path_name, 'wb') as pdf:
@@ -149,6 +149,9 @@ def scrape_content(urls: list[str]) -> list[str]:
             print(f'Scraping {url}')
             output, _ = scraper.scrape_post(url)
             topic_content.append(output['text'])
+
+        if len(topic_content) == n:
+            break
 
     return topic_content
 
@@ -184,11 +187,9 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     if not urls:
         return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
-    else:
-        urls = urls[:2]
 
     try:
-        topic_content = scrape_content(urls)
+        topic_content = scrape_content(urls, n=2)
     except:
         return {'topic': topic, 'url': ','.join(urls), 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
 
