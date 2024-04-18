@@ -31,8 +31,10 @@ from utils.content import handle_pdf
 #from utils.workflow_utils import get_top_n_search
 try:
     from scrapers.base import Scraper
+    print('Using scrapers.base')
 except:
     from task.scrapers.base import Scraper
+    print('Using task.scrapers.base')
 
 
 from langchain_openai import OpenAIEmbeddings
@@ -169,6 +171,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     n=10
     attempt = 0
     while not urls and attempt < 3:
+        print(f'Attempt {attempt}')
         #search_results = get_top_n_search(topic, n=10)
         #try:
         scraper = GeneralScraper(is_google_search=True)
