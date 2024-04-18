@@ -170,18 +170,18 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     attempt = 0
     while not urls and attempt < 3:
         #search_results = get_top_n_search(topic, n=10)
-        try:
-            scraper = GeneralScraper(is_google_search=True)
-            search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
-            search_results['links'] = search_results['links'][:n]
-            urls = search_results['links']
-        except:
-            print('Issue with Cloud Google Search. Using Serper API')
-            search = GoogleSerperAPIWrapper()
-            search_results = search.results(topic)
-            search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
-            result = {'q': topic, 'links': [res['link'] for res in search_results][:n]}
-            urls = search_results['links']
+        #try:
+        scraper = GeneralScraper(is_google_search=True)
+        search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
+        search_results['links'] = search_results['links'][:n]
+        urls = search_results['links']
+        #except:
+        #    print('Issue with Cloud Google Search. Using Serper API')
+        #    search = GoogleSerperAPIWrapper()
+        #    search_results = search.results(topic)
+        #    search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
+        #    result = {'q': topic, 'links': [res['link'] for res in search_results][:n]}
+        #    urls = search_results['links']
 
         # Check if customer ranks for this topic and if so, ignore
         if customer_domain:
