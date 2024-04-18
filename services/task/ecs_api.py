@@ -189,7 +189,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
 
     try:
-        topic_content = scrape_content(urls, n=2)
+        topic_content = scrape_content(urls, n=top_n_ser)
     except:
         return {'topic': topic, 'url': ','.join(urls), 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
 
