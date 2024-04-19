@@ -178,6 +178,9 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         #try:
         scraper = GeneralScraper(is_google_search=True)
         search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
+
+        print(search_results)
+
         search_results['links'] = search_results['links'][:n]
         urls = search_results['links']
         #except:
