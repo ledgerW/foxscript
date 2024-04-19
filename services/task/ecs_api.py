@@ -102,8 +102,10 @@ class GeneralScraper(Scraper):
 
         url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
         html = requests.get(url, headers=header, verify=False)
+        print(html)
         
         soup = BeautifulSoup(html.content, 'html.parser')
+        print(soup.select("a:has(h3)"))
 
         all_links = []
         for a in soup.select("a:has(h3)"):
@@ -201,7 +203,15 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         time.sleep(5)
 
     if not urls:
-        return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
+        print('Issue with Cloud Google Search. Using Serper API')
+        search = GoogleSerperAPIWrapper()
+        search_results = search.results(topic)
+        search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
+        result = {'q': topic, 'links': [res['link'] for res in search_results][:n]}
+        urls = search_results['links']
+        
+        if not urls:
+            return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
 
     try:
         topic_content = scrape_content(urls, n=top_n_ser)
