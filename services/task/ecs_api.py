@@ -101,7 +101,7 @@ class GeneralScraper(Scraper):
         header = {'User-Agent':str(ua.random)}
 
         url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
-        html = requests.get(url, headers=header)
+        html = requests.get(url, headers=header, verify=False)
         
         soup = BeautifulSoup(html.content, 'html.parser')
 
@@ -172,7 +172,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     urls = []
     n=10
     attempt = 0
-    while not urls and attempt < 3:
+    while not urls and attempt < 5:
         print(f'Attempt {attempt}')
         #search_results = get_top_n_search(topic, n=10)
         #try:
@@ -195,7 +195,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
                 already_ranks = True
 
         attempt += 1
-        time.sleep(3)
+        time.sleep(5)
 
     if not urls:
         return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
