@@ -10,6 +10,7 @@ except:
 
 import json
 import boto3
+import time
 import numpy as np
 import pathlib
 import requests
@@ -112,6 +113,7 @@ class GeneralScraper(Scraper):
                     if link not in all_links:
                         all_links.append(link)
             except:
+                print('')
                 pass
 
         all_links = [url.replace('/url?q=','').split('&sa')[0] for url in all_links]
@@ -193,6 +195,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
                 already_ranks = True
 
         attempt += 1
+        time.sleep(3)
 
     if not urls:
         return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}

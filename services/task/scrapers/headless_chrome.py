@@ -24,6 +24,7 @@ HEADLESS_CHROMIUM_VERBOSITY_LEVEL: int = 0
 HEADLESS_CHROMIUM_WINDOW_SIZE: str = "1280x1696"
 #USER_AGENT: str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) \
 #    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36"
+# "--disk-cache-dir={}".format(TMP_FOLDER + "/cache-dir")
 HEADLESS_CHROMIUM_PARAMS: list = [
     "--headless",
     "--no-sandbox",
@@ -39,7 +40,7 @@ HEADLESS_CHROMIUM_PARAMS: list = [
     "--user-data-dir={}".format(TMP_FOLDER + "/user-data"),
     "--data-path={}".format(TMP_FOLDER + "/data-path"),
     f"--homedir={TMP_FOLDER}",
-    "--disk-cache-dir={}".format(TMP_FOLDER + "/cache-dir")
+    "--disable-cache"
 ]
 
 # Need to configure the FONTCONFIG_PATH to work
@@ -63,10 +64,10 @@ def _create_folders(tmp_folder: str = None):
         os.makedirs(tmp_data_path)
         logging.info("Created folder: %s", tmp_data_path)
 
-    tmp_cache_dir = tmp_folder + "/cache-dir"
-    if not os.path.exists(tmp_cache_dir):
-        os.makedirs(tmp_cache_dir)
-        logging.info("Created folder: %s", tmp_cache_dir)
+    #tmp_cache_dir = tmp_folder + "/cache-dir"
+    #if not os.path.exists(tmp_cache_dir):
+    #    os.makedirs(tmp_cache_dir)
+    #    logging.info("Created folder: %s", tmp_cache_dir)
 
 
 def _configure_download_location(download_location: str = None) -> dict:
