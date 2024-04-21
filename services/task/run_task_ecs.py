@@ -82,15 +82,17 @@ def main(task_args):
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
     queue = SQS(sqs)
     counter = 0
+    serper_api = False
     for idx, topic in enumerate(topics):
         if idx%10 == 0:
             print(f"Item #{idx}: {topic}")
 
         # do distributed ECS for each topic
         if topic:
-            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, sqs=sqs, invocation_type='Event') 
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, serper_api, sqs=sqs, invocation_type='Event') 
             time.sleep(0.1)
             counter += 1
+            serper_api = not serper_api
         else:
             pass
 

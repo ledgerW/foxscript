@@ -88,7 +88,7 @@ def cloud_research(url, sqs=None, query=None, invocation_type='Event', chunk_ove
     return res
 
 
-def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, sqs=None, invocation_type='Event'):
+def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, serper_api=None, sqs=None, invocation_type='Event'):
     res = lambda_client.invoke(
         FunctionName=f'foxscript-task-{STAGE}-ecs',
         InvocationType=invocation_type,
@@ -98,6 +98,7 @@ def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, sqs=No
             'user_email': user_email,
             'customer_domain': customer_domain,
             'top_n_ser': top_n_ser,
+            'serper_api': serper_api,
             'sqs': sqs
         }})
     )

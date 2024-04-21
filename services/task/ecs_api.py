@@ -168,47 +168,51 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
     return topic_content
 
 
-def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2) -> dict:
+def serper_search(query, n):
+    search = GoogleSerperAPIWrapper()
+    search_results = search.results(query)
+    search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
+    search_results = {'q': query, 'links': [res['link'] for res in search_results][:n]}
+    urls = search_results['links']
+
+    return urls
+
+
+def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2, serper_api=False) -> dict:
     print(f'Getting Top {top_n_ser} Search Results')
-    already_ranks = False
-    urls = []
-    n=10
-    attempt = 0
-    while not urls and attempt < 5:
-        print(f'Attempt {attempt}')
-        #search_results = get_top_n_search(topic, n=10)
-        #try:
-        scraper = GeneralScraper(is_google_search=True)
-        search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
 
-        print(search_results)
+    if serper_api:
+        print('Using Serper API')
+        urls = serper_search(topic, n)
+    else:
+        already_ranks = False
+        urls = []
+        n=10
+        attempt = 0
+        while not urls and attempt < 3:
+            print(f'Attempt {attempt}')
+            #search_results = get_top_n_search(topic, n=10)
+            #try:
+            scraper = GeneralScraper(is_google_search=True)
+            search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
 
-        search_results['links'] = search_results['links'][:n]
-        urls = search_results['links']
-        #except:
-        #    print('Issue with Cloud Google Search. Using Serper API')
-        #    search = GoogleSerperAPIWrapper()
-        #    search_results = search.results(topic)
-        #    search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
-        #    result = {'q': topic, 'links': [res['link'] for res in search_results][:n]}
-        #    urls = search_results['links']
+            print(search_results)
 
-        # Check if customer ranks for this topic and if so, ignore
-        if customer_domain:
-            if [d for d in urls if customer_domain in d]:
-                print('Customer ranks for this topic')
-                already_ranks = True
+            search_results['links'] = search_results['links'][:n]
+            urls = search_results['links']
 
-        attempt += 1
-        time.sleep(5)
+            # Check if customer ranks for this topic and if so, ignore
+            if customer_domain:
+                if [d for d in urls if customer_domain in d]:
+                    print('Customer ranks for this topic')
+                    already_ranks = True
+
+            attempt += 1
+            time.sleep(3)
 
     if not urls:
         print('Issue with Cloud Google Search. Using Serper API')
-        search = GoogleSerperAPIWrapper()
-        search_results = search.results(topic)
-        search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
-        result = {'q': topic, 'links': [res['link'] for res in search_results][:n]}
-        urls = search_results['links']
+        urls = serper_search(topic, n)
         
         if not urls:
             return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
@@ -257,6 +261,7 @@ def ecs(event, context):
     user_email = body['user_email']
     customer_domain = body['customer_domain']
     top_n_ser = body['top_n_ser']
+    serper_api = body['serper_api']
 
     # ECS
     ecs_result = topic_ecs(
@@ -264,7 +269,8 @@ def ecs(event, context):
         ec_lib_name=ec_lib_name,
         user_email=user_email,
         customer_domain=customer_domain,
-        top_n_ser=top_n_ser
+        top_n_ser=top_n_ser,
+        serper_api=serper_api
     )
 
     if sqs:
