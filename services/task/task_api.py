@@ -73,7 +73,7 @@ def run_cloud(task_name, task_args={}):
         overrides={
         'containerOverrides': [
             {
-                'name': f'{task_name}-{STAGE}',
+                'name': f'run_task-{STAGE}',
                 'command': command,
                 'environment': [
                     {
