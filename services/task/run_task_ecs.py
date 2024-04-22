@@ -25,6 +25,7 @@ from utils.bubble import (
 from utils.cloud_funcs import cloud_ecs
 from utils.general import SQS
 from utils.response_lib import *
+from utils.google import get_creds, upload_to_google_drive
 from utils.workflow_utils import make_batch_files
 
 
@@ -47,6 +48,8 @@ def main(task_args):
     print(task_args)
     print('')
 
+    user_id = task_args['user_id']
+    drive_folder = task_args['drive_folder']
     email = task_args['user_email']
     ec_lib_name = task_args['ec_lib_name']
     domain = task_args['customer_domain']
@@ -112,6 +115,23 @@ def main(task_args):
     local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
     print(local_ecs_path)
     ecs_df.to_csv(local_ecs_path, index=False)
+
+    # Send to Google Drive
+    res = get_bubble_object('user', user_id)
+    goog_token = res.json()['response']['DriveAccessToken']
+    goog_refresh_token = res.json()['response']['DriveRefreshToken']
+    
+    creds = get_creds(goog_token, goog_refresh_token)
+
+    file_id = upload_to_google_drive(
+        f'{domain_name}_ecs',
+        'csv',
+        content=None,
+        path=local_ecs_path,
+        folder_id=drive_folder,
+        creds=creds
+    )
+    print(file_id)
         
     # send result to Bubble Document
     #body = {}
