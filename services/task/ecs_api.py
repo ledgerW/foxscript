@@ -180,12 +180,13 @@ def serper_search(query, n):
 def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2, serper_api=False) -> dict:
     print(f'Getting Top {top_n_ser} Search Results')
 
+    urls = []
+    already_ranks = False
+
     if serper_api:
         print('Using Serper API')
         urls = serper_search(topic, top_n_ser)
     else:
-        already_ranks = False
-        urls = []
         n=10
         attempt = 0
         while not urls and attempt < 3:

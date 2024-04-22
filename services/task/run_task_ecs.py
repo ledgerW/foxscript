@@ -69,7 +69,7 @@ def main(task_args):
     # Get Topics
     topics_df = pd.read_csv(local_batch_path)
     print(f"Topics Shape: {topics_df.shape}")
-    topics = [t.split(' - ')[0] for t in topics_df.Keyword]
+    topics = [t.split(' - ')[0] for t in topics_df.Keyword][:1000]
 
     # load batch list
     #if local_batch_path.endswith('.csv'):
