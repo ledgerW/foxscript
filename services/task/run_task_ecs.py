@@ -51,6 +51,8 @@ def main(task_args):
     ec_lib_name = task_args['ec_lib_name']
     domain = task_args['customer_domain']
     top_n_ser = task_args['top_n_ser']
+    ecs_buffer = task_args['ecs_buffer']    # 0.1, 0.5, 1, etc...
+    serp_method = task_args['serp_method']  # lambda, serper, hybrid
 
     # Fetch batch input file from bubble
     batch_url = task_args['batch_input_url']
@@ -82,7 +84,7 @@ def main(task_args):
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
     queue = SQS(sqs)
     counter = 0
-    serper_api = False
+    serper_api = serp_method == 'serper'
     for idx, topic in enumerate(topics):
         if idx%10 == 0:
             print(f"Item #{idx}: {topic}")
@@ -90,9 +92,11 @@ def main(task_args):
         # do distributed ECS for each topic
         if topic:
             cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, serper_api, sqs=sqs, invocation_type='Event') 
-            time.sleep(0.1)
+            time.sleep(ecs_buffer)
             counter += 1
-            serper_api = not serper_api
+
+            if serp_method == 'hybrid':
+                serper_api = not serper_api
         else:
             pass
 

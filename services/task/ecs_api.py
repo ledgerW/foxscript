@@ -105,7 +105,6 @@ class GeneralScraper(Scraper):
         print(html)
         
         soup = BeautifulSoup(html.content, 'html.parser')
-        print(soup.select("a:has(h3)"))
 
         all_links = []
         for a in soup.select("a:has(h3)"):
@@ -183,7 +182,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     if serper_api:
         print('Using Serper API')
-        urls = serper_search(topic, n)
+        urls = serper_search(topic, top_n_ser)
     else:
         already_ranks = False
         urls = []
