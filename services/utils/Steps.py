@@ -588,6 +588,7 @@ class cluster_keywords():
 
         keyword_groups = []
 
+        not_processed = 0
         # run through each batch of keywords
         for i, keyword_batch in enumerate(keyword_batches):
             print(f"Batch {i+1}")
@@ -613,10 +614,14 @@ class cluster_keywords():
             for new_keyword in new_keywords:
                 if len(new_keyword['links']) > 0:
                     keyword_groups = process_new_keyword(new_keyword, keyword_groups, thresh=self.thresh)
+                else:
+                    not_processed += 1
+                    print(new_keyword['links'])
 
         keyword_groups_df = pd.DataFrame(keyword_groups)\
             .assign(group_size=lambda df: df.keywords.apply(len))
 
+        print(f"Not Processed: {not_processed}")
         print(f"Keyword Group Size: {keyword_groups_df.shape}")
 
         local_keyword_name = f"{keyword_csv_name.replace('.csv','')}_{int(self.thresh*100)}.csv"
