@@ -147,18 +147,21 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
 
         return handle_pdf(pathlib.Path(path_name), n, url=url, return_raw=return_raw)
 
+    print(f"scrape_content n={n}")
     topic_content = []
     for url in urls:
         try:
             try:
+                print(f"Trying to scrape as pdf: {url}")
                 pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=True)
                 topic_content.append('\n\n'.join(pages)) 
             except:
                 scraper = GeneralScraper()
-                print(f'Scraping {url}')
+                print(f'Trying to scrape as html {url}')
                 output, _ = scraper.scrape_post(url)
                 topic_content.append(output['text'])
         except:
+            print(f"Skipping {url}")
             continue
 
         if len(topic_content) == n:
@@ -219,6 +222,10 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     try:
         topic_content = scrape_content(urls, n=top_n_ser)
+
+        if not topic_content:
+            time.sleep(5)
+            topic_content = scrape_content(urls, n=top_n_ser)
     except Exception as e:
         print(e)
         return {'topic': topic, 'url': ','.join(urls), 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}

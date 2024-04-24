@@ -599,7 +599,7 @@ class cluster_keywords():
             counter = 0
             for q in keyword_batch:
                 if q:
-                    get_top_n_search(q, 10, sqs=sqs)
+                    get_top_n_search(q, 10, sqs=sqs, serper=True)
                     time.sleep(0.01)
                     counter += 1
                 else:
