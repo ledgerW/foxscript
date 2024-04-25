@@ -1,3 +1,4 @@
+import os
 from selenium import webdriver
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.service import Service
@@ -18,10 +19,10 @@ class Scraper():
 
 
   @classmethod
-  def get_selenium_old(self):
+  def get_selenium(self):
       ua = UserAgent()
       user_agent = ua.random
-      try:
+      if not os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
           options = webdriver.ChromeOptions()
           options.add_argument("--headless")
           options.add_argument(f'--user-agent={user_agent}')
@@ -37,7 +38,7 @@ class Scraper():
           options.add_argument("--dns-prefetch-disable")
           options.add_argument("--no-zygote")
           driver = Chrome(options=options)
-      except:
+      else:
           options = webdriver.ChromeOptions()
           options.binary_location = '/opt/chrome/chrome'
           options.add_argument('--headless')
@@ -49,6 +50,7 @@ class Scraper():
           options.add_argument('--disable-image-loading')
           options.add_argument("--window-size=1280x1696")
           options.add_argument("--single-process")
+          options.add_argument("--hide-scrollbars")
           options.add_argument("--disable-dev-shm-usage")
           options.add_argument("--disable-dev-tools")
           options.add_argument('--disable-extensions')
@@ -64,7 +66,7 @@ class Scraper():
       return driver
   
 
-  def get_selenium(self):
+  def get_selenium_old(self):
      return create_driver()
 
 

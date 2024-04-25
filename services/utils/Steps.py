@@ -601,7 +601,7 @@ class cluster_keywords():
             for q in keyword_batch:
                 if q:
                     get_top_n_search(q, 10, sqs=sqs, serper=True)
-                    time.sleep(0.05)
+                    time.sleep(0.1)
                     counter += 1
                 else:
                     pass

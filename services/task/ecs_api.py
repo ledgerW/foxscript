@@ -145,7 +145,10 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
         with open(path_name, 'wb') as pdf:
             pdf.write(r.content)
 
-        return handle_pdf(pathlib.Path(path_name), n, url=url, return_raw=return_raw)
+        pages, meta = handle_pdf(pathlib.Path(path_name), n, url=url, return_raw=return_raw)
+        os.remove(path_name)
+
+        return pages, meta
 
     print(f"scrape_content n={n}")
     topic_content = []
