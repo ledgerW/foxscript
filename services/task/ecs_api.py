@@ -155,12 +155,14 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
                 print(f"Trying to scrape as pdf: {url}")
                 pages, meta = scrape_and_chunk_pdf(url, 100, return_raw=True)
                 topic_content.append('\n\n'.join(pages)) 
-            except:
+            except Exception as e:
+                print(e)
                 scraper = GeneralScraper()
                 print(f'Trying to scrape as html {url}')
                 output, _ = scraper.scrape_post(url)
                 topic_content.append(output['text'])
-        except:
+        except Exception as e:
+            print(e)
             print(f"Skipping {url}")
             continue
 
