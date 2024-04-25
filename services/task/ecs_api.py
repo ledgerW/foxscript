@@ -185,12 +185,11 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     urls = []
     already_ranks = False
-
+    n_search=10
     if serper_api:
         print('Using Serper API')
-        urls = serper_search(topic, top_n_ser)
+        urls = serper_search(topic, n_search)
     else:
-        n=10
         attempt = 0
         while not urls and attempt < 3:
             print(f'Attempt {attempt}')
@@ -201,7 +200,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
             print(search_results)
 
-            search_results['links'] = search_results['links'][:n]
+            search_results['links'] = search_results['links'][:n_search]
             urls = search_results['links']
 
             # Check if customer ranks for this topic and if so, ignore
@@ -215,7 +214,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     if not urls:
         print('Issue with Cloud Google Search. Using Serper API')
-        urls = serper_search(topic, n)
+        urls = serper_search(topic, n_search)
         
         if not urls:
             return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
