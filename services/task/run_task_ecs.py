@@ -12,7 +12,6 @@ import argparse
 from datetime import datetime
 import time
 import json
-import boto3
 import pandas as pd
 from utils.bubble import (
     create_bubble_object,
@@ -27,6 +26,7 @@ from utils.general import SQS
 from utils.response_lib import *
 from utils.google import get_creds, upload_to_google_drive
 from utils.workflow_utils import make_batch_files
+from utils.Steps import cluster_keywords
 
 
 STAGE = os.getenv('STAGE')
@@ -104,6 +104,7 @@ def main(task_args):
             pass
 
     # wait for and collect search results from SQS
+    print(f"Waiting for {counter} items")
     all_ecs = queue.collect(counter, max_wait=600)
     print(f"all_ecs length: {len(all_ecs)}")
 
@@ -128,6 +129,20 @@ def main(task_args):
         'csv',
         content=None,
         path=local_ecs_path,
+        folder_id=drive_folder,
+        creds=creds
+    )
+    print(file_id)
+
+    # Now Cluster Results
+    cluster = cluster_keywords()
+    cluster_url = cluster(local_ecs_path, keyword_col='topic', to_bubble=False)
+
+    file_id = upload_to_google_drive(
+        f'{domain_name}_clusters',
+        'csv',
+        content=None,
+        path=cluster_url,
         folder_id=drive_folder,
         creds=creds
     )
@@ -160,7 +175,9 @@ if __name__ == "__main__":
 
     start = datetime.now()
     print(start)
+    
     main(task_args)
+    
     print(datetime.now() - start)
 
   

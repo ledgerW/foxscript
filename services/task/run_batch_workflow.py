@@ -18,12 +18,7 @@ from utils.response_lib import *
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
-if os.getenv('IS_OFFLINE'):
-   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
-   LAMBDA_DATA_DIR = '.'
-else:
-   lambda_client = boto3.client('lambda')
-   LAMBDA_DATA_DIR = '/tmp'
+LAMBDA_DATA_DIR = '.'
 
 
 

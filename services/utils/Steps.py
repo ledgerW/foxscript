@@ -564,7 +564,7 @@ class cluster_keywords():
         return input
   
 
-    def __call__(self, input, TEST_MODE=False):
+    def __call__(self, input, keyword_col='Keyword', to_bubble=True, TEST_MODE=False):
         """
         TESTING: Expect Keyword string
 
@@ -581,9 +581,12 @@ class cluster_keywords():
         keyword_csv_name = keyword_csv_url.split('/')[-1]
         local_keyword_csv_path = os.path.join(LAMBDA_DATA_DIR, keyword_csv_name)
 
-        get_bubble_doc(keyword_csv_url, local_keyword_csv_path)
+        if 'app.foxscript.ai' in keyword_csv_url:
+            get_bubble_doc(keyword_csv_url, local_keyword_csv_path)
+        else:
+            local_keyword_csv_path = keyword_csv_url
         
-        keyword_batches = get_keyword_batches(local_keyword_csv_path, self.batch_size)
+        keyword_batches = get_keyword_batches(local_keyword_csv_path, self.batch_size, keyword_col)
         print(len(keyword_batches))
 
         keyword_groups = []
@@ -627,9 +630,13 @@ class cluster_keywords():
         local_keyword_name = f"{keyword_csv_name.replace('.csv','')}_{int(self.thresh*100)}.csv"
         local_keyword_path = os.path.join(LAMBDA_DATA_DIR, local_keyword_name)
         keyword_groups_df.to_csv(local_keyword_path, index=False)
-        bubble_url = upload_bubble_file(local_keyword_path)
 
-        return bubble_url
+        if to_bubble:
+            return_url = upload_bubble_file(local_keyword_path)
+        else:
+            return_url = local_keyword_path
+
+        return return_url
   
 
 class get_workflow():

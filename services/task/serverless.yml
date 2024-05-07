@@ -127,6 +127,7 @@ provider:
     AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
     AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
     SERPER_API_KEY: ${env:SERPER_API_KEY}
+    SCRAPER_API_KEY: ${env:SCRAPER_API_KEY}
     BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
     BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
     BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
@@ -185,6 +186,7 @@ fargate:
         AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
         AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
         SERPER_API_KEY: ${env:SERPER_API_KEY}
+        SCRAPER_API_KEY: ${env:SCRAPER_API_KEY}
         BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
         BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
@@ -210,6 +212,7 @@ fargate:
         AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
         AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
         SERPER_API_KEY: ${env:SERPER_API_KEY}
+        SCRAPER_API_KEY: ${env:SCRAPER_API_KEY}
         BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
         BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
@@ -235,6 +238,7 @@ fargate:
         AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY}
         AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT}
         SERPER_API_KEY: ${env:SERPER_API_KEY}
+        SCRAPER_API_KEY: ${env:SCRAPER_API_KEY}
         BUBBLE_API_ROOT: ${env:BUBBLE_API_ROOT}
         BUBBLE_WF_API_ROOT: ${env:BUBBLE_WF_API_ROOT}
         BUBBLE_API_KEY: ${env:BUBBLE_API_KEY}
@@ -296,7 +300,8 @@ functions:
         - ecs_api.ecs
       entryPoint:
         - '/lambda-entrypoint.sh'
-    memorySize: 2048
+    memorySize: 1024
+    ephemeralStorageSize: 1024
     timeout: 420
     maximumRetryAttempts: 0
     events:

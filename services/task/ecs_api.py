@@ -9,7 +9,6 @@ except:
     pass
 
 import json
-import boto3
 import time
 import numpy as np
 import pathlib
@@ -30,12 +29,13 @@ from utils.response_lib import *
 from utils.weaviate_utils import wv_client, get_wv_class_name
 from utils.content import handle_pdf
 #from utils.workflow_utils import get_top_n_search
-try:
-    from scrapers.base import Scraper
-    print('Using scrapers.base')
-except:
-    from task.scrapers.base import Scraper
-    print('Using task.scrapers.base')
+
+#try:
+#    from scrapers.base import Scraper
+#    print('Using scrapers.base')
+#except:
+#    from task.scrapers.base import Scraper
+#    print('Using task.scrapers.base')
 
 
 from langchain_openai import OpenAIEmbeddings
@@ -49,6 +49,7 @@ from tenacity import (
 
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
+SCRAPER_API_KEY = os.getenv('SCRAPER_API_KEY')
 
 if os.getenv('IS_OFFLINE'):
    LAMBDA_DATA_DIR = '.'
@@ -58,6 +59,7 @@ else:
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 
+x = """
 class GeneralScraper(Scraper):
     blog_url = None
     source = None
@@ -119,6 +121,17 @@ class GeneralScraper(Scraper):
 
         all_links = [url.replace('/url?q=','').split('&sa')[0] for url in all_links]
         return {'q': q, 'links': all_links}
+    """
+
+
+def serper_search(query, n):
+    search = GoogleSerperAPIWrapper()
+    search_results = search.results(query)
+    search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
+    search_results = {'q': query, 'links': [res['link'] for res in search_results][:n]}
+    urls = search_results['links']
+
+    return urls
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(5), reraise=True)
@@ -135,6 +148,29 @@ def get_content_near_vector(class_name: str, vector: list[float], n=1) -> dict:
         .do()
     
     return result
+
+
+def scraper_scape(url):
+    payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'autoparse': 'true'}
+    res = requests.get('http://api.scraperapi.com', params=payload)
+    html = res.text
+
+    soup = BeautifulSoup(html, 'html.parser')
+
+    title = soup.find('title').text
+    raw_elements = partition_html(text=html)
+    text = "\n\n".join([str(el) for el in raw_elements])
+    elements = convert_to_dict(raw_elements)
+    
+
+    output = {
+        'html': html,
+        'elements': elements,
+        'text': text,
+        'title': title
+    }
+    
+    return output
 
 
 def scrape_content(urls: list[str], n=2) -> list[str]:
@@ -160,9 +196,7 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
                 topic_content.append('\n\n'.join(pages)) 
             except Exception as e:
                 print(e)
-                scraper = GeneralScraper()
-                print(f'Trying to scrape as html {url}')
-                output, _ = scraper.scrape_post(url)
+                output = scraper_scape(url)
                 topic_content.append(output['text'])
         except Exception as e:
             print(e)
@@ -175,50 +209,47 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
     return topic_content
 
 
-def serper_search(query, n):
-    search = GoogleSerperAPIWrapper()
-    search_results = search.results(query)
-    search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
-    search_results = {'q': query, 'links': [res['link'] for res in search_results][:n]}
-    urls = search_results['links']
-
-    return urls
-
-
-def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2, serper_api=False) -> dict:
+def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2, serper_api=True) -> dict:
     print(f'Getting Top {top_n_ser} Search Results')
 
     urls = []
     already_ranks = False
     n_search=10
-    if serper_api:
-        print('Using Serper API')
-        urls = serper_search(topic, n_search)
-    else:
-        attempt = 0
-        while not urls and attempt < 3:
-            print(f'Attempt {attempt}')
+    
+    print('Using Serper API')
+    urls = serper_search(topic, n_search)
+
+    # Check if customer ranks for this topic and if so, ignore
+    if customer_domain:
+        if [d for d in urls if customer_domain in d]:
+            print('Customer ranks for this topic')
+            already_ranks = True
+    
+    #else:
+    #    attempt = 0
+    #    while not urls and attempt < 3:
+    #        print(f'Attempt {attempt}')
             #search_results = get_top_n_search(topic, n=10)
             #try:
-            scraper = GeneralScraper(is_google_search=True)
-            search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
-
-            print(search_results)
-
-            search_results['links'] = search_results['links'][:n_search]
-            urls = search_results['links']
-
+    #        scraper = GeneralScraper(is_google_search=True)
+    #        search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
+    #
+    #        print(search_results)
+    #
+    #        search_results['links'] = search_results['links'][:n_search]
+    #        urls = search_results['links']
+    #
             # Check if customer ranks for this topic and if so, ignore
-            if customer_domain:
-                if [d for d in urls if customer_domain in d]:
-                    print('Customer ranks for this topic')
-                    already_ranks = True
-
-            attempt += 1
-            time.sleep(3)
+    #        if customer_domain:
+    #            if [d for d in urls if customer_domain in d]:
+    #                print('Customer ranks for this topic')
+    #               already_ranks = True
+#
+    #        attempt += 1
+    #        time.sleep(3)
 
     if not urls:
-        print('Issue with Cloud Google Search. Using Serper API')
+        print('Issue with First Search. Tryin Serper API Again')
         urls = serper_search(topic, n_search)
         
         if not urls:
