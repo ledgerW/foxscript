@@ -190,3 +190,31 @@ functions:
           method: post
           cors: true
 
+  ecs:
+    image:
+      name: data_image
+      command:
+        - ecs_api.ecs
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 1024
+    ephemeralStorageSize: 1024
+    timeout: 420
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: ecs
+          method: post
+          cors: true
+
+  ecs_local:
+    runtime: python3.11
+    handler: ecs_api.ecs
+    memorySize: 256
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: ecs_local
+          method: post
+          cors: true

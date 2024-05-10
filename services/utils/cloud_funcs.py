@@ -90,7 +90,7 @@ def cloud_research(url, sqs=None, query=None, invocation_type='Event', chunk_ove
 
 def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, serper_api=None, sqs=None, invocation_type='Event'):
     res = lambda_client.invoke(
-        FunctionName=f'foxscript-task-{STAGE}-ecs',
+        FunctionName=f'foxscript-data-{STAGE}-ecs',
         InvocationType=invocation_type,
         Payload=json.dumps({"body": {
             'topic': topic,
