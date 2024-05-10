@@ -151,8 +151,8 @@ def get_content_near_vector(class_name: str, vector: list[float], n=1) -> dict:
 
 
 def scraper_scape(url):
-    payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'autoparse': 'true'}
-    res = requests.get('http://api.scraperapi.com', params=payload)
+    payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'autoparse': True, 'render': True}
+    res = requests.get('http://api.scraperapi.com', params=payload, timeout=60)
     html = res.text
 
     soup = BeautifulSoup(html, 'html.parser')
