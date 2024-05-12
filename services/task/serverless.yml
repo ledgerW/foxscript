@@ -100,6 +100,7 @@ package:
 
 provider:
   name: aws
+  runtime: python3.11
   stage: dev
   region: us-east-1
   lambdaHashingVersion: 20201221
@@ -252,7 +253,6 @@ fargate:
 
 functions:
   task:
-    runtime: python3.11
     handler: task_api.handler
     memorySize: 256
     timeout: 300
@@ -266,7 +266,6 @@ functions:
           cors: true
 
   batch_workflow:
-    runtime: python3.11
     handler: batch_api.batch_workflow
     memorySize: 512
     timeout: 300
@@ -280,7 +279,6 @@ functions:
           cors: true
 
   batch_upload_to_s3:
-    runtime: python3.11
     handler: batch_api.batch_upload_to_s3
     memorySize: 256
     timeout: 300
