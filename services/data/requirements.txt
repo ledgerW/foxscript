@@ -7,7 +7,6 @@ unstructured
 PyPDF2
 beautifulsoup4
 lxml==4.9.2
-pycryptodome
 boto3
 urllib3<2
 tenacity
