@@ -150,7 +150,7 @@ def get_content_near_vector(class_name: str, vector: list[float], n=1) -> dict:
     return result
 
 
-def scraper_scape(url):
+def scraper_scrape(url):
     payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'autoparse': True, 'render': True}
     res = requests.get('http://api.scraperapi.com', params=payload, timeout=60)
     html = res.text
@@ -175,7 +175,7 @@ def scraper_scape(url):
 
 def scrape_content(urls: list[str], n=2) -> list[str]:
     def scrape_and_chunk_pdf(url, n, return_raw=False):
-        r = requests.get(url, timeout=10, verify=False)
+        r = requests.get(url, timeout=30, verify=False)
         file_name = url.split('/')[-1].replace('.pdf', '')
         path_name = LAMBDA_DATA_DIR + f'/{file_name}.pdf'
         with open(path_name, 'wb') as pdf:
@@ -196,7 +196,7 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
                 topic_content.append('\n\n'.join(pages)) 
             except Exception as e:
                 print(e)
-                output = scraper_scape(url)
+                output = scraper_scrape(url)
                 topic_content.append(output['text'])
         except Exception as e:
             print(e)

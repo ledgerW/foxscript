@@ -255,7 +255,7 @@ functions:
   task:
     handler: task_api.handler
     memorySize: 256
-    timeout: 300
+    timeout: 900
     maximumRetryAttempts: 0
     layers:
       - Ref: PythonRequirementsLambdaLayer
