@@ -11,5 +11,5 @@ tenacity
 weaviate-client
 langchain-text-splitters
 tiktoken
-langchain-openai==0.0.6
-langchain-community==0.0.20
+langchain-openai
+langchain-community
