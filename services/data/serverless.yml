@@ -191,7 +191,12 @@ functions:
           cors: true
 
   ecs:
-    handler: ecs_api.ecs
+    image:
+      name: data_image
+      command:
+        - researcher.research
+      entryPoint:
+        - '/lambda-entrypoint.sh'
     memorySize: 1024
     ephemeralStorageSize: 1024
     timeout: 420

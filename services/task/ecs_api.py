@@ -150,8 +150,11 @@ def get_content_near_vector(class_name: str, vector: list[float], n=1) -> dict:
 
 
 def scraper_scrape(url):
-    payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'autoparse': True, 'render': True}
-    res = requests.get('http://api.scraperapi.com', params=payload, timeout=60)
+    #payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'autoparse': True, 'render': True}
+    #res = requests.get('http://api.scraperapi.com', params=payload, timeout=60)
+
+    payload = {'api_key': SCRAPER_API_KEY, 'url': url, 'block_ads': 'true'}
+    res = requests.get('https://app.scrapingbee.com/api/v1/', params=payload, timeout=60)
     html = res.text
 
     soup = BeautifulSoup(html, 'html.parser')

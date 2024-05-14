@@ -148,7 +148,7 @@ def get_keyword_batches(csv_path: str, batch_size: int, keyword_col: str='Keywor
     fake_concurrent_runs = int(total_size/batch_size)
 
     batch_list = make_batch_files(keywords_df, concurrent_runs=fake_concurrent_runs, as_csv=False)
-    keyword_batches = [batch['Keyword'].to_list() for batch in batch_list]
+    keyword_batches = [batch[keyword_col].to_list() for batch in batch_list]
 
     return keyword_batches
 

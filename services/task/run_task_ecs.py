@@ -54,7 +54,7 @@ def main(task_args):
     ec_lib_name = task_args['ec_lib_name']
     domain = task_args['customer_domain']
     top_n_ser = task_args['top_n_ser']
-    ecs_buffer = task_args['ecs_buffer']    # 0.1, 0.5, 1, etc...
+    ecs_concurrency = task_args['ecs_concurrency']    # 0.1, 0.5, 1, etc...
     serp_method = task_args['serp_method']  # lambda, serper, hybrid
 
     # Fetch batch input file from bubble
@@ -73,6 +73,7 @@ def main(task_args):
     topics_df = pd.read_csv(local_batch_path)
     print(f"Topics Shape: {topics_df.shape}")
     topics = [t.split(' - ')[0] for t in topics_df.Keyword]
+    topics = [t for t in topics if t]
 
     # load batch list
     #if local_batch_path.endswith('.csv'):
@@ -88,25 +89,27 @@ def main(task_args):
     queue = SQS(sqs)
     counter = 0
     serper_api = serp_method == 'serper'
-    for idx, topic in enumerate(topics):
-        if idx%10 == 0:
-            print(f"Item #{idx}: {topic}")
+    all_ecs = []
+    for i in range(0, len(topics), ecs_concurrency):
+        topic_batch = topics[i:i + ecs_concurrency]
+        
+        for idx, topic in enumerate(topic_batch):
+            if idx%10 == 0:
+                print(f"Item #{idx}: {topic}")
 
-        # do distributed ECS for each topic
-        if topic:
+            # do distributed ECS for each topic
             cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, serper_api, sqs=sqs, invocation_type='Event') 
-            time.sleep(ecs_buffer)
-            counter += 1
 
-            if serp_method == 'hybrid':
-                serper_api = not serper_api
-        else:
-            pass
+            #if serp_method == 'hybrid':
+            #    serper_api = not serper_api
 
-    # wait for and collect search results from SQS
-    print(f"Waiting for {counter} items")
-    all_ecs = queue.collect(counter, max_wait=600)
+        # wait for and collect search results from SQS
+        print(f"Waiting for items {i} through {(i + len(topic_batch))}")
+        ecs_batch = queue.collect(len(topic_batch), max_wait=600, self_destruct=False)
+        all_ecs = all_ecs + ecs_batch
+    
     print(f"all_ecs length: {len(all_ecs)}")
+    queue.self_destruct()
 
     ecs_df = pd.DataFrame(all_ecs)
     print(f'ECS DF SHAPE: {ecs_df.shape}')
@@ -136,7 +139,8 @@ def main(task_args):
 
     # Now Cluster Results
     cluster = cluster_keywords()
-    cluster_url = cluster(local_ecs_path, keyword_col='topic', to_bubble=False)
+    input = {'input': local_ecs_path}
+    cluster_url = cluster(input, keyword_col='topic', to_bubble=False)
 
     file_id = upload_to_google_drive(
         f'{domain_name}_clusters',
