@@ -2,15 +2,14 @@ boto3
 requests
 unittest-parametrize
 python-docx
-numpy
 unstructured
 PyPDF2
 beautifulsoup4
 lxml==4.9.2
-boto3
 urllib3<2
 tenacity
 weaviate-client
-langchain==0.1.7
+langchain-text-splitters
+tiktoken
 langchain-openai==0.0.6
 langchain-community==0.0.20

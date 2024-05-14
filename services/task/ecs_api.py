@@ -10,7 +10,6 @@ except:
 
 import json
 import time
-import numpy as np
 import pathlib
 import requests
 from unstructured.partition.html import partition_html
@@ -209,6 +208,37 @@ def scrape_content(urls: list[str], n=2) -> list[str]:
     return topic_content
 
 
+def mean_word_embedding(word_embeddings):
+    """
+    Calculate the mean word embedding from a list of word embeddings.
+
+    :param word_embeddings: List of word embeddings, where each embedding is a list of floats.
+    :return: Mean word embedding as a list of floats.
+    """
+    if not word_embeddings:
+        raise ValueError("The list of word embeddings is empty.")
+
+    # Get the length of embeddings
+    embedding_length = len(word_embeddings[0])
+    
+    # Initialize a list with zeros for mean calculation
+    mean_embedding = [0.0] * embedding_length
+    
+    # Sum all the embeddings
+    for embedding in word_embeddings:
+        if len(embedding) != embedding_length:
+            raise ValueError("All word embeddings must be of the same length.")
+        for i in range(embedding_length):
+            mean_embedding[i] += embedding[i]
+    
+    # Divide by the number of embeddings to get the mean
+    num_embeddings = len(word_embeddings)
+    mean_embedding = [x / num_embeddings for x in mean_embedding]
+    
+    return mean_embedding
+
+
+
 def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2, serper_api=True) -> dict:
     print(f'Getting Top {top_n_ser} Search Results')
 
@@ -267,7 +297,8 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     print('Getting Embeddings for Topic Results')
     text_embeddings = embedder.embed_documents(topic_content)
-    topic_vector = np.average(text_embeddings, axis=0, keepdims=True).tolist()[0]
+    topic_vector = mean_word_embedding(topic_content)
+    #topic_vector = np.average(text_embeddings, axis=0, keepdims=True).tolist()[0]
 
     print(f'Getting Most Similar Existing Content from {ec_lib_name}')
     ec_class_name, _ = get_wv_class_name(user_email, ec_lib_name)

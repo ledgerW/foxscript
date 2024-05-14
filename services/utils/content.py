@@ -4,7 +4,7 @@ import json
 import re
 from urllib.parse import unquote
 from datetime import datetime
-from langchain.text_splitter import TokenTextSplitter
+from langchain_text_splitters import TokenTextSplitter
 from PyPDF2 import PdfReader
 from tenacity import (
     retry,
