@@ -201,8 +201,6 @@ functions:
     ephemeralStorageSize: 1024
     timeout: 420
     maximumRetryAttempts: 0
-    layers:
-      - Ref: PythonRequirementsLambdaLayer
     events:
       - http:
           path: ecs
