@@ -300,7 +300,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     print('Getting Embeddings for Topic Results')
     text_embeddings = embedder.embed_documents(topic_content)
-    topic_vector = mean_word_embedding(topic_content)
+    topic_vector = mean_word_embedding(text_embeddings)
     #topic_vector = np.average(text_embeddings, axis=0, keepdims=True).tolist()[0]
 
     print(f'Getting Most Similar Existing Content from {ec_lib_name}')
