@@ -2,6 +2,12 @@ import os
 import json
 import boto3
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass
+
 STAGE = os.getenv('STAGE')
 lambda_client = boto3.client('lambda')
 
@@ -76,6 +82,24 @@ def cloud_research(url, sqs=None, query=None, invocation_type='Event', chunk_ove
             'sqs': sqs,
             'query': query,
             'chunk_overlap': chunk_overlap
+        }})
+    )
+
+    return res
+
+
+def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, serper_api=None, sqs=None, invocation_type='Event'):
+    res = lambda_client.invoke(
+        FunctionName=f'foxscript-data-{STAGE}-ecs',
+        InvocationType=invocation_type,
+        Payload=json.dumps({"body": {
+            'topic': topic,
+            'ec_lib_name': ec_lib_name,
+            'user_email': user_email,
+            'customer_domain': customer_domain,
+            'top_n_ser': top_n_ser,
+            'serper_api': serper_api,
+            'sqs': sqs
         }})
     )
 

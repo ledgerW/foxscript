@@ -564,7 +564,7 @@ class cluster_keywords():
         return input
   
 
-    def __call__(self, input, TEST_MODE=False):
+    def __call__(self, input, keyword_col='Keyword', to_bubble=True, TEST_MODE=False):
         """
         TESTING: Expect Keyword string
 
@@ -581,13 +581,17 @@ class cluster_keywords():
         keyword_csv_name = keyword_csv_url.split('/')[-1]
         local_keyword_csv_path = os.path.join(LAMBDA_DATA_DIR, keyword_csv_name)
 
-        get_bubble_doc(keyword_csv_url, local_keyword_csv_path)
+        if 'app.foxscript.ai' in keyword_csv_url:
+            get_bubble_doc(keyword_csv_url, local_keyword_csv_path)
+        else:
+            local_keyword_csv_path = keyword_csv_url
         
-        keyword_batches = get_keyword_batches(local_keyword_csv_path, self.batch_size)
+        keyword_batches = get_keyword_batches(local_keyword_csv_path, self.batch_size, keyword_col)
         print(len(keyword_batches))
 
         keyword_groups = []
 
+        not_processed = 0
         # run through each batch of keywords
         for i, keyword_batch in enumerate(keyword_batches):
             print(f"Batch {i+1}")
@@ -599,8 +603,8 @@ class cluster_keywords():
             counter = 0
             for q in keyword_batch:
                 if q:
-                    get_top_n_search(q, 10, sqs=sqs)
-                    time.sleep(0.01)
+                    get_top_n_search(q, 10, sqs=sqs, serper=True)
+                    time.sleep(0.1)
                     counter += 1
                 else:
                     pass
@@ -613,18 +617,26 @@ class cluster_keywords():
             for new_keyword in new_keywords:
                 if len(new_keyword['links']) > 0:
                     keyword_groups = process_new_keyword(new_keyword, keyword_groups, thresh=self.thresh)
+                else:
+                    not_processed += 1
+                    print(new_keyword['links'])
 
         keyword_groups_df = pd.DataFrame(keyword_groups)\
             .assign(group_size=lambda df: df.keywords.apply(len))
 
+        print(f"Not Processed: {not_processed}")
         print(f"Keyword Group Size: {keyword_groups_df.shape}")
 
         local_keyword_name = f"{keyword_csv_name.replace('.csv','')}_{int(self.thresh*100)}.csv"
         local_keyword_path = os.path.join(LAMBDA_DATA_DIR, local_keyword_name)
         keyword_groups_df.to_csv(local_keyword_path, index=False)
-        bubble_url = upload_bubble_file(local_keyword_path)
 
-        return bubble_url
+        if to_bubble:
+            return_url = upload_bubble_file(local_keyword_path)
+        else:
+            return_url = local_keyword_path
+
+        return return_url
   
 
 class get_workflow():

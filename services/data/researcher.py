@@ -98,7 +98,8 @@ class GeneralScraper(Scraper):
         header = {'User-Agent':str(ua.random)}
 
         url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
-        html = requests.get(url, headers=header)
+        html = requests.get(url, headers=header, verify=False)
+        print(html)
         
         soup = BeautifulSoup(html.content, 'html.parser')
 

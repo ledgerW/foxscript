@@ -43,7 +43,7 @@ class SQS():
         except:
             return None
         
-    def collect(self, n_items, max_wait=300):
+    def collect(self, n_items, max_wait=300, self_destruct=True):
         start = datetime.now()
         all_items = []
         while True:
@@ -53,14 +53,16 @@ class SQS():
                 all_items.append(item)
 
             if len(all_items) == n_items:
-                self.self_destruct()
+                if self_destruct:
+                    self.self_destruct()
                 break
             else:
                 time.sleep(0.1)
 
             # force break after max wait
             if (datetime.now() - start).seconds > max_wait:
-                self.self_destruct()
+                if self_destruct:
+                    self.self_destruct()
                 break
         
         # sort items if order key is present
@@ -71,6 +73,7 @@ class SQS():
 
         return all_items
 
+    
     def self_destruct(self):
         _ = self.sqs.delete_queue(
             QueueUrl=self.url

@@ -13,8 +13,13 @@ COPY services/utils ./utils
 RUN mkdir weaviate
 COPY weaviate ./weaviate
 
+RUN mkdir data
+COPY services/data ./data
+
+COPY services/task/run_task_ecs.py run_task_ecs.py
 COPY services/task/run_batch_workflow.py run_batch_workflow.py
 COPY services/task/run_batch_upload_to_s3.py run_batch_upload_to_s3.py
+
 
 # Override default lambda entrypoint
 ENTRYPOINT [ "python3.11" ]

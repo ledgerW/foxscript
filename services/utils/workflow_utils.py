@@ -140,20 +140,29 @@ def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
     return batch_df_list
 
 
-def get_keyword_batches(csv_path: str, batch_size: int) -> list[list[str]]:
-    keywords_df = pd.read_csv(csv_path)[['Keyword']]
+def get_keyword_batches(csv_path: str, batch_size: int, keyword_col: str='Keyword') -> list[list[str]]:
+    keywords_df = pd.read_csv(csv_path)[[keyword_col]]
     total_size = keywords_df.shape[0]
     if batch_size > total_size:
         batch_size = total_size
     fake_concurrent_runs = int(total_size/batch_size)
 
     batch_list = make_batch_files(keywords_df, concurrent_runs=fake_concurrent_runs, as_csv=False)
-    keyword_batches = [batch['Keyword'].to_list() for batch in batch_list]
+    keyword_batches = [batch[keyword_col].to_list() for batch in batch_list]
 
     return keyword_batches
+
+
+def serper_search(query, n):
+    search = GoogleSerperAPIWrapper()
+    search_results = search.results(query)
+    search_results = [res for res in search_results['organic'] if 'youtube.com' not in res['link']]
+    search_results = {'q': query, 'links': [res['link'] for res in search_results][:n]}
+
+    return search_results
   
 
-def get_top_n_search(query, n=50, sqs=None):
+def get_top_n_search(query, n=50, sqs=None, serper=False):
     """
     When NOT SQS:
     Returns: {q:str, links:[str]}
@@ -161,24 +170,36 @@ def get_top_n_search(query, n=50, sqs=None):
     When SQS:
     Returns [{q:str, links:[str]}] when pulled from SQS.collect()
     """
-    try:
-        # returns in queue as [{q:str, links:[str]}]
-        result = cloud_google_search(q=query, n=None, sqs=sqs)
-
-        if not sqs:
-            res_body = json.loads(result['Payload'].read().decode("utf-8"))
-            result = json.loads(res_body['body'])  # {q:str, link:[str]}
-            result['links'] = [res for res in result['links'] if 'youtube.com' not in res][:n]
-    except:
-        print('Issue with Cloud Google Search. Using Serper API')
-        search = GoogleSerperAPIWrapper()
-        results = search.results(query)
-        results = [res for res in results['organic'] if 'youtube.com' not in res['link']]
-        result = {'q': query, 'links': [res['link'] for res in results][:n]}
-
+    if serper:
+        result = serper_search(query, n)
+        
         if sqs:
             queue = SQS(sqs)
             queue.send(result)
+    else:
+        try:
+            # returns in queue as [{q:str, links:[str]}]
+            result = cloud_google_search(q=query, n=None, sqs=sqs)
+            res_body = json.loads(result['Payload'].read().decode("utf-8"))
+            res_body = json.loads(res_body['body'])
+            
+            if not res_body['links']:
+                raise ValueError('Failed to return links')
+
+            if not sqs:
+                res_body = json.loads(result['Payload'].read().decode("utf-8"))
+                result = json.loads(res_body['body'])  # {q:str, link:[str]}
+                result['links'] = [res for res in result['links'] if 'youtube.com' not in res][:n]
+        except:
+            print('Issue with Cloud Google Search. Using Serper API')
+            search = GoogleSerperAPIWrapper()
+            results = search.results(query)
+            results = [res for res in results['organic'] if 'youtube.com' not in res['link']]
+            result = {'q': query, 'links': [res['link'] for res in results][:n]}
+
+            if sqs:
+                queue = SQS(sqs)
+                queue.send(result)
 
     return result
 
