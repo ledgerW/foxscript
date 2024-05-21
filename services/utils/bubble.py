@@ -1,6 +1,12 @@
 import os
 import requests
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass
+
 
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
 BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')

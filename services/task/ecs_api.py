@@ -286,7 +286,14 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         urls = serper_search(topic, n_search)
         
         if not urls:
-            return {'topic': topic, 'url': 'NONE', 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
+            return {
+                'topic': topic,
+                'url': 'NONE',
+                'distance': 1000,
+                'score': 0,
+                'already_ranks': already_ranks,
+                'search_urls': ','.join(urls)
+            }
 
     try:
         topic_content = scrape_content(urls, n=top_n_ser)
@@ -296,12 +303,18 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
             topic_content = scrape_content(urls, n=top_n_ser)
     except Exception as e:
         print(e)
-        return {'topic': topic, 'url': ','.join(urls), 'distance': 1000, 'score': 0, 'already_ranks': already_ranks}
+        return {
+            'topic': topic,
+            'url': ','.join(urls),
+            'distance': 1000,
+            'score': 0,
+            'already_ranks': already_ranks,
+            'search_urls': ','.join(urls)
+        }
 
     print('Getting Embeddings for Topic Results')
     text_embeddings = embedder.embed_documents(topic_content)
     topic_vector = mean_word_embedding(text_embeddings)
-    #topic_vector = np.average(text_embeddings, axis=0, keepdims=True).tolist()[0]
 
     print(f'Getting Most Similar Existing Content from {ec_lib_name}')
     ec_class_name, _ = get_wv_class_name(user_email, ec_lib_name)
@@ -314,7 +327,14 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     score = 1 - distance
     print(f'Score: {score}')
 
-    return {'topic': topic, 'url': url, 'distance': distance, 'score': score, 'already_ranks': already_ranks}
+    return {
+        'topic': topic,
+        'url': url,
+        'distance': distance,
+        'score': score,
+        'already_ranks': already_ranks,
+        'search_urls': ','.join(urls)
+    }
 
   
 

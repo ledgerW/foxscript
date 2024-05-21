@@ -206,3 +206,14 @@ functions:
           path: ecs
           method: post
           cors: true
+
+  keyword_doc_checker:
+    handler: keyword_doc_checker.handler
+    memorySize: 512
+    timeout: 300
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: keyword_doc_checker
+          method: post
+          cors: true
