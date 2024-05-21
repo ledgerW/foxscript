@@ -35,6 +35,7 @@ COPY services/data/scrapers ./scrapers
 
 COPY services/data/load_data.py ./
 COPY services/data/researcher.py ./
+COPY services/data/keyword_doc_checker.py ./
 COPY services/data/news_sources.txt ./
 COPY services/task/ecs_api.py ./
 

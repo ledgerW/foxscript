@@ -208,7 +208,12 @@ functions:
           cors: true
 
   keyword_doc_checker:
-    handler: keyword_doc_checker.handler
+    image:
+      name: data_image
+      command:
+        - keyword_doc_checker.handler
+      entryPoint:
+        - '/lambda-entrypoint.sh'
     memorySize: 512
     timeout: 300
     maximumRetryAttempts: 0
