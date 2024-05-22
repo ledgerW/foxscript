@@ -31,6 +31,20 @@ else:
 
 
 
+def keywords_to_cost(n_keywords):
+    if n_keywords <= 1000:
+        cost = 250
+
+    if (n_keywords > 1000) and (n_keywords <= 5000):
+        cost = 500
+
+    if n_keywords > 5000:
+        cost = 1000
+
+    return cost
+
+
+
 # Lambda Handler
 def handler(event, context):
     """
@@ -67,11 +81,13 @@ def handler(event, context):
 
     # Update ECS Doc Object in Bubble
     object_body = {
-       'n_topics': n_topics,
-       'has_keyword_col': has_keyword_col,
-       'has_volume_col': has_volume_col
+        'n_topics': n_topics,
+        'has_keyword_col': has_keyword_col,
+        'has_volume_col': has_volume_col
     }
     _ = update_bubble_object('ecs-doc', ecs_doc_id, object_body)
+
+    object_body['ecs_doc_id'] = ecs_doc_id
 
     return success(object_body)
     
