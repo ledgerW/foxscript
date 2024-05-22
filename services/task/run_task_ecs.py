@@ -168,12 +168,11 @@ def main(task_args):
     doc_body = {
         'name': ecs_file_name,
         'url': ecs_file_url,
-        'type': 'raw_ecs_doc'
+        'type': 'raw_ecs_doc',
+        'ecs_job': ecs_job_id
     }
     res = create_bubble_object('ecs-doc', doc_body)
     ecs_ecs_doc_id = res.json()['id']
-
-
 
     # Send to Google Drive
     #res = get_bubble_object('user', user_id)
@@ -202,7 +201,8 @@ def main(task_args):
     doc_body = {
         'name': f'{domain_name}_clusters.csv',
         'url': cluster_file_url,
-        'type': 'raw_cluster_doc'
+        'type': 'raw_cluster_doc',
+        'ecs_job': ecs_job_id
     }
     res = create_bubble_object('ecs-doc', doc_body)
     ecs_cluster_doc_id = res.json()['id']
@@ -215,7 +215,8 @@ def main(task_args):
     doc_body = {
         'name': f'{domain_name}_ecs_clusters.csv',
         'url': final_doc_url,
-        'type': 'ecs_cluster_doc'
+        'type': 'ecs_cluster_doc',
+        'ecs_job': ecs_job_id
     }
     res = create_bubble_object('ecs-doc', doc_body)
     final_doc_id = res.json()['id']

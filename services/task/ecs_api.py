@@ -58,71 +58,6 @@ else:
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 
-x = """
-class GeneralScraper(Scraper):
-    blog_url = None
-    source = None
-    base_url = None
-
-    def __init__(self, is_google_search: bool=False):
-        self.is_google_search = is_google_search
-
-        if not self.is_google_search:
-            self.driver = self.get_selenium()
-            self.driver.set_page_load_timeout(180)
-
-
-    def scrape_post(self, url: str=None):
-        self.driver.get(url)
-
-        html = self.driver.page_source
-        soup = BeautifulSoup(html, 'html.parser')
-
-        title = soup.find('title').text
-        raw_elements = partition_html(text=html)
-        text = "\n\n".join([str(el) for el in raw_elements])
-        elements = convert_to_dict(raw_elements)
-        
-
-        output = {
-            'html': html,
-            'elements': elements,
-            'text': text,
-            'title': title
-        }
-        
-        self.driver.quit()
-
-        return output, raw_elements
-    
-
-    def google_search(self, q: str):
-        from fake_useragent import UserAgent
-        ua = UserAgent()
-        header = {'User-Agent':str(ua.random)}
-
-        url = f"https://www.google.com/search?q={q.replace(' ', '+')}"
-        html = requests.get(url, headers=header, verify=False)
-        print(html)
-        
-        soup = BeautifulSoup(html.content, 'html.parser')
-
-        all_links = []
-        for a in soup.select("a:has(h3)"):
-            try:
-                if 'https://' in a['href'] or 'http://' in a['href']:
-                    link = a['href'].split('#')[0]
-                    if link not in all_links:
-                        all_links.append(link)
-            except:
-                print('')
-                pass
-
-        all_links = [url.replace('/url?q=','').split('&sa')[0] for url in all_links]
-        return {'q': q, 'links': all_links}
-    """
-
-
 def serper_search(query, n):
     search = GoogleSerperAPIWrapper()
     search_results = search.results(query)
@@ -257,32 +192,9 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         if [d for d in urls if customer_domain in d]:
             print('Customer ranks for this topic')
             already_ranks = True
-    
-    #else:
-    #    attempt = 0
-    #    while not urls and attempt < 3:
-    #        print(f'Attempt {attempt}')
-            #search_results = get_top_n_search(topic, n=10)
-            #try:
-    #        scraper = GeneralScraper(is_google_search=True)
-    #        search_results = scraper.google_search(topic)   # returns {q:str, links:[str]}
-    #
-    #        print(search_results)
-    #
-    #        search_results['links'] = search_results['links'][:n_search]
-    #        urls = search_results['links']
-    #
-            # Check if customer ranks for this topic and if so, ignore
-    #        if customer_domain:
-    #            if [d for d in urls if customer_domain in d]:
-    #                print('Customer ranks for this topic')
-    #               already_ranks = True
-#
-    #        attempt += 1
-    #        time.sleep(3)
 
     if not urls:
-        print('Issue with First Search. Tryin Serper API Again')
+        print('Issue with First Search. Trying Serper API Again')
         urls = serper_search(topic, n_search)
         
         if not urls:
