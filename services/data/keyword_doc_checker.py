@@ -73,7 +73,7 @@ def handler(event, context):
     }
     _ = update_bubble_object('ecs-doc', ecs_doc_id, object_body)
 
-    return success({'success': True})
+    return success(object_body)
     
 
 
