@@ -139,7 +139,7 @@ def main(task_args):
 
         _ = lambda_client.invoke(
             FunctionName=f'foxscript-api-{STAGE}-upload_to_s3_cloud',
-            InvocationType='Event',
+            InvocationType='RequestResponse',
             Payload=json.dumps({"body": out_body})
         )
 
