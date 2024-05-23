@@ -15,26 +15,10 @@ import requests
 from unstructured.partition.html import partition_html
 from unstructured.staging.base import convert_to_dict
 from bs4 import BeautifulSoup
-from utils.bubble import (
-    create_bubble_object,
-    get_bubble_object,
-    update_bubble_object,
-    get_bubble_doc,
-    delete_bubble_object,
-    upload_bubble_file
-)
 from utils.general import SQS
 from utils.response_lib import *
 from utils.weaviate_utils import wv_client, get_wv_class_name
 from utils.content import handle_pdf
-#from utils.workflow_utils import get_top_n_search
-
-#try:
-#    from scrapers.base import Scraper
-#    print('Using scrapers.base')
-#except:
-#    from task.scrapers.base import Scraper
-#    print('Using task.scrapers.base')
 
 
 from langchain_openai import OpenAIEmbeddings
@@ -228,9 +212,11 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     text_embeddings = embedder.embed_documents(topic_content)
     topic_vector = mean_word_embedding(text_embeddings)
 
+
     print(f'Getting Most Similar Existing Content from {ec_lib_name}')
     ec_class_name, _ = get_wv_class_name(user_email, ec_lib_name)
     result = get_content_near_vector(ec_class_name, topic_vector)
+
 
     url = result['data']['Get'][f"{ec_class_name}Content"][0]['url']
     print(f'URL: {url}')
@@ -249,8 +235,6 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
     }
 
   
-
-    
 
 def ecs(event, context):
     print(event)

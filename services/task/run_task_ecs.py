@@ -8,6 +8,7 @@ try:
 except:
     pass
 
+import boto3
 import argparse
 from datetime import datetime
 import time
@@ -24,8 +25,8 @@ from utils.bubble import (
 from utils.cloud_funcs import cloud_ecs
 from utils.general import SQS
 from utils.response_lib import *
-from utils.google import get_creds, upload_to_google_drive
-from utils.workflow_utils import make_batch_files
+#from utils.google import get_creds, upload_to_google_drive
+from utils.weaviate_utils import wv_client, get_wv_class_name, create_library, delete_library
 from utils.Steps import cluster_keywords
 from utils.workflow_utils import unfold_keyword_clusters
 
@@ -33,12 +34,12 @@ from utils.workflow_utils import unfold_keyword_clusters
 STAGE = os.getenv('STAGE')
 BUCKET = os.getenv('BUCKET')
 
-#if os.getenv('IS_OFFLINE'):
-#   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
-#   LAMBDA_DATA_DIR = '.'
-#else:
-#   lambda_client = boto3.client('lambda')
-#   LAMBDA_DATA_DIR = '/tmp'
+if os.getenv('IS_OFFLINE'):
+   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
+   LAMBDA_DATA_DIR = '.'
+else:
+   lambda_client = boto3.client('lambda')
+
 LAMBDA_DATA_DIR = '.'
 
 
@@ -84,53 +85,74 @@ def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
     return local_final_path
 
 
+def text_to_wv_classname(text):
+    return ''.join(e for e in text if e.isalnum() and not e.isdigit()).capitalize()
+
+
+
 def main(task_args):
     print('task_args:')
     print(task_args)
     print('')
 
-    user_id = task_args['user_id']
-    drive_folder = task_args['drive_folder']
     email = task_args['user_email']
-    ec_lib_name = task_args['ec_lib_name']
-    domain = task_args['customer_domain']
     top_n_ser = task_args['top_n_ser']
     ecs_concurrency = task_args['ecs_concurrency']    # 0.1, 0.5, 1, etc...
-    serp_method = task_args['serp_method']  # lambda, serper, hybrid
     ecs_job_id = task_args['ecs_job_id']
 
-    # Fetch batch input file from bubble
-    batch_url = task_args['batch_input_url']
-    batch_input_file_name = batch_url.split('/')[-1]
+    # Get ECS Job
+    ecs_job_res = get_bubble_object('ecs-job', ecs_job_id)
+    ecs_job_json = ecs_job_res['response']
+
+    # Get Compnay Domain
+    domain = ecs_job_json['company_domain']
+
+    # Fetch Keywords Doc input file from bubble
+    keywords_doc = ecs_job_json['keywords_doc']
+    keyword_doc_res = get_bubble_object('ecs-doc', keywords_doc)
+    keywords_doc_url = keyword_doc_res.json()['response']['url']
+
+    batch_input_file_name = keywords_doc_url.split('/')[-1]
     local_batch_path = f'{LAMBDA_DATA_DIR}/{batch_input_file_name}'
 
-    if 'app.foxscript.ai' in batch_url:
-        get_bubble_doc(batch_url, local_batch_path)
+    if 'app.foxscript.ai' in keywords_doc_url:
+        get_bubble_doc(keywords_doc_url, local_batch_path)
         print("Retrieved batch doc from bubble")
     else:
-        local_batch_path = batch_url
+        local_batch_path = keywords_doc_url
         print("Using local batch file")
+
+
+    # Make Existing Content Library
+    job_name = ecs_job_json['name']
+    ec_lib_name = text_to_wv_classname(job_name)
+    ec_class_name, account_name = get_wv_class_name(email, ec_lib_name)
+    create_library(ec_class_name)
+
+    # Scrape and load content urls to Weaviate Library
+    for content_url in ecs_job_json['content_urls']:
+        out_body = {
+            'email': email,
+            'name': ec_lib_name,
+            'doc_url': content_url
+        }
+
+        _ = lambda_client.invoke(
+            FunctionName=f'foxscript-api-{STAGE}-upload_to_s3_cloud',
+            InvocationType='Event',
+            Payload=json.dumps({"body": out_body})
+        )
 
     # Get Topics
     topics_df = pd.read_csv(local_batch_path)
     print(f"Topics Shape: {topics_df.shape}")
     topics = [t.split(' - ')[0] for t in topics_df.Keyword]
     topics = [t for t in topics if t]
-
-    # load batch list
-    #if local_batch_path.endswith('.csv'):
-    #    print('Preparing CSV Batch Input')
-    #    batch_list = get_csv_lines(content=None, path=local_batch_path, delimiter=',', return_as_json=True)
-    #    batch_list = [item for item in batch_list if item != '']
-    #else:
-    #    print('PROBLEM: Batch Input Not CSV')
-
     
     # Process the Batch CSV
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
     queue = SQS(sqs)
-    counter = 0
-    serper_api = serp_method == 'serper'
+    serper_api = 'serper'
     all_ecs = []
     for i in range(0, len(topics), ecs_concurrency):
         topic_batch = topics[i:i + ecs_concurrency]
@@ -139,13 +161,12 @@ def main(task_args):
             # do distributed ECS for each topic
             cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, serper_api, sqs=sqs, invocation_type='Event') 
 
-            #if serp_method == 'hybrid':
-            #    serper_api = not serper_api
-
         # wait for and collect search results from SQS
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")
         ecs_batch = queue.collect(len(topic_batch), max_wait=600, self_destruct=False)
         all_ecs = all_ecs + ecs_batch
+        
+        # Update Job Status
         job_body = {
             'ecs_progress': i
         }
@@ -174,22 +195,6 @@ def main(task_args):
     res = create_bubble_object('ecs-doc', doc_body)
     ecs_ecs_doc_id = res.json()['id']
 
-    # Send to Google Drive
-    #res = get_bubble_object('user', user_id)
-    #goog_token = res.json()['response']['DriveAccessToken']
-    #goog_refresh_token = res.json()['response']['DriveRefreshToken']
-    
-    #creds = get_creds(goog_token, goog_refresh_token)
-
-    #file_id = upload_to_google_drive(
-    #    f'{domain_name}_ecs',
-    #    'csv',
-    #    content=None,
-    #    path=local_ecs_path,
-    #    folder_id=drive_folder,
-    #    creds=creds
-    #)
-    #print(file_id)
 
     # Now Cluster Results
     cluster = cluster_keywords()
@@ -230,6 +235,23 @@ def main(task_args):
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     ecs_cluster_doc_id = res.json()['id']
 
+
+    # Send to Google Drive
+    #res = get_bubble_object('user', user_id)
+    #goog_token = res.json()['response']['DriveAccessToken']
+    #goog_refresh_token = res.json()['response']['DriveRefreshToken']
+    
+    #creds = get_creds(goog_token, goog_refresh_token)
+
+    #file_id = upload_to_google_drive(
+    #    f'{domain_name}_ecs',
+    #    'csv',
+    #    content=None,
+    #    path=local_ecs_path,
+    #    folder_id=drive_folder,
+    #    creds=creds
+    #)
+    #print(file_id)
 
     #file_id = upload_to_google_drive(
     #    f'{domain_name}_clusters',
