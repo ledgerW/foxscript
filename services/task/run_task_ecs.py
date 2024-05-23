@@ -102,7 +102,7 @@ def main(task_args):
 
     # Get ECS Job
     ecs_job_res = get_bubble_object('ecs-job', ecs_job_id)
-    ecs_job_json = ecs_job_res['response']
+    ecs_job_json = ecs_job_res.json()['response']
 
     # Get Compnay Domain
     domain = ecs_job_json['company_domain']
