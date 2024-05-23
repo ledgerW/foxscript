@@ -83,7 +83,8 @@ def handler(event, context):
     object_body = {
         'n_topics': n_topics,
         'has_keyword_col': has_keyword_col,
-        'has_volume_col': has_volume_col
+        'has_volume_col': has_volume_col,
+        'cost': keywords_to_cost(n_topics)
     }
     _ = update_bubble_object('ecs-doc', ecs_doc_id, object_body)
 

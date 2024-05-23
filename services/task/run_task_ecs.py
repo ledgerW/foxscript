@@ -130,7 +130,7 @@ def main(task_args):
     create_library(ec_class_name)
 
     # Scrape and load content urls to Weaviate Library
-    for content_url in ecs_job_json['content_urls']:
+    for content_url in ecs_job_json['content_urls'].split('\n'):
         out_body = {
             'email': email,
             'name': ec_lib_name,
@@ -230,10 +230,14 @@ def main(task_args):
     job_body = {
         'raw_ecs_result': ecs_ecs_doc_id,
         'raw_cluster_result': ecs_cluster_doc_id,
-        'ecs_cluster_result': final_doc_id
+        'ecs_cluster_result': final_doc_id,
+        'cost': keyword_doc_res.json()['response']['cost']
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     ecs_cluster_doc_id = res.json()['id']
+
+    # Delete Wv Library
+    delete_library(ec_class_name)
 
 
     # Send to Google Drive
