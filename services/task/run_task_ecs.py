@@ -195,7 +195,7 @@ def main(task_args):
     ecs_file_name = f'{domain_name}_ecs_full.csv'
     local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
     print(local_ecs_path)
-    ecs_df.to_csv(local_ecs_path, index=False)
+    ecs_full_df.to_csv(local_ecs_path, index=False)
 
     # Save to ECS-Doc Object
     ecs_file_url = upload_bubble_file(local_ecs_path)
