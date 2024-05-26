@@ -45,9 +45,14 @@ LAMBDA_DATA_DIR = '.'
 
 def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
     # Get Keywords df
-    topics_df = pd.read_csv(topics_path)\
-        .assign(Volume=lambda df: df['Search Volume'].apply(lambda x: int(x)))\
-        [['Keyword', 'Volume']]
+    try:
+        topics_df = pd.read_csv(topics_path)\
+            .assign(Volume=lambda df: df['Search Volume'].apply(lambda x: int(x)))\
+            [['Keyword', 'Volume']]
+    except:
+        topics_df = pd.read_csv(topics_path)\
+            .assign(Volume=lambda df: df['Volume'].apply(lambda x: int(x)))\
+            [['Keyword', 'Volume']]
 
     # Get Clusters df
     #cluster_local_file_name = os.path.join(LAMBDA_DATA_DIR, 'clusters.csv')
@@ -75,7 +80,8 @@ def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
             Links=('Links', 'first')
         )\
         .assign(Keywords=lambda df: df.Keywords.apply(lambda x: ' - '.join(x)))\
-        .assign(AlreadyRanks=lambda df: df.AlreadyRanks.apply(lambda x: round(sum(x)/len(x), 2)))
+        .assign(AlreadyRanks=lambda df: df.AlreadyRanks.apply(lambda x: round(sum(x)/len(x), 2)))\
+        .sort_values(by=['Score', 'Volume'], ascending=False)
 
     # Upload Merged Clusters to Bubble
     local_final_path = os.path.join(LAMBDA_DATA_DIR, f'{domain_name}_clustered_ecs.csv')
@@ -171,15 +177,22 @@ def main(task_args):
             'ecs_progress': i
         }
         res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
+    # Update Job Status
+    job_body = {
+        'ecs_progress': len(topics)
+    }
+    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     
     print(f"all_ecs length: {len(all_ecs)}")
     queue.self_destruct()
 
-    ecs_df = pd.DataFrame(all_ecs)
-    print(f'ECS DF SHAPE: {ecs_df.shape}')
+    ecs_full_df = pd.DataFrame(all_ecs)
+    print(f'ECS DF SHAPE FULL: {ecs_full_df.shape}')
 
+    # Save Full ECS CSV
     domain_name = domain.split('.')[0]
-    ecs_file_name = f'{domain_name}_ecs.csv'
+    ecs_file_name = f'{domain_name}_ecs_full.csv'
     local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
     print(local_ecs_path)
     ecs_df.to_csv(local_ecs_path, index=False)
@@ -189,14 +202,44 @@ def main(task_args):
     doc_body = {
         'name': ecs_file_name,
         'url': ecs_file_url,
-        'type': 'raw_ecs_doc',
+        'type': 'raw_ecs_full_doc',
         'ecs_job': ecs_job_id
     }
     res = create_bubble_object('ecs-doc', doc_body)
     ecs_ecs_doc_id = res.json()['id']
 
+    # Filter out ECS Scores below 0.45
+    try:
+        ecs_df = ecs_full_df.query('score >= 0.45')
+        print(f'ECS DF SHAPE AFTER SCORE FILTER: {ecs_df.shape}')
+
+        domain_name = domain.split('.')[0]
+        ecs_file_name = f'{domain_name}_ecs_filtered.csv'
+        local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
+        print(local_ecs_path)
+        ecs_df.to_csv(local_ecs_path, index=False)
+
+
+        # Save to ECS-Doc Object
+        ecs_file_url = upload_bubble_file(local_ecs_path)
+        doc_body = {
+            'name': ecs_file_name,
+            'url': ecs_file_url,
+            'type': 'raw_ecs_filtered_doc',
+            'ecs_job': ecs_job_id
+        }
+        res = create_bubble_object('ecs-doc', doc_body)
+        ecs_ecs_doc_id = res.json()['id']
+    except:
+        ecs_df = ecs_full_df
+
 
     # Now Cluster Results
+    job_body = {
+        'has_clustering_begun': True
+    }
+    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
     cluster = cluster_keywords()
     input = {'input': local_ecs_path}
     cluster_path = cluster(input, keyword_col='topic', to_bubble=False)

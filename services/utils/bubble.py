@@ -19,7 +19,9 @@ else:
 
 
 def upload_bubble_file(path):
-    if path.endswith('.pdf'):
+    if path.endswith('.csv'):
+        file = {'document': (path.split('/')[-1], open(path, 'rb'), 'text/csv')}
+    elif path.endswith('.pdf'):
         file = {path.split('/')[-1]: (path.split('/')[-1], open(path, 'rb'), 'application/pdf')}
     else:
         file = {'document': open(path,'rb')}
