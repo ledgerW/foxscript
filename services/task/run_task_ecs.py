@@ -241,8 +241,14 @@ def main(task_args):
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
     cluster = cluster_keywords()
-    input = {'input': local_ecs_path}
-    cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    try:
+        input = {'input': local_ecs_path}
+        cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    except:
+        ecs_file_name = f'{domain_name}_ecs_full.csv'
+        local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
+        input = {'input': local_ecs_path}
+        cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
 
     # Save to ECS-Doc Object
     cluster_file_url = upload_bubble_file(cluster_path)
