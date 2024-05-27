@@ -9,6 +9,7 @@ plugins:
   - serverless-python-requirements
   - serverless-fargate
   - serverless-vpc-plugin
+  - serverless-lift
 
 custom:
   stage: ${opt:stage, self:provider.stage}
@@ -135,6 +136,8 @@ provider:
     GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
     GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
     ORIGINALITY_PLAG: ${env:ORIGINALITY_PLAG}
+    QUEUE_URL: ${construct:ecs-task.queueUrl}
+    DLQ_URL: ${construct:ecs-task.dlqUrl}
 
   iam:
     role:
@@ -170,6 +173,12 @@ provider:
             - xray:PutTraceSegments
             - xray:PutTelemetryRecords
           Resource: '*'
+
+constructs:
+  ecs-task:
+    type: queue
+    alarm: ledger@foxscript.ai
+    fifo: true
 
 fargate:
   tasks:
