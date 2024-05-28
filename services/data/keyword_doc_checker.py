@@ -32,7 +32,10 @@ else:
 
 
 def keywords_to_cost(n_keywords):
-    if n_keywords <= 1000:
+    if n_keywords <= 10:
+        cost = 0
+
+    if (n_keywords > 10) and (n_keywords <= 1000):
         cost = 250
 
     if (n_keywords > 1000) and (n_keywords <= 5000):
