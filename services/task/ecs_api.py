@@ -340,7 +340,7 @@ def ecs(event, context):
         return success(ecs_result)
     
 
-def sample_ecs(event):
+def sample_ecs(event, context):
     print(event)
     try:
         body = json.loads(event['body'])
