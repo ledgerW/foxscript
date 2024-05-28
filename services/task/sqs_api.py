@@ -166,12 +166,16 @@ def poll(event, context):
     """
     print(event)
     try:
-        body = json.loads(event['body'])
-    except:
-        body = event['body']
+        try:
+            body = json.loads(event['body'])
+        except:
+            body = event['body']
 
-    max_jobs = body['max_jobs']
-    sample_job = body['sample_job']
+        max_jobs = body['max_jobs']
+        sample_job = body['sample_job']
+    except:
+        max_jobs = 1
+        sample_job = False
 
     # Check every 10 seconds
     # Are there any jobs waiting to be executed?
