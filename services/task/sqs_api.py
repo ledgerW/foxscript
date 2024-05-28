@@ -8,6 +8,7 @@ except:
     pass
 
 import os
+import time
 import json
 import uuid
 import boto3
@@ -22,6 +23,9 @@ SERVICE = os.getenv('SERVICE')
 ECS_SQS_URL = os.getenv('ECS_SQS_URL')
 ECS_SQS_NAME = os.getenv('ECS_SQS_NAME')
 ECS_GROUP_MESSAGE_ID = os.getenv('ECS_GROUP_MESSAGE_ID')
+SAMPLE_ECS_SQS_URL = os.getenv('SAMPLE_ECS_SQS_URL')
+SAMPLE_ECS_SQS_NAME = os.getenv('SAMPLE_ECS_SQS_NAME')
+SAMPLE_ECS_GROUP_MESSAGE_ID = os.getenv('SAMPLE_ECS_GROUP_MESSAGE_ID')
 
 if os.getenv('IS_OFFLINE'):
    lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
@@ -31,7 +35,7 @@ else:
 
 
 
-def pushlish_ecs_message(message):
+def pushlish_ecs_message(message, sample_job=False):
     """
     message = {
         'task': 'ecs',
@@ -44,23 +48,28 @@ def pushlish_ecs_message(message):
     }
     """
     sqs = boto3.client('sqs')
+
+    URL = SAMPLE_ECS_SQS_URL if sample_job else ECS_SQS_URL
+    GROUP_MESSAGE_ID = SAMPLE_ECS_GROUP_MESSAGE_ID if sample_job else ECS_GROUP_MESSAGE_ID
     
     res = sqs.send_message(
-        QueueUrl=ECS_SQS_URL,
+        QueueUrl=URL,
         MessageBody=json.dumps(message),
         MessageDeduplicationId=str(uuid.uuid1()),
-        MessageGroupId=ECS_GROUP_MESSAGE_ID,
+        MessageGroupId=GROUP_MESSAGE_ID,
         MessageAttributes={}
     )
 
     return res
 
 
-def get_ecs_message() -> dict:
+def get_ecs_message(sample_job=False) -> dict:
     sqs = boto3.client('sqs')
+
+    URL = SAMPLE_ECS_SQS_URL if sample_job else ECS_SQS_URL
     
     res = sqs.receive_message(
-        QueueUrl=ECS_SQS_URL,
+        QueueUrl=URL,
         MessageAttributeNames=['All']
     )
 
@@ -68,7 +77,7 @@ def get_ecs_message() -> dict:
         message = json.loads(res['Messages'][0]['Body'])
 
         res = sqs.delete_message(
-            QueueUrl=ECS_SQS_URL,
+            QueueUrl=URL,
             ReceiptHandle=res['Messages'][0]['ReceiptHandle']
         )
 
@@ -77,11 +86,13 @@ def get_ecs_message() -> dict:
         return None
     
 
-def get_ecs_message_count() -> int:
+def get_ecs_message_count(sample_job=False) -> int:
     sqs = boto3.client('sqs')
+
+    URL = SAMPLE_ECS_SQS_URL if sample_job else ECS_SQS_URL
     
     res = sqs.get_queue_attributes(
-        QueueUrl=ECS_SQS_URL,
+        QueueUrl=URL,
         AttributeNames=['All']
     )
 
@@ -104,36 +115,7 @@ def get_ecs_running_jobs_count() -> int:
     return len(res['taskArns'])
 
 
-
-def publish(event, context):
-    print(event)
-    try:
-        message = json.loads(event['body'])
-    except:
-        message = event['body']
-
-    res = pushlish_ecs_message(message)
-
-    message_count = get_ecs_message_count()
-
-    return success({'message_count': message_count})
-
-
-def poll(event, context):
-    """
-    body = {
-        max_jobs: 1
-    }
-    """
-    print(event)
-    try:
-        body = json.loads(event['body'])
-    except:
-        body = event['body']
-
-    max_jobs = body['max_jobs']
-
-    # Are there any jobs waiting to be executed?
+def check_and_trigger_ecs_job(max_jobs=1, sample_job=False):
     ecs_job_message = None
     ecs_message_count = get_ecs_message_count()
     if ecs_message_count > 0:
@@ -157,4 +139,44 @@ def poll(event, context):
                 ecs_job_id = ecs_job_message['task_args']['ecs_job_id']
                 res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
-    return success({'new_job_start': ecs_job_message})
+    return ecs_job_message
+
+
+
+def publish(event, context):
+    print(event)
+    try:
+        message = json.loads(event['body'])
+    except:
+        message = event['body']
+
+    res = pushlish_ecs_message(message)
+
+    message_count = get_ecs_message_count()
+
+    return success({'message_count': message_count})
+
+
+def poll(event, context):
+    """
+    body = {
+        max_jobs: 1,
+        sample_job: True
+    }
+    """
+    print(event)
+    try:
+        body = json.loads(event['body'])
+    except:
+        body = event['body']
+
+    max_jobs = body['max_jobs']
+    sample_job = body['sample_job']
+
+    # Check every 10 seconds
+    # Are there any jobs waiting to be executed?
+    for _ in range(6):
+        ecs_job_message = check_and_trigger_ecs_job(max_jobs, sample_job)
+        time.sleep(10)
+
+    return success({'success': True})

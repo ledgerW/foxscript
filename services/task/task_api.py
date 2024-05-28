@@ -19,8 +19,10 @@ BUCKET = os.getenv('BUCKET')
 SERVICE = os.getenv('SERVICE')
 
 if os.getenv('IS_OFFLINE'):
+   lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
    LAMBDA_DATA_DIR = '.'
 else:
+   lambda_client = boto3.client('lambda')
    LAMBDA_DATA_DIR = '/tmp'
 
 
@@ -102,6 +104,7 @@ def handler(event, context):
         input = event['body']
 
     task_name = input['task']
+    is_sample = input['sample']
     task_args = input['task_args']
 
     print('task_api task_args:')
@@ -110,11 +113,18 @@ def handler(event, context):
 
     task_script = f'run_task_{task_name}'
 
-    if os.getenv('IS_OFFLINE', 'false') == 'true':
-        print('RUNNING LOCAL')
-        run_local(task_script, task_args=task_args)
+    if is_sample:
+        _ = lambda_client.invoke(
+            FunctionName=f'foxscript-data-{STAGE}-sample_ecs',
+            InvocationType='Event',
+            Payload=json.dumps({"body": task_args})
+        )
     else:
-        print('RUNNING CLOUD')
-        run_cloud(task_script, task_args=task_args)
+        if os.getenv('IS_OFFLINE', 'false') == 'true':
+            print('RUNNING LOCAL')
+            run_local(task_script, task_args=task_args)
+        else:
+            print('RUNNING CLOUD')
+            run_cloud(task_script, task_args=task_args)
 
     return success({'success': True})

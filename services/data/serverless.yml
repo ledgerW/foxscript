@@ -207,6 +207,23 @@ functions:
           method: post
           cors: true
 
+  sample_ecs:
+    image:
+      name: data_image
+      command:
+        - ecs_api.sample_ecs
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 1024
+    ephemeralStorageSize: 1024
+    timeout: 600
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: sample_ecs
+          method: post
+          cors: true
+
   keyword_doc_checker:
     image:
       name: data_image

@@ -277,7 +277,7 @@ functions:
       - Ref: PythonRequirementsLambdaLayer
     events:
       - schedule:
-          rate: rate(10 seconds)
+          rate: rate(1 minute)
       - http:
           path: poll_sqs
           method: post

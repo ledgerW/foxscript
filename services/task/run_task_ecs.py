@@ -103,7 +103,7 @@ def main(task_args):
 
     email = task_args['user_email']
     top_n_ser = task_args['top_n_ser']
-    ecs_concurrency = task_args['ecs_concurrency']    # 0.1, 0.5, 1, etc...
+    ecs_concurrency = task_args['ecs_concurrency']
     ecs_job_id = task_args['ecs_job_id']
 
     # Get ECS Job
