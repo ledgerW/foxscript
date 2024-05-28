@@ -399,7 +399,7 @@ def sample_ecs(event):
     topics_df = pd.read_csv(local_batch_path)
     print(f"Topics Shape: {topics_df.shape}")
     topics = [t.split(' - ')[0] for t in topics_df.Keyword]
-    topics = [t for t in topics if t]
+    topics = [t for t in topics if t][:10]
     
     # Process the Batch CSV
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
