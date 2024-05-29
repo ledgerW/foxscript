@@ -113,7 +113,7 @@ def handler(event, context):
 
     task_script = f'run_task_{task_name}'
 
-    if is_sample:
+    if is_sample is 'yes':
         _ = lambda_client.invoke(
             FunctionName=f'foxscript-data-{STAGE}-sample_ecs',
             InvocationType='Event',
