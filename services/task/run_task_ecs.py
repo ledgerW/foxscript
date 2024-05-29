@@ -245,7 +245,7 @@ def main(task_args):
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
-    cluster = cluster_keywords(thresh=0.6)
+    cluster = cluster_keywords(thresh=0.4)
     try:
         input = {'input': local_ecs_path}
         cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
