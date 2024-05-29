@@ -526,10 +526,11 @@ def sample_ecs(event, context):
         'raw_ecs_result': ecs_ecs_doc_id,
         'raw_cluster_result': ecs_cluster_doc_id,
         'ecs_cluster_result': final_doc_id,
-        'cost': keyword_doc_res.json()['response']['cost']
+        'cost': keyword_doc_res.json()['response']['cost'],
+        'is_complete': True,
+        'is_running': False
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
-    ecs_cluster_doc_id = res.json()['id']
 
     # Delete Wv Library
     delete_library(ec_class_name)

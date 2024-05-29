@@ -106,6 +106,11 @@ def main(task_args):
     ecs_concurrency = task_args['ecs_concurrency']
     ecs_job_id = task_args['ecs_job_id']
 
+    job_body = {
+        'is_running': True
+    }
+    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
     # Get ECS Job
     ecs_job_res = get_bubble_object('ecs-job', ecs_job_id)
     ecs_job_json = ecs_job_res.json()['response']
@@ -280,10 +285,11 @@ def main(task_args):
         'raw_ecs_result': ecs_ecs_doc_id,
         'raw_cluster_result': ecs_cluster_doc_id,
         'ecs_cluster_result': final_doc_id,
-        'cost': keyword_doc_res.json()['response']['cost']
+        'cost': keyword_doc_res.json()['response']['cost'],
+        'is_complete': True,
+        'is_running': False
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
-    ecs_cluster_doc_id = res.json()['id']
 
     # Delete Wv Library
     delete_library(ec_class_name)
