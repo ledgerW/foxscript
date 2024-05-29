@@ -586,6 +586,12 @@ class cluster_keywords():
         else:
             local_keyword_csv_path = keyword_csv_url
         
+        # Check if search results are included
+        all_keywords_df = pd.read_csv(local_keyword_csv_path)
+        have_search_results = 'search_urls' in all_keywords_df.columns
+        if have_search_results:
+            print('Search Results already present, will skip google search.')
+
         keyword_batches = get_keyword_batches(local_keyword_csv_path, self.batch_size, keyword_col)
         print(len(keyword_batches))
 
@@ -594,24 +600,34 @@ class cluster_keywords():
         not_processed = 0
         # run through each batch of keywords
         for i, keyword_batch in enumerate(keyword_batches):
-            print(f"Batch {i+1}")
-            print(f"Batch Size: {len(keyword_batch)}")
-            sqs = 'googsearch{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
-            queue = SQS(sqs)
+            if not have_search_results:
+                print(f"Batch {i+1}")
+                print(f"Batch Size: {len(keyword_batch)}")
+                sqs = 'googsearch{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+                queue = SQS(sqs)
 
-            # do distributed google search for each keyword in batch
-            counter = 0
-            for q in keyword_batch:
-                if q:
-                    get_top_n_search(q, 10, sqs=sqs, serper=True)
-                    time.sleep(0.1)
-                    counter += 1
-                else:
-                    pass
+                # do distributed google search for each keyword in batch
+                counter = 0
+                for q in keyword_batch:
+                    if q:
+                        get_top_n_search(q, 10, sqs=sqs, serper=True)
+                        time.sleep(0.1)
+                        counter += 1
+                    else:
+                        pass
 
-            # wait for and collect search results from SQS
-            new_keywords = queue.collect(counter, max_wait=600)
-            print(f"New Keyword Batch Size: {len(new_keywords)}")
+                # wait for and collect search results from SQS
+                new_keywords = queue.collect(counter, max_wait=600)
+                print(f"New Keyword Batch Size: {len(new_keywords)}")
+            else:
+                new_keywords = []
+                for q in keyword_batch:
+                    try:
+                        links = all_keywords_df.query(f'topic == "{q}"').reset_index().search_urls[0].split(',')
+                    except Exception as e:
+                        print(e)
+                        links = []
+                    new_keywords.append({'q': q, 'links': links})
             
             # group keywords form this batch
             for new_keyword in new_keywords:

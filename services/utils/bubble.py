@@ -1,6 +1,12 @@
 import os
 import requests
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass
+
 
 BUBBLE_API_KEY = os.getenv('BUBBLE_API_KEY')
 BUBBLE_API_ROOT = os.getenv('BUBBLE_API_ROOT')
@@ -13,7 +19,9 @@ else:
 
 
 def upload_bubble_file(path):
-    if path.endswith('.pdf'):
+    if path.endswith('.csv'):
+        file = {'document': (path.split('/')[-1], open(path, 'rb'), 'text/csv')}
+    elif path.endswith('.pdf'):
         file = {path.split('/')[-1]: (path.split('/')[-1], open(path, 'rb'), 'application/pdf')}
     else:
         file = {'document': open(path,'rb')}

@@ -140,7 +140,11 @@ def make_batch_files(batch_df, concurrent_runs=1, as_csv=False):
     return batch_df_list
 
 
-def get_keyword_batches(csv_path: str, batch_size: int, keyword_col: str='Keyword') -> list[list[str]]:
+def get_keyword_batches(
+        csv_path: str,
+        batch_size: int,
+        keyword_col: str='Keyword'
+    ) -> list[list[str]]:
     keywords_df = pd.read_csv(csv_path)[[keyword_col]]
     total_size = keywords_df.shape[0]
     if batch_size > total_size:

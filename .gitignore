@@ -4,6 +4,7 @@ breakdown_prompt.txt
 articles/
 mosaic/
 *.pdf
+local_data/
 
 ## SST ##
 .sst

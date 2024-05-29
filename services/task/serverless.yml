@@ -135,6 +135,9 @@ provider:
     GOOG_CLIENT_ID: ${env:GOOG_CLIENT_ID}
     GOOG_CLIENT_SECRET: ${env:GOOG_CLIENT_SECRET}
     ORIGINALITY_PLAG: ${env:ORIGINALITY_PLAG}
+    ECS_SQS_URL: ${env:ECS_SQS_URL}
+    ECS_SQS_NAME: ${env:ECS_SQS_NAME}
+    ECS_GROUP_MESSAGE_ID: ${env:ECS_GROUP_MESSAGE_ID}
 
   iam:
     role:
@@ -252,6 +255,34 @@ fargate:
         assignPublicIp: true
 
 functions:
+  publish_to_sqs:
+    handler: sqs_api.publish
+    memorySize: 256
+    timeout: 180
+    maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - http:
+          path: publish_to_sqs
+          method: post
+          cors: true
+
+  poll_ecs_sqs:
+    handler: sqs_api.poll
+    memorySize: 256
+    timeout: 180
+    maximumRetryAttempts: 0
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - schedule:
+          rate: rate(1 minute)
+      - http:
+          path: poll_sqs
+          method: post
+          cors: true
+
   task:
     handler: task_api.handler
     memorySize: 256
