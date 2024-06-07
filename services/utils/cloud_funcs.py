@@ -58,19 +58,38 @@ def cloud_google_search(q:str, n:int=None, sqs:str=None):
 
     return res
 
-def cloud_scrape(url, sqs=None, invocation_type='Event', chunk_overlap=10, return_raw=False):
-    res = lambda_client.invoke(
-        FunctionName=f'foxscript-data-{STAGE}-scraper',
-        InvocationType=invocation_type,
-        Payload=json.dumps({"body": {
-            'url': url,
-            'sqs': sqs,
-            'chunk_overlap': chunk_overlap,
-            'return_raw': return_raw
-        }})
-    )
 
-    return res
+def cloud_scrape(url, sqs=None, invocation_type='Event', chunk_overlap=10, return_raw=False):
+    if return_raw:
+        res = lambda_client.invoke(
+            FunctionName=f'foxscript-data-{STAGE}-ecs',
+            InvocationType=invocation_type,
+            Payload=json.dumps({"body": {
+                'topic': 'SCRAPE',
+                'ec_lib_name': 'SCRAPE',
+                'user_email': 'SCRAPE',
+                'customer_domain': 'SCRAPE',
+                'top_n_ser': 0,
+                'urls': [url],
+                'special_return': 'scrape',
+                'sqs': sqs
+            }})
+        )
+
+        return res
+    else:
+        res = lambda_client.invoke(
+            FunctionName=f'foxscript-data-{STAGE}-scraper',
+            InvocationType=invocation_type,
+            Payload=json.dumps({"body": {
+                'url': url,
+                'sqs': sqs,
+                'chunk_overlap': chunk_overlap,
+                'return_raw': return_raw
+            }})
+        )
+
+        return res
 
 
 def cloud_research(url, sqs=None, query=None, invocation_type='Event', chunk_overlap=10):
@@ -88,7 +107,7 @@ def cloud_research(url, sqs=None, query=None, invocation_type='Event', chunk_ove
     return res
 
 
-def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, serper_api=None, sqs=None, invocation_type='Event'):
+def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, urls=[], special_return=None, sqs=None, invocation_type='Event'):
     res = lambda_client.invoke(
         FunctionName=f'foxscript-data-{STAGE}-ecs',
         InvocationType=invocation_type,
@@ -98,7 +117,8 @@ def cloud_ecs(topic, ec_lib_name, user_email, customer_domain, top_n_ser, serper
             'user_email': user_email,
             'customer_domain': customer_domain,
             'top_n_ser': top_n_ser,
-            'serper_api': serper_api,
+            'urls': urls,
+            'special_return': special_return,
             'sqs': sqs
         }})
     )

@@ -21,7 +21,8 @@ AZ_EMBEDDING = 'text-embedding-ada-002'
 GPT_35 = 'gpt-3.5-turbo'
 GPT_35_16K = 'gpt-3.5-turbo'
 GPT_4 = 'gpt-4'
-GPT_4_TURBO = 'gpt-4-turbo-preview'
+GPT_4_TURBO = 'gpt-4-turbo'
+GPT_4o = 'gpt-4o'
 EMBEDDING = 'text-embedding-3-large'
 
 az_openai_kwargs = {
@@ -53,7 +54,7 @@ class FoxLLM():
             'gpt-35': ChatOpenAI(**openai_kwargs, model_name=GPT_35, temperature=temp, verbose=True),
             'gpt-35-16k': ChatOpenAI(**openai_kwargs, model_name=GPT_35_16K, temperature=temp, verbose=True),
             'gpt-4-old': ChatOpenAI(**openai_kwargs, model_name=GPT_4, temperature=temp, verbose=True),
-            'gpt-4': ChatOpenAI(**openai_kwargs, model_name=GPT_4_TURBO, temperature=temp, verbose=True)
+            'gpt-4': ChatOpenAI(**openai_kwargs, model_name=GPT_4o, temperature=temp, verbose=True)
         }
 
         self.model_fallbacks = {

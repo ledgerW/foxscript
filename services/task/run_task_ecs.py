@@ -96,6 +96,7 @@ def text_to_wv_classname(text):
 
 
 
+
 def main(task_args):
     print('task_args:')
     print(task_args)
@@ -123,8 +124,8 @@ def main(task_args):
     keyword_doc_res = get_bubble_object('ecs-doc', keywords_doc)
     keywords_doc_url = keyword_doc_res.json()['response']['url']
 
-    batch_input_file_name = keywords_doc_url.split('/')[-1]
-    local_batch_path = f'{LAMBDA_DATA_DIR}/{batch_input_file_name}'
+    keyword_doc_file_name = keywords_doc_url.split('/')[-1]
+    local_keyword_doc_path = f'{LAMBDA_DATA_DIR}/{keyword_doc_file_name}'
 
     if 'app.foxscript.ai' in keywords_doc_url:
         get_bubble_doc(keywords_doc_url, local_batch_path)
@@ -134,6 +135,57 @@ def main(task_args):
         print("Using local batch file")
 
 
+    # Get Topics DF
+    topics_df = pd.read_csv(local_keyword_doc_path)
+    print(f"Topics Shape: {topics_df.shape}")
+    topics = [t.split(' - ')[0] for t in topics_df.Keyword]
+    topics = [t for t in topics if t]
+
+    # Get SERP Results
+    sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+    queue = SQS(sqs)
+    serp_concurrency = 50
+    all_topic_urls = []
+    for i in range(0, len(topics), serp_concurrency):
+        topic_batch = topics[i:i + serp_concurrency]
+        
+        for idx, topic in enumerate(topic_batch):
+            # do distributed ECS for each topic
+            ec_lib_name = 'SERP'
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=[], special_return='serp', sqs=sqs, invocation_type='Event') 
+
+        # wait for and collect search results from SQS
+        print(f"Waiting for items {i} through {(i + len(topic_batch))}")
+        serp_batch = queue.collect(len(topic_batch), max_wait=600, self_destruct=False)
+        all_topic_urls = all_topic_urls + serp_batch
+        
+        # Update Job Status
+        job_body = {
+            'serp_progress': i
+        }
+        res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
+    # Update Job Status
+    job_body = {
+        'serp_progress': len(topics)
+    }
+    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+    
+    print(f"all_topic_urls length: {len(all_topic_urls)}")
+    queue.self_destruct()
+
+    serp_results_df = pd.DataFrame(all_topic_urls)\
+        .assign(top_serp=lambda df: df.search_urls.apply(lambda x: x.split(',')[0]))
+    print(f'SERP RESULTS DF SHAPE FULL: {serp_results_df.shape}')
+
+    # Consolidate and dedupe top serp urls
+    top_serps = []
+    for serp in serp_results_df.search_urls:
+        search_urls = serp.split(',')
+        top_serps.append(search_urls[0])
+
+    unique_top_serps = list(set(top_serps))
+
     # Make Existing Content Library
     job_name = ecs_job_json['name']
     ec_lib_name = text_to_wv_classname(job_name)
@@ -141,7 +193,9 @@ def main(task_args):
     create_library(ec_class_name)
 
     # Scrape and load content urls to Weaviate Library
-    for content_url in ecs_job_json['content_urls'].split('\n'):
+    #content_urls = ecs_job_json['content_urls'].split('\n')
+    content_urls = unique_top_serps
+    for content_url in content_urls:
         out_body = {
             'email': email,
             'name': ec_lib_name,
@@ -150,27 +204,24 @@ def main(task_args):
 
         _ = lambda_client.invoke(
             FunctionName=f'foxscript-api-{STAGE}-upload_to_s3_cloud',
-            InvocationType='RequestResponse',
+            InvocationType='Event',
             Payload=json.dumps({"body": out_body})
         )
+        time.sleep(0.2)
+    time.sleep(180)
 
-    # Get Topics
-    topics_df = pd.read_csv(local_batch_path)
-    print(f"Topics Shape: {topics_df.shape}")
-    topics = [t.split(' - ')[0] for t in topics_df.Keyword]
-    topics = [t for t in topics if t]
-    
+
     # Process the Batch CSV
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
     queue = SQS(sqs)
-    serper_api = 'serper'
     all_ecs = []
     for i in range(0, len(topics), ecs_concurrency):
         topic_batch = topics[i:i + ecs_concurrency]
         
         for idx, topic in enumerate(topic_batch):
             # do distributed ECS for each topic
-            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, serper_api, sqs=sqs, invocation_type='Event') 
+            topic_urls = serp_results_df.query(f'topic == "{topic}"').search_urls.values[0].split(',')
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=topic_urls, special_return=None, sqs=sqs, invocation_type='Event') 
 
         # wait for and collect search results from SQS
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")
