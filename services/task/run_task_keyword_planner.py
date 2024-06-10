@@ -162,8 +162,7 @@ def main(task_args):
         
         for idx, topic in enumerate(topic_batch):
             # do distributed ECS for each topic
-            ec_lib_name = 'SERP'
-            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=[], special_return='serp', sqs=sqs, invocation_type='Event') 
+            cloud_ecs(topic, 'SERP', email, domain, top_n_ser, urls=[], special_return='serp', sqs=sqs, invocation_type='Event') 
 
         # wait for and collect search results from SQS
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")
