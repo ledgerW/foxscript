@@ -118,6 +118,7 @@ def main(task_args):
 
     # Get Compnay Domain
     domain = ecs_job_json['company_domain']
+    domain_name = domain.split('.')[0]
 
     # Make HUB Content Library
     job_name = ecs_job_json['name']
@@ -344,7 +345,6 @@ def main(task_args):
     print(f'ECS DF SHAPE FULL: {ecs_full_df.shape}')
 
     # Save Full ECS CSV
-    domain_name = domain.split('.')[0]
     ecs_file_name = f'{domain_name}_ecs_full.csv'
     local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
     print(local_ecs_path)
