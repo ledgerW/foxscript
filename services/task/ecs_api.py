@@ -470,7 +470,7 @@ def sample_ecs(event, context):
         
         for idx, topic in enumerate(topic_batch):
             # do distributed ECS for each topic
-            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, sqs=sqs, invocation_type='Event') 
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=[], special_return=None, sqs=sqs, invocation_type='Event')
 
         # wait for and collect search results from SQS
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")

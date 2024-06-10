@@ -96,6 +96,7 @@ def text_to_wv_classname(text):
 
 
 
+
 def main(task_args):
     print('task_args:')
     print(task_args)
@@ -118,13 +119,19 @@ def main(task_args):
     # Get Compnay Domain
     domain = ecs_job_json['company_domain']
 
+    # Make HUB Content Library
+    job_name = ecs_job_json['name']
+    ec_lib_name = text_to_wv_classname(job_name)
+    ec_class_name, account_name = get_wv_class_name(email, ec_lib_name)
+    create_library(ec_class_name)
+
     # Fetch Keywords Doc input file from bubble
     keywords_doc = ecs_job_json['keywords_doc']
     keyword_doc_res = get_bubble_object('ecs-doc', keywords_doc)
     keywords_doc_url = keyword_doc_res.json()['response']['url']
 
-    batch_input_file_name = keywords_doc_url.split('/')[-1]
-    local_batch_path = f'{LAMBDA_DATA_DIR}/{batch_input_file_name}'
+    keyword_doc_file_name = keywords_doc_url.split('/')[-1]
+    local_keyword_doc_path = f'{LAMBDA_DATA_DIR}/{keyword_doc_file_name}'
 
     if 'app.foxscript.ai' in keywords_doc_url:
         get_bubble_doc(keywords_doc_url, local_batch_path)
@@ -134,14 +141,157 @@ def main(task_args):
         print("Using local batch file")
 
 
-    # Make Existing Content Library
-    job_name = ecs_job_json['name']
-    ec_lib_name = text_to_wv_classname(job_name)
-    ec_class_name, account_name = get_wv_class_name(email, ec_lib_name)
-    create_library(ec_class_name)
+    # Get Topics DF
+    topics_df = pd.read_csv(local_keyword_doc_path)
+    if 'Search Volume' in topics_df.columns:
+        topics_df.rename(columns={'Search Volume': 'Volume'}, inplace=True)
+
+    print(f"Topics Shape: {topics_df.shape}")
+    topics = topics_df.Keyword.to_list()
+
+    #### STEP 1: Get SERP Results
+    print('BEGIN STEP 1')
+
+    sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
+    queue = SQS(sqs)
+    serp_concurrency = 50
+    all_topic_urls = []
+    for i in range(0, len(topics), serp_concurrency):
+        topic_batch = topics[i:i + serp_concurrency]
+        
+        for idx, topic in enumerate(topic_batch):
+            # do distributed ECS for each topic
+            ec_lib_name = 'SERP'
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=[], special_return='serp', sqs=sqs, invocation_type='Event') 
+
+        # wait for and collect search results from SQS
+        print(f"Waiting for items {i} through {(i + len(topic_batch))}")
+        serp_batch = queue.collect(len(topic_batch), max_wait=600, self_destruct=False)
+        all_topic_urls = all_topic_urls + serp_batch
+        
+        # Update Job Status
+        job_body = {
+            'serp_progress': i
+        }
+        res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
+    # Update Job Status
+    job_body = {
+        'serp_progress': len(topics)
+    }
+    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+    
+    print(f"all_topic_urls length: {len(all_topic_urls)}")
+    queue.self_destruct()
+
+    serp_results_df = pd.DataFrame(all_topic_urls)\
+        .merge(topics_df, how='left', left_on='topic', right_on='Keyword')\
+        .assign(top_serp=lambda df: df.search_urls.apply(lambda x: x.split(',')[0]))
+    
+    local_serp_results_path = f'{LAMBDA_DATA_DIR}/serp_results.csv'
+    serp_results_df.to_csv(local_serp_results_path, index=False)
+
+    # Save to ECS-Doc Object
+    serp_results_file_url = upload_bubble_file(local_serp_results_path)
+    doc_body = {
+        'name': 'serp_results.csv',
+        'url': serp_results_file_url,
+        'type': 'serp_results_doc',
+        'ecs_job': ecs_job_id
+    }
+    res = create_bubble_object('ecs-doc', doc_body)
+    serp_results_doc_id = res.json()['id']
+    
+    print(f'SERP RESULTS DF SHAPE FULL: {serp_results_df.shape}')
+    
+    #### END STEP 1
+
+
+    #### BEGIN STEP 2: Get HUBS and URLs for WV Library for ECS
+    print('BEGIN STEP 2')
+    
+    # Now Cluster Results
+    job_body = {
+        'has_clustering_begun': True
+    }
+    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
+    cluster = cluster_keywords(thresh=0.4)
+    input = {'input': local_serp_results_path}
+    cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    print(cluster_path)
+
+    # Save to ECS-Doc Object
+    cluster_file_url = upload_bubble_file(cluster_path)
+    doc_body = {
+        'name': f'{domain_name}_clusters.csv',
+        'url': cluster_file_url,
+        'type': 'raw_cluster_doc',
+        'ecs_job': ecs_job_id
+    }
+    res = create_bubble_object('ecs-doc', doc_body)
+    ecs_cluster_doc_id = res.json()['id']
+
+    clusters_df = pd.read_csv(cluster_path)
+    unfolded_clusters_df = unfold_keyword_clusters(clusters_df)
+
+    hub_df = unfolded_clusters_df\
+        .merge(serp_results_df, how='left', on='Keyword')\
+        .groupby('Group', as_index=False)\
+            .agg(
+                Topic=('topic', 'first'),
+                Volume=('Volume', 'sum'),
+                Keywords=('Keyword', list),
+                KeywordCount=('Keyword', 'count'),
+                Links=('Links', 'first'),
+                TopSERP=('top_serp', 'first')
+            )\
+        .sort_values(by=['Volume'], ascending=False)\
+        .reset_index(drop=True)\
+        .groupby('TopSERP', as_index=False)\
+            .agg(
+                Topic=('Topic', 'first'),
+                Volume=('Volume', 'sum'),
+                Keywords=('Keywords', 'sum'),
+                KeywordCount=('KeywordCount', 'sum'),
+                Links=('Links', 'sum')
+            )\
+        .sort_values(by=['Volume'], ascending=False)\
+        .reset_index(drop=True)
+
+    print(hub_df.shape)
+
+    # Save to ECS-Doc Object
+    local_hub_df_path = f'{LAMBDA_DATA_DIR}/hub_df.csv'
+    hub_df.to_csv(local_hub_df_path, index=False)
+    hub_df_file_url = upload_bubble_file(local_hub_df_path)
+    doc_body = {
+        'name': f'{domain_name}_hub_df.csv',
+        'url': hub_df_file_url,
+        'type': 'hub_df_doc',
+        'ecs_job': ecs_job_id
+    }
+    res = create_bubble_object('ecs-doc', doc_body)
+    ecs_hub_df_doc_id = res.json()['id']
+
+    HUB_URL_MAX = 1000
+    HUB_DF_50 = int(hub_df.shape[0] * 0.5)
+    HUB_URL_COUNT = min(HUB_DF_50, HUB_URL_MAX)
+    print(HUB_URL_COUNT)
+
+    hub_urls = hub_df.head(HUB_URL_COUNT).TopSERP.to_list()
+
+    #### END STEP 2
+
+
+
+    #### BEGIN STEP 3: Load HUB URLs into WV Library
+    print('BEGIN STEP 3')
+    print(f"{len(hub_urls)} unique SERPS going to WV Library")
 
     # Scrape and load content urls to Weaviate Library
-    for content_url in ecs_job_json['content_urls'].split('\n'):
+    #content_urls = ecs_job_json['content_urls'].split('\n')
+    for content_url in hub_urls:
         out_body = {
             'email': email,
             'name': ec_lib_name,
@@ -150,27 +300,25 @@ def main(task_args):
 
         _ = lambda_client.invoke(
             FunctionName=f'foxscript-api-{STAGE}-upload_to_s3_cloud',
-            InvocationType='RequestResponse',
+            InvocationType='Event',
             Payload=json.dumps({"body": out_body})
         )
+        time.sleep(0.2)
+    time.sleep(180)
 
-    # Get Topics
-    topics_df = pd.read_csv(local_batch_path)
-    print(f"Topics Shape: {topics_df.shape}")
-    topics = [t.split(' - ')[0] for t in topics_df.Keyword]
-    topics = [t for t in topics if t]
-    
+
+    # STEP 4 ECS Score Keywords into HUBs
     # Process the Batch CSV
     sqs = 'ecs{}'.format(datetime.now().isoformat().replace(':','_').replace('.','_'))
     queue = SQS(sqs)
-    serper_api = 'serper'
     all_ecs = []
     for i in range(0, len(topics), ecs_concurrency):
         topic_batch = topics[i:i + ecs_concurrency]
         
         for idx, topic in enumerate(topic_batch):
             # do distributed ECS for each topic
-            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=[], special_return=None, sqs=sqs, invocation_type='Event')
+            topic_urls = serp_results_df.query(f'topic == "{topic}"').search_urls.values[0].split(',')
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=topic_urls, special_return=None, sqs=sqs, invocation_type='Event') 
 
         # wait for and collect search results from SQS
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")
@@ -215,7 +363,7 @@ def main(task_args):
 
     # Filter out ECS Scores below 0.45
     try:
-        ecs_df = ecs_full_df.query('score >= 0.45')
+        ecs_df = ecs_full_df.query('score >= 0.05') # !!!! DOUBLE CHECK THIS SCORE THRESHOLD !!!! #
         print(f'ECS DF SHAPE AFTER SCORE FILTER: {ecs_df.shape}')
 
         domain_name = domain.split('.')[0]
@@ -240,31 +388,33 @@ def main(task_args):
 
 
     # Now Cluster Results
-    job_body = {
-        'has_clustering_begun': True
-    }
-    res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+    #job_body = {
+    #    'has_clustering_begun': True
+    #}
+    #res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
-    cluster = cluster_keywords(thresh=0.4)
-    try:
-        input = {'input': local_ecs_path}
-        cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
-    except:
-        ecs_file_name = f'{domain_name}_ecs_full.csv'
-        local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
-        input = {'input': local_ecs_path}
-        cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    #cluster = cluster_keywords(thresh=0.4)
+    #try:
+    #    input = {'input': local_ecs_path}
+    #    cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    #except:
+    #    ecs_file_name = f'{domain_name}_ecs_full.csv'
+    #    local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
+    #    input = {'input': local_ecs_path}
+    #    cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
 
     # Save to ECS-Doc Object
-    cluster_file_url = upload_bubble_file(cluster_path)
-    doc_body = {
-        'name': f'{domain_name}_clusters.csv',
-        'url': cluster_file_url,
-        'type': 'raw_cluster_doc',
-        'ecs_job': ecs_job_id
-    }
-    res = create_bubble_object('ecs-doc', doc_body)
-    ecs_cluster_doc_id = res.json()['id']
+    #cluster_file_url = upload_bubble_file(cluster_path)
+    #doc_body = {
+    #    'name': f'{domain_name}_clusters.csv',
+    #    'url': cluster_file_url,
+    #    'type': 'raw_cluster_doc',
+    #    'ecs_job': ecs_job_id
+    #}
+    #res = create_bubble_object('ecs-doc', doc_body)
+    #ecs_cluster_doc_id = res.json()['id']
+
+
 
     # Merge into final doc
     final_doc_path = make_final_doc(local_batch_path, local_ecs_path, cluster_path, domain_name)
@@ -282,9 +432,11 @@ def main(task_args):
 
     # Attch output to ECS Job object
     job_body = {
+        'serp_results_doc': serp_results_doc_id,
         'raw_ecs_result': ecs_ecs_doc_id,
         'raw_cluster_result': ecs_cluster_doc_id,
         'ecs_cluster_result': final_doc_id,
+        'hub_df_doc': ecs_hub_df_doc_id,
         'cost': keyword_doc_res.json()['response']['cost'],
         'is_complete': True,
         'is_running': False

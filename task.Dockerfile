@@ -16,6 +16,7 @@ COPY weaviate ./weaviate
 RUN mkdir data
 COPY services/data ./data
 
+COPY services/task/run_task_keyword_planner.py run_task_keyword_planner.py
 COPY services/task/run_task_ecs.py run_task_ecs.py
 COPY services/task/run_batch_workflow.py run_batch_workflow.py
 COPY services/task/run_batch_upload_to_s3.py run_batch_upload_to_s3.py
