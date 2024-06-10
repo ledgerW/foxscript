@@ -416,7 +416,7 @@ def main(task_args):
 
 
     # Merge into final doc
-    final_doc_path = make_final_doc(local_batch_path, local_ecs_path, cluster_path, domain_name)
+    final_doc_path = make_final_doc(local_keyword_doc_path, local_ecs_path, cluster_path, domain_name)
 
     # Save to ECS-Doc Object
     final_doc_url = upload_bubble_file(final_doc_path)
