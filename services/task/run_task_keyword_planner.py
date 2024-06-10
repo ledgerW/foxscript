@@ -134,10 +134,10 @@ def main(task_args):
     local_keyword_doc_path = f'{LAMBDA_DATA_DIR}/{keyword_doc_file_name}'
 
     if 'app.foxscript.ai' in keywords_doc_url:
-        get_bubble_doc(keywords_doc_url, local_batch_path)
+        get_bubble_doc(keywords_doc_url, local_keyword_doc_path)
         print("Retrieved batch doc from bubble")
     else:
-        local_batch_path = keywords_doc_url
+        local_keyword_doc_path = keywords_doc_url
         print("Using local batch file")
 
 
