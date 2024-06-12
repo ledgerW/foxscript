@@ -29,6 +29,7 @@ from utils.response_lib import *
 from utils.weaviate_utils import wv_client, get_wv_class_name, create_library, delete_library
 from utils.Steps import cluster_keywords
 from utils.workflow_utils import unfold_keyword_clusters
+from utils.FoxLLM import *
 
 
 STAGE = os.getenv('STAGE')
@@ -89,6 +90,85 @@ def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
     final_df.to_csv(local_final_path, index=False)
 
     return local_final_path
+
+
+def get_topic_category(urls: str, categories: str):
+    llm = FoxLLM(az_openai_kwargs, openai_kwargs, 'gpt-4', temp=0.1)
+
+    prompt = f"""Please assign a general category label for the urls below.
+    URLs:
+    {urls}
+
+
+    If there is a suitable category label from the options below, then please use that.
+    But if none of them fit, then create a new cateogory label. The category label does
+    not have to be perfect.
+
+    Options:
+    {categories}
+
+    The category label should be pretty simple, like Audio, Math, Home Financing, etc...
+
+    Return only the category label.
+
+    Category Label:
+    """
+
+    res = llm.llm.invoke(prompt)
+    
+    return res.content
+
+
+def make_keyword_planner_doc(clustered_ecs_path, domain_name):
+    keyword_planner_df = pd.read_csv(clustered_ecs_path)
+
+    subtopics_df = keyword_planner_df\
+        .dropna()\
+        .rename(columns={'Topic': 'SubTopic', 'ClosestURL': 'MainTopic'})
+    
+    main_topics = keyword_planner_df\
+        .dropna()\
+        .rename(columns={'Topic': 'SubTopic', 'ClosestURL': 'MainTopic'})\
+        .groupby(['MainTopic'], as_index=False)\
+        .agg(TopicVolume=('Volume', 'sum'))\
+        .sort_values(by=['TopicVolume'], ascending=False)\
+        .reset_index(drop=True)
+
+    main_topics = main_topics\
+        .merge(subtopics_df, how='left', on='MainTopic')\
+        .groupby(['MainTopic', 'TopicVolume', 'SubTopic', 'Volume', 'Score', 'KeywordCount', 'Keywords', 'Links', 'AlreadyRanks'])\
+        .agg(TopicVolumeDummy=('TopicVolume', 'first'))\
+        .drop(columns=['TopicVolumeDummy'])\
+        .sort_values(by=['TopicVolume', 'Volume'], ascending=False)
+    
+    main_topics_dict_list = main_topics\
+        .reset_index()\
+        .groupby('MainTopic', as_index=False)\
+        .agg(Links=('Links', 'first'))\
+        .to_dict(orient='records')
+    
+    category_labels = []
+    for idx, topic in enumerate(main_topics_dict_list):
+        topic['TopicNumber'] = idx+1
+        topic['Label'] = get_topic_category(topic['Links'], str(category_labels))
+        print(topic['Label'])
+
+        main_topics_dict_list[idx] = topic
+
+        category_labels = list(set(category_labels + [topic['Label']]))
+
+    topic_labels_df = pd.DataFrame(main_topics_dict_list)
+
+    keyword_plan_final_df = topic_labels_df[['Label', 'TopicNumber', 'MainTopic']]\
+        .merge(main_topics.reset_index(), how='left', on='MainTopic')\
+        .rename(columns={'Label': 'Category'})
+    
+    # Upload Merged Clusters to Bubble
+    local_keyword_plan_path = os.path.join(LAMBDA_DATA_DIR, f'{domain_name}_keyword_plan.csv')
+
+    keyword_plan_final_df.to_csv(local_keyword_plan_path, index=False)
+
+    return local_keyword_plan_path
 
 
 def text_to_wv_classname(text):
@@ -284,7 +364,6 @@ def main(task_args):
     #### END STEP 2
 
 
-
     #### BEGIN STEP 3: Load HUB URLs into WV Library
     print('BEGIN STEP 3')
     print(f"{len(hub_urls)} unique SERPS going to WV Library")
@@ -362,7 +441,7 @@ def main(task_args):
 
     # Filter out ECS Scores below 0.45
     try:
-        ecs_df = ecs_full_df.query('score >= 0.05') # !!!! DOUBLE CHECK THIS SCORE THRESHOLD !!!! #
+        ecs_df = ecs_full_df.query('score >= 0.45')
         print(f'ECS DF SHAPE AFTER SCORE FILTER: {ecs_df.shape}')
 
         domain_name = domain.split('.')[0]
@@ -417,24 +496,25 @@ def main(task_args):
 
     # Merge into final doc
     final_doc_path = make_final_doc(local_keyword_doc_path, local_ecs_path, cluster_path, domain_name)
+    keyword_plan_path = make_keyword_planner_doc(final_doc_path, domain_name)
 
     # Save to ECS-Doc Object
-    final_doc_url = upload_bubble_file(final_doc_path)
+    keyword_plan_url = upload_bubble_file(keyword_plan_path)
     doc_body = {
         'name': f'{domain_name}_ecs_clusters.csv',
-        'url': final_doc_url,
-        'type': 'ecs_cluster_doc',
+        'url': keyword_plan_url,
+        'type': 'keyword_plan_doc',
         'ecs_job': ecs_job_id
     }
     res = create_bubble_object('ecs-doc', doc_body)
-    final_doc_id = res.json()['id']
+    keyword_plan_id = res.json()['id']
 
     # Attch output to ECS Job object
     job_body = {
         'serp_results_doc': serp_results_doc_id,
         'raw_ecs_result': ecs_ecs_doc_id,
         'raw_cluster_result': ecs_cluster_doc_id,
-        'ecs_cluster_result': final_doc_id,
+        'keyword_plan_doc': keyword_plan_id,
         'hub_df_doc': ecs_hub_df_doc_id,
         'cost': keyword_doc_res.json()['response']['cost'],
         'is_complete': True,
