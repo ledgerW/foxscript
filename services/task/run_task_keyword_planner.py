@@ -501,7 +501,7 @@ def main(task_args):
     # Save to ECS-Doc Object
     keyword_plan_url = upload_bubble_file(keyword_plan_path)
     doc_body = {
-        'name': f'{domain_name}_ecs_clusters.csv',
+        'name': f'{domain_name}_keyword_plan.csv',
         'url': keyword_plan_url,
         'type': 'keyword_plan_doc',
         'ecs_job': ecs_job_id

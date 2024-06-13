@@ -9,7 +9,8 @@ if os.getenv('IS_OFFLINE'):
    WEAVIATE_SCHEMA_DIR = '../../'
 else:
    LAMBDA_DATA_DIR = '/tmp'
-   WEAVIATE_SCHEMA_DIR = ''
+   WEAVIATE_SCHEMA_DIR = '../'
+
 
 
 wv_client = wv.Client(
@@ -51,8 +52,17 @@ def get_wv_class_name(email, name):
 
 
 def create_library(name):
+    #wv_client = wv.connect_to_weaviate_cloud(
+    #    cluster_url=os.environ['WEAVIATE_URL'],
+    #    auth_credentials=wv.auth.AuthApiKey(os.environ['WEAVIATE_API_KEY']),
+    #    headers={'X-OpenAI-Api-key': os.environ['OPENAI_API_KEY']}
+    #)
+    
     content_cls_name = "{}Content".format(name)
     chunk_cls_name = "{}Chunk".format(name)
+
+    print(content_cls_name)
+    print(chunk_cls_name)
 
     content_ref_prop = {
       'name': 'hasChunks',
@@ -73,6 +83,8 @@ def create_library(name):
     props = [prop for prop in content_cls['properties'] if prop['name'] != 'hasChunks'] + [content_ref_prop]
     content_cls['properties'] = props
 
+    print(content_cls)
+
 
     # make new source chunk class
     with open(WEAVIATE_SCHEMA_DIR + 'weaviate/schema/Chunk.json', 'r', encoding='utf-8') as f:
@@ -82,30 +94,51 @@ def create_library(name):
     props = [prop for prop in chunk_cls['properties'] if prop['name'] != 'fromContent'] + [chunk_ref_prop]
     chunk_cls['properties'] = props
 
+    print(chunk_cls)
+
     try:
       try:
+        #wv_client.collections.create_from_dict(content_cls)
         wv_client.schema.create_class(content_cls)
       except:
         print(f'{chunk_cls_name} class not created yet - will create')
 
+      #wv_client.collections.create_from_dict(chunk_cls)
       wv_client.schema.create_class(chunk_cls)
+
+      #wv_client.collections.delete(content_cls_name)
       wv_client.schema.delete_class(content_cls_name)
+
+      #wv_client.collections.create_from_dict(content_cls)
       wv_client.schema.create_class(content_cls)
+
     except Exception as e:
+      print(e)
       if 'already used' in e.message:
         print('SKIPPING - Class already exists')
 
+    #schema = wv_client.schema.get()
+    #print([cl['class'] for cl in schema['classes']])
 
-    schema = wv_client.schema.get()
-    print([cl['class'] for cl in schema['classes']])
+    #wv_client.close()
 
 
 def delete_library(name):
+    #wv_client = wv.connect_to_weaviate_cloud(
+    #    cluster_url=os.environ['WEAVIATE_URL'],
+    #    auth_credentials=wv.auth.AuthApiKey(os.environ['WEAVIATE_API_KEY']),
+    #    headers={'X-OpenAI-Api-key': os.environ['OPENAI_API_KEY']}
+    #)
+
     content_cls_name = "{}Content".format(name)
     chunk_cls_name = "{}Chunk".format(name)
 
+    #wv_client.collections.delete(content_cls_name)
+    #wv_client.collections.delete(chunk_cls_name)
     wv_client.schema.delete_class(content_cls_name)
     wv_client.schema.delete_class(chunk_cls_name)
 
-    schema = wv_client.schema.get()
-    print([cl['class'] for cl in schema['classes']])
+    #schema = wv_client.schema.get()
+    #print([cl['class'] for cl in schema['classes']])
+
+    #wv_client.close()
