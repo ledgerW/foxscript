@@ -9,7 +9,7 @@ if os.getenv('IS_OFFLINE'):
    WEAVIATE_SCHEMA_DIR = '../../'
 else:
    LAMBDA_DATA_DIR = '/tmp'
-   WEAVIATE_SCHEMA_DIR = '../'
+   WEAVIATE_SCHEMA_DIR = ''
 
 
 
