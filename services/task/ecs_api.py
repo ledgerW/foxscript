@@ -244,6 +244,7 @@ def topic_ecs(
         urls = serper_search(topic, 10)
         return {
             'topic': topic,
+            'topic_vector': [],
             'url': None,
             'distance': 1000,
             'score': 0,
@@ -263,6 +264,7 @@ def topic_ecs(
 
             return {
                 'topic': topic,
+                'topic_vector': [],
                 'url': urls[0],
                 'distance': 1000,
                 'score': 0,
@@ -275,6 +277,7 @@ def topic_ecs(
             print(e)
             return {
                 'topic': topic,
+                'topic_vector': [],
                 'url': urls[0],
                 'distance': 1000,
                 'score': 0,
@@ -299,6 +302,7 @@ def topic_ecs(
             if not urls:
                 return {
                     'topic': topic,
+                    'topic_vector': [],
                     'url': 'NONE',
                     'distance': 1000,
                     'score': 0,
@@ -324,6 +328,7 @@ def topic_ecs(
         print(e)
         return {
             'topic': topic,
+            'topic_vector': [],
             'url': ','.join(urls),
             'distance': 1000,
             'score': 0,
@@ -350,6 +355,7 @@ def topic_ecs(
 
     return {
         'topic': topic,
+        'topic_vector': topic_vector,
         'url': url,
         'distance': distance,
         'score': score,

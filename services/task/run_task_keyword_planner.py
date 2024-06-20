@@ -119,14 +119,37 @@ def get_topic_category(urls: str, categories: str):
     return res.content
 
 
-def make_keyword_planner_doc(clustered_ecs_path, domain_name):
-    keyword_planner_df = pd.read_csv(clustered_ecs_path)
+def get_spoke_name(url: str, options: list[str]):
+    llm = FoxLLM(az_openai_kwargs, openai_kwargs, 'gpt-4', temp=0.1)
 
-    subtopics_df = keyword_planner_df\
+    prompt = f"""Please assign a user-friendly label to the url below
+    based on the text in the url. Assume the url text is representative of
+    the content on its page and this label will let people know what the url
+    is about. But do not make the label too specific. Do not include company
+    names, for example. The label should be more specifc than a broad category,
+    but still general enough to act as a sub-category, and not so specific that
+    it only describes the url.
+    
+    URL: {url}
+
+    Return only the user-friendly label.
+
+    User-Friendly Label:
+    """
+
+    res = llm.llm.invoke(prompt)
+    
+    return res.content
+
+
+def make_keyword_planner_doc(clustered_ecs_path, domain_name):
+    raw_keyword_plann_df = pd.read_csv(clustered_ecs_path)
+
+    subtopics_df = raw_keyword_plan_df\
         .dropna()\
         .rename(columns={'Topic': 'SubTopic', 'ClosestURL': 'MainTopic'})
     
-    main_topics = keyword_planner_df\
+    main_topics = raw_keyword_plan_df\
         .dropna()\
         .rename(columns={'Topic': 'SubTopic', 'ClosestURL': 'MainTopic'})\
         .groupby(['MainTopic'], as_index=False)\
@@ -159,14 +182,78 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
 
     topic_labels_df = pd.DataFrame(main_topics_dict_list)
 
-    keyword_plan_final_df = topic_labels_df[['Label', 'TopicNumber', 'MainTopic']]\
+    keyword_plan_df = topic_labels_df[['Label', 'TopicNumber', 'MainTopic']]\
         .merge(main_topics.reset_index(), how='left', on='MainTopic')\
         .rename(columns={'Label': 'Category'})
+
+    # Hubs - Spokes - Keywords
+    spoke_names = []
+    spoke_options = []
+    for spoke_url in keyword_plan_df.MainTopic.unique():
+        new_spoke_name = get_spoke_name(spoke_url, str(spoke_options))
+        spoke_names.append(new_spoke_name)
+        spoke_options = list(set(spoke_options + [new_spoke_name]))
+
+    spokes = {url: spoke for url, spoke in zip(keyword_plan_df.MainTopic.unique(), spoke_names)}
+
+    keyword_plan_df['MainTopicURL'] = keyword_plan_df['MainTopic']
+    keyword_plan_df['MainTopic'] = keyword_plan_df['MainTopicURL'].apply(lambda x: spokes[x])
+
+    hub_and_spoke_df = keyword_plan_df\
+        .groupby(['Category', 'TopicNumber'], as_index=False)\
+        .agg(
+            MainTopic=('MainTopic', 'first'),
+            CategoryVolume=('TopicVolume', 'first'),
+            KeywordCount=('KeywordCount', 'sum'),
+            SubTopicCount=('SubTopic', 'count')
+        )
+
+    hub_and_spoke_df = hub_and_spoke_df\
+        .groupby(['Category', 'MainTopic'], as_index=False)\
+        .agg(
+            CategoryVolume=('CategoryVolume', 'sum'),
+            KeywordCount=('KeywordCount', 'sum'),
+            SubTopicCount=('SubTopicCount', 'sum')
+        )
+
+    hub_df = hub_and_spoke_df\
+        .groupby('Category', as_index=False)\
+        .agg(
+            CategoryVolume=('CategoryVolume', 'sum'),
+            TopicCount=('MainTopic', 'count'),
+            SubTopicCount=('SubTopicCount', 'sum'),
+            KeywordCount=('KeywordCount', 'sum')
+        )\
+        .sort_values(by='CategoryVolume', ascending=False)
+
+    renames = {
+        'Category': 'Hub',
+        'CategoryVolume': 'HubVolume',
+        'TopicCount': 'SpokeCount',
+        'SubTopicCount': 'KeywordsCount',
+        'KeywordCount': 'ClusteredKeywordCount',
+        'MainTopic': 'Spoke',
+        'TopicVolume': 'SpokeVolume',
+        'SubTopic': 'Keyword',
+        'Volume': 'KeywordVolume',
+        'Keywords': 'ClusteredKeywords'
+    }
+
+    col_order = [
+        'Hub', 'HubVolume', 'Spoke', 'SpokeVolume', 'Keyword', 'KeywordVolume', 'ClusteredKeywordCount', 'ClusteredKeywords',
+        'Links', 'Score', 'AlreadyRanks'
+    ]
+
+    hub_spoke_keyword_df = hub_df\
+        .merge(keyword_plan_df.drop(columns=['KeywordCount']), how='left', on='Category')\
+        .rename(columns=renames)\
+        .sort_values(by=['HubVolume', 'SpokeVolume', 'KeywordVolume'], ascending=False)\
+        [col_order]
     
     # Upload Merged Clusters to Bubble
     local_keyword_plan_path = os.path.join(LAMBDA_DATA_DIR, f'{domain_name}_keyword_plan.csv')
 
-    keyword_plan_final_df.to_csv(local_keyword_plan_path, index=False)
+    hub_spoke_keyword_df.to_csv(local_keyword_plan_path, index=False)
 
     return local_keyword_plan_path
 
@@ -287,7 +374,7 @@ def main(task_args):
     #### END STEP 1
 
 
-    #### BEGIN STEP 2: Get HUBS and URLs for WV Library for ECS
+    #### BEGIN STEP 2: Get Spokes and URLs for WV Library for ECS
     print('BEGIN STEP 2')
     
     # Now Cluster Results
@@ -315,7 +402,7 @@ def main(task_args):
     clusters_df = pd.read_csv(cluster_path)
     unfolded_clusters_df = unfold_keyword_clusters(clusters_df)
 
-    hub_df = unfolded_clusters_df\
+    spoke_df = unfolded_clusters_df\
         .merge(serp_results_df, how='left', on='Keyword')\
         .groupby('Group', as_index=False)\
             .agg(
@@ -339,38 +426,42 @@ def main(task_args):
         .sort_values(by=['Volume'], ascending=False)\
         .reset_index(drop=True)
 
-    print(hub_df.shape)
+    print(spoke_df.shape)
 
     # Save to ECS-Doc Object
-    local_hub_df_path = f'{LAMBDA_DATA_DIR}/hub_df.csv'
-    hub_df.to_csv(local_hub_df_path, index=False)
-    hub_df_file_url = upload_bubble_file(local_hub_df_path)
+    local_spoke_df_path = f'{LAMBDA_DATA_DIR}/spoke_df.csv'
+    spoke_df.to_csv(local_spoke_df_path, index=False)
+    spoke_df_file_url = upload_bubble_file(local_spoke_df_path)
     doc_body = {
-        'name': f'{domain_name}_hub_df.csv',
-        'url': hub_df_file_url,
-        'type': 'hub_df_doc',
+        'name': f'{domain_name}_spoke_df.csv',
+        'url': spoke_df_file_url,
+        'type': 'spoke_df_doc',
         'ecs_job': ecs_job_id
     }
     res = create_bubble_object('ecs-doc', doc_body)
-    ecs_hub_df_doc_id = res.json()['id']
+    ecs_spoke_df_doc_id = res.json()['id']
 
-    HUB_URL_MAX = 1000
-    HUB_DF_50 = int(hub_df.shape[0] * 0.5)
-    HUB_URL_COUNT = min(HUB_DF_50, HUB_URL_MAX)
-    print(HUB_URL_COUNT)
+    #SPOKE_URL_MAX = 100
+    #SPOKE_DF_50 = int(spoke_df.shape[0] * 0.01)
+    #SPOKE_URL_COUNT = min(SPOKE_DF_50, SPOKE_URL_MAX)
+    #print(SPOKE_URL_COUNT)
+    SPOKE_URL_COUNT = int(spoke_df.shape[0] * 0.01)
+    SPOKE_URL_COUNT = max(10, SPOKE_URL_COUNT)
 
-    hub_urls = hub_df.head(HUB_URL_COUNT).TopSERP.to_list()
+    volume_spoke_urls = spoke_df.head(SPOKE_URL_COUNT).TopSERP.to_list()
+    random_spoke_urls = spoke_df.sample(SPOKE_URL_COUNT).TopSERP.to_list()
+    spoke_urls = volume_spoke_urls + random_spoke_urls
 
     #### END STEP 2
 
 
     #### BEGIN STEP 3: Load HUB URLs into WV Library
     print('BEGIN STEP 3')
-    print(f"{len(hub_urls)} unique SERPS going to WV Library")
+    print(f"{len(spoke_urls)} unique SERPS going to WV Library")
 
     # Scrape and load content urls to Weaviate Library
     #content_urls = ecs_job_json['content_urls'].split('\n')
-    for content_url in hub_urls:
+    for content_url in spoke_urls:
         out_body = {
             'email': email,
             'name': ec_lib_name,
@@ -515,7 +606,7 @@ def main(task_args):
         'raw_ecs_result': ecs_ecs_doc_id,
         'raw_cluster_result': ecs_cluster_doc_id,
         'keyword_plan_doc': keyword_plan_id,
-        'hub_df_doc': ecs_hub_df_doc_id,
+        'hub_df_doc': ecs_spoke_df_doc_id,
         'cost': keyword_doc_res.json()['response']['cost'],
         'is_complete': True,
         'is_running': False
