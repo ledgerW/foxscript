@@ -143,7 +143,7 @@ def get_spoke_name(url: str, options: list[str]):
 
 
 def make_keyword_planner_doc(clustered_ecs_path, domain_name):
-    raw_keyword_plann_df = pd.read_csv(clustered_ecs_path)
+    raw_keyword_plan_df = pd.read_csv(clustered_ecs_path)
 
     subtopics_df = raw_keyword_plan_df\
         .dropna()\
