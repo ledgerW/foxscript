@@ -119,7 +119,7 @@ def get_topic_category(urls: str, categories: str):
     return res.content
 
 
-def get_spoke_name(url: str, options: list[str]):
+def get_spoke_name(url: str, options: str, hub_names:str):
     llm = FoxLLM(az_openai_kwargs, openai_kwargs, 'gpt-4', temp=0.1)
 
     prompt = f"""Please assign a user-friendly label to the url below
@@ -131,6 +131,9 @@ def get_spoke_name(url: str, options: list[str]):
     it only describes the url.
     
     URL: {url}
+
+    The label must NOT be any of the following:
+    {hub_names}
 
     Return only the user-friendly label.
 
@@ -189,8 +192,9 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
     # Hubs - Spokes - Keywords
     spoke_names = []
     spoke_options = []
+    hub_names = keyword_plan_df.Category.unique().tolist()
     for spoke_url in keyword_plan_df.MainTopic.unique():
-        new_spoke_name = get_spoke_name(spoke_url, str(spoke_options))
+        new_spoke_name = get_spoke_name(spoke_url, str(spoke_options), str(hub_names))
         spoke_names.append(new_spoke_name)
         spoke_options = list(set(spoke_options + [new_spoke_name]))
 
@@ -229,9 +233,9 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
     renames = {
         'Category': 'Hub',
         'CategoryVolume': 'HubVolume',
-        'TopicCount': 'SpokeCount',
-        'SubTopicCount': 'KeywordsCount',
-        'KeywordCount': 'ClusteredKeywordCount',
+        'TopicCount': 'HubSpokeCount',
+        'SubTopicCount': 'HubKeywordsCount',
+        'KeywordCount': 'HubClusteredKeywordCount',
         'MainTopic': 'Spoke',
         'TopicVolume': 'SpokeVolume',
         'SubTopic': 'Keyword',
@@ -244,11 +248,30 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
         'Links', 'Score', 'AlreadyRanks'
     ]
 
+    spoke_totals_df = keyword_plan_df\
+        .groupby('TopicNumber', as_index=False)\
+        .agg(
+            Category=('Category', 'first'),
+            MainTopic=('MainTopic', 'first'),
+            TopicVolume=('TopicVolume', 'first')
+        )\
+        .groupby('MainTopic', as_index=False)\
+        .agg(
+            Category=('Category', 'first'),
+            TopicVolume=('TopicVolume', 'sum')
+        )\
+        .sort_values(by=['Category', 'TopicVolume'], ascending=False)\
+        [['Category', 'MainTopic', 'TopicVolume']]\
+        .merge(keyword_plan_df.drop(columns=['Category', 'TopicVolume']), how='left', on='MainTopic')\
+        .rename(columns={'KeywordCount': 'ClusteredKeywordCount'})
+
     hub_spoke_keyword_df = hub_df\
-        .merge(keyword_plan_df.drop(columns=['KeywordCount']), how='left', on='Category')\
+        .merge(spoke_totals_df, how='left', on='Category')\
         .rename(columns=renames)\
         .sort_values(by=['HubVolume', 'SpokeVolume', 'KeywordVolume'], ascending=False)\
-        [col_order]
+        .drop(columns=['MainTopicURL'])
+    
+    #hub_spoke_keyword_df['ClusteredKeywordCount'] = hub_spoke_keyword_df['ClusteredKeywords'].apply(lambda x: len(x.split('-')))
     
     # Upload Merged Clusters to Bubble
     local_keyword_plan_path = os.path.join(LAMBDA_DATA_DIR, f'{domain_name}_keyword_plan.csv')
