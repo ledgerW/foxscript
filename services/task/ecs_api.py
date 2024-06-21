@@ -151,7 +151,6 @@ def scraper_scrape(url):
     text = "\n\n".join([str(el) for el in raw_elements])
     elements = convert_to_dict(raw_elements)
     
-
     output = {
         'html': html,
         'elements': elements,
@@ -229,35 +228,95 @@ def mean_word_embedding(word_embeddings):
 
 
 
-def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=None, top_n_ser=2, serper_api=True) -> dict:
-    print(f'Getting Top {top_n_ser} Search Results')
-
-    urls = []
-    already_ranks = False
-    n_search=10
+def topic_ecs(
+        topic: str,
+        ec_lib_name: str,
+        user_email: str,
+        customer_domain=None,
+        top_n_ser=2,
+        urls=[],
+        special_return=None
+    ) -> dict:
+    """
+    """
+    if special_return == 'serp':
+        print('Return SERP Only')
+        urls = serper_search(topic, 10)
+        return {
+            'topic': topic,
+            'topic_vector': [],
+            'url': None,
+            'distance': 1000,
+            'score': 0,
+            'already_ranks': False,
+            'search_urls': ','.join(urls),
+            'content': ''
+        }
     
-    print('Using Serper API')
-    urls = serper_search(topic, n_search)
+    if special_return == 'scrape' and urls:
+        print('Return Scrape Only')
+        try:
+            topic_content = scrape_content(urls[0], n=1)
+
+            if not topic_content:
+                time.sleep(5)
+                topic_content = scrape_content(urls[0], n=1)
+
+            return {
+                'topic': topic,
+                'topic_vector': [],
+                'url': urls[0],
+                'distance': 1000,
+                'score': 0,
+                'already_ranks': False,
+                'search_urls': ','.join(urls),
+                'content': topic_content[0],
+                'chunks': topic_content[0]
+            }
+        except Exception as e:
+            print(e)
+            return {
+                'topic': topic,
+                'topic_vector': [],
+                'url': urls[0],
+                'distance': 1000,
+                'score': 0,
+                'already_ranks': False,
+                'search_urls': ','.join(urls),
+                'content': 'ERROR',
+                'chunks': 'ERROR'
+            }
+
+
+    already_ranks = False
+    n_search = 10
+    
+    if not urls:
+        print('Using Serper API')
+        urls = serper_search(topic, n_search)
+
+        if not urls:
+            print('Issue with First Search. Trying Serper API Again')
+            urls = serper_search(topic, n_search)
+            
+            if not urls:
+                return {
+                    'topic': topic,
+                    'topic_vector': [],
+                    'url': 'NONE',
+                    'distance': 1000,
+                    'score': 0,
+                    'already_ranks': already_ranks,
+                    'search_urls': ','.join(urls)
+                }
+    else:
+        print('URLs provided')
 
     # Check if customer ranks for this topic and if so, ignore
     if customer_domain:
         if [d for d in urls if customer_domain in d]:
             print('Customer ranks for this topic')
             already_ranks = True
-
-    if not urls:
-        print('Issue with First Search. Trying Serper API Again')
-        urls = serper_search(topic, n_search)
-        
-        if not urls:
-            return {
-                'topic': topic,
-                'url': 'NONE',
-                'distance': 1000,
-                'score': 0,
-                'already_ranks': already_ranks,
-                'search_urls': ','.join(urls)
-            }
 
     try:
         topic_content = scrape_content(urls, n=top_n_ser)
@@ -269,6 +328,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
         print(e)
         return {
             'topic': topic,
+            'topic_vector': [],
             'url': ','.join(urls),
             'distance': 1000,
             'score': 0,
@@ -295,6 +355,7 @@ def topic_ecs(topic: str, ec_lib_name: str, user_email: str, customer_domain=Non
 
     return {
         'topic': topic,
+        'topic_vector': topic_vector,
         'url': url,
         'distance': distance,
         'score': score,
@@ -321,7 +382,10 @@ def ecs(event, context):
     user_email = body['user_email']
     customer_domain = body['customer_domain']
     top_n_ser = body['top_n_ser']
-    serper_api = body['serper_api']
+    urls = body['urls']
+
+    # Special Return Cases
+    special_return = body['special_return'] # serp | scrape | serp_scrape | None
 
     # ECS
     ecs_result = topic_ecs(
@@ -330,7 +394,8 @@ def ecs(event, context):
         user_email=user_email,
         customer_domain=customer_domain,
         top_n_ser=top_n_ser,
-        serper_api=serper_api
+        urls=urls,
+        special_return=special_return
     )
 
     if sqs:
@@ -411,7 +476,7 @@ def sample_ecs(event, context):
         
         for idx, topic in enumerate(topic_batch):
             # do distributed ECS for each topic
-            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, serper_api, sqs=sqs, invocation_type='Event') 
+            cloud_ecs(topic, ec_lib_name, email, domain, top_n_ser, urls=[], special_return=None, sqs=sqs, invocation_type='Event')
 
         # wait for and collect search results from SQS
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")

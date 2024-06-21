@@ -31,18 +31,32 @@ else:
 
 
 
-def keywords_to_cost(n_keywords):
-    if n_keywords <= 10:
-        cost = 0
+def keywords_to_cost(n_keywords, job_type):
+    if job_type == 'ecs':
+        if n_keywords <= 10:
+            cost = 0
 
-    if (n_keywords > 10) and (n_keywords <= 1000):
-        cost = 250
+        if (n_keywords > 10) and (n_keywords <= 1000):
+            cost = 250
 
-    if (n_keywords > 1000) and (n_keywords <= 5000):
-        cost = 500
+        if (n_keywords > 1000) and (n_keywords <= 5000):
+            cost = 500
 
-    if n_keywords > 5000:
-        cost = 1000
+        if n_keywords > 5000:
+            cost = 1000
+
+    if job_type == 'keyword_planner':
+        if n_keywords <= 100:
+            cost = 0
+
+        if (n_keywords > 100) and (n_keywords <= 1000):
+            cost = 1000
+
+        if (n_keywords > 1000) and (n_keywords <= 5000):
+            cost = 2500
+
+        if n_keywords > 5000:
+            cost = 5000
 
     return cost
 
@@ -63,6 +77,7 @@ def handler(event, context):
     ecs_doc_id = body['ecs_doc_id']
     res = get_bubble_object('ecs-doc', ecs_doc_id)
     ecs_doc_object = res.json()['response']
+    job_type = ecs_doc_object['job_type']      # keyword_planner | ecs
 
     keyword_doc_url = ecs_doc_object['url']
     keyword_doc_file_name = keyword_doc_url.split('/')[-1]
@@ -87,7 +102,7 @@ def handler(event, context):
         'n_topics': n_topics,
         'has_keyword_col': has_keyword_col,
         'has_volume_col': has_volume_col,
-        'cost': keywords_to_cost(n_topics)
+        'cost': keywords_to_cost(n_topics, job_type)
     }
     _ = update_bubble_object('ecs-doc', ecs_doc_id, object_body)
 

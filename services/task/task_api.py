@@ -92,6 +92,9 @@ def run_cloud(task_name, task_args={}):
 def run_local(task_name, task_args={}):
     if task_name == 'run_task_ecs':
         from run_task_ecs import main
+
+    if task_name == 'run_task_keyword_planner':
+        from run_task_keyword_planner import main
     
     main(task_args)
 
