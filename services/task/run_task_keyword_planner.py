@@ -46,9 +46,12 @@ LAMBDA_DATA_DIR = '.'
 
 def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
     # Get Keywords df
+    topics_df = pd.read_csv(topics_path)
+    volume_col = 'Search Volume' if 'Search Volume' in topics_df.columns else 'Volume'
+
     try:
         topics_df = pd.read_csv(topics_path)\
-            .assign(Volume=lambda df: df['Search Volume'].apply(lambda x: int(x)))\
+            .assign(Volume=lambda df: df[volume_col].apply(lambda x: int(x.replace(',',''))))\
             [['Keyword', 'Volume']]
     except:
         topics_df = pd.read_csv(topics_path)\
@@ -274,7 +277,7 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
     #hub_spoke_keyword_df['ClusteredKeywordCount'] = hub_spoke_keyword_df['ClusteredKeywords'].apply(lambda x: len(x.split('-')))
     
     # Upload Merged Clusters to Bubble
-    local_keyword_plan_path = os.path.join(LAMBDA_DATA_DIR, f'{domain_name}_keyword_plan.csv')
+    local_keyword_plan_path = os.path.join(LAMBDA_DATA_DIR, f'{domain_name}_hubs_and_spokes.csv')
 
     hub_spoke_keyword_df.to_csv(local_keyword_plan_path, index=False)
 
