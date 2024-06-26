@@ -50,12 +50,12 @@ def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
     volume_col = 'Search Volume' if 'Search Volume' in topics_df.columns else 'Volume'
 
     try:
-        topics_df = pd.read_csv(topics_path)\
+        topics_df = topics_df\
             .assign(Volume=lambda df: df[volume_col].apply(lambda x: int(x.replace(',',''))))\
             [['Keyword', 'Volume']]
     except:
-        topics_df = pd.read_csv(topics_path)\
-            .assign(Volume=lambda df: df['Volume'].apply(lambda x: int(x)))\
+        topics_df = topics_df\
+            .assign(Volume=lambda df: df[volume_col].apply(lambda x: int(x)))\
             [['Keyword', 'Volume']]
 
     # Get Clusters df

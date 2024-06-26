@@ -397,6 +397,7 @@ def ecs(event, context):
         urls=urls,
         special_return=special_return
     )
+    print(ecs_result)
 
     if sqs:
         queue = SQS(sqs)
