@@ -558,7 +558,7 @@ def main(task_args):
 
     # Filter out ECS Scores below 0.45
     try:
-        ecs_df = ecs_full_df.query('score >= 0.45')
+        ecs_df = ecs_full_df.query('score >= 0.5')
         print(f'ECS DF SHAPE AFTER SCORE FILTER: {ecs_df.shape}')
 
         domain_name = domain.split('.')[0]
