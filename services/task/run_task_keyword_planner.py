@@ -243,7 +243,9 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
         'TopicVolume': 'SpokeVolume',
         'SubTopic': 'Keyword',
         'Volume': 'KeywordVolume',
-        'Keywords': 'ClusteredKeywords'
+        'Keywords': 'ClusteredKeywords',
+        'MainTopicURL': 'SpokeURL',
+        'TopicNumber': 'SpokeNumber'
     }
 
     col_order = [
@@ -272,7 +274,7 @@ def make_keyword_planner_doc(clustered_ecs_path, domain_name):
         .merge(spoke_totals_df, how='left', on='Category')\
         .rename(columns=renames)\
         .sort_values(by=['HubVolume', 'SpokeVolume', 'KeywordVolume'], ascending=False)\
-        .drop(columns=['MainTopicURL'])
+        .drop(columns=['Links'])
     
     #hub_spoke_keyword_df['ClusteredKeywordCount'] = hub_spoke_keyword_df['ClusteredKeywords'].apply(lambda x: len(x.split('-')))
     
