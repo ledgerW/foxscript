@@ -600,3 +600,5 @@ def sample_ecs(event, context):
 
     # Delete Wv Library
     delete_library(ec_class_name)
+
+    

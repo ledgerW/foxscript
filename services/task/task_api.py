@@ -118,7 +118,7 @@ def handler(event, context):
 
     if is_sample is 'yes':
         _ = lambda_client.invoke(
-            FunctionName=f'foxscript-data-{STAGE}-sample_ecs',
+            FunctionName=f'foxscript-data-{STAGE}-sample_{task_name}',
             InvocationType='Event',
             Payload=json.dumps({"body": task_args})
         )

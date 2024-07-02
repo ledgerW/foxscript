@@ -38,8 +38,10 @@ BUCKET = os.getenv('BUCKET')
 if os.getenv('IS_OFFLINE'):
    lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
    LAMBDA_DATA_DIR = '.'
-else:
+
+if os.getenv(''):
    lambda_client = boto3.client('lambda')
+   LAMBDA_DATA_DIR = '/tmp'
 
 LAMBDA_DATA_DIR = '.'
 
@@ -313,7 +315,7 @@ def main(task_args):
 
     # Get Compnay Domain
     domain = ecs_job_json['company_domain']
-    domain_name = domain.split('.')[0]
+    domain_name = domain.replace('www.','').replace('http://','').replace('https//','').split('.')[0]
 
     # Make HUB Content Library
     job_name = ecs_job_json['name']
@@ -685,6 +687,25 @@ def main(task_args):
     #    project_docs = []
 
     #_ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+
+
+def sample_keyword_planner(event, context):
+    print(event)
+    try:
+        task_args = json.loads(event['body'])
+    except:
+        task_args = event['body']
+
+    print(task_args)
+
+    #task_args = json.loads(args.task_args)
+
+    start = datetime.now()
+    print(start)
+    
+    main(task_args)
+    
+    print(datetime.now() - start)
 
 
 
