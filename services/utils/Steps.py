@@ -564,11 +564,12 @@ class cluster_keywords():
         return input
   
 
-    def __call__(self, input, keyword_col='Keyword', to_bubble=True, TEST_MODE=False):
+    def __call__(self, input, keyword_col='Keyword', track_progress_id='', to_bubble=True, TEST_MODE=False):
         """
         TESTING: Expect Keyword string
 
         Input: {'input': "url/to/keyword_csv_name.csv"}
+        track_progress (str): ecs_job_id (bubble object)
 
         Returns string
         """
@@ -637,6 +638,21 @@ class cluster_keywords():
                     not_processed += 1
                     print(new_keyword['links'])
 
+            # Update Job Status
+            if track_progress_id:
+                job_body = {
+                    'clustering_progress': (i+1)*len(keyword_batch)
+                }
+                res = update_bubble_object('ecs-job', track_progress_id, job_body)
+
+        
+        # Update Job Status
+        if track_progress_id:
+            job_body = {
+                'clustering_progress': all_keywords_df.shape[0]
+            }
+            res = update_bubble_object('ecs-job', track_progress_id, job_body)
+        
         keyword_groups_df = pd.DataFrame(keyword_groups)\
             .assign(group_size=lambda df: df.keywords.apply(len))
 

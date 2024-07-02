@@ -415,7 +415,7 @@ def main(task_args):
 
     cluster = cluster_keywords(thresh=0.4)
     input = {'input': local_serp_results_path}
-    cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    cluster_path = cluster(input, keyword_col='topic', track_progress_id=ecs_job_id, to_bubble=False)
     print(cluster_path)
 
     # Save to ECS-Doc Object
@@ -491,7 +491,7 @@ def main(task_args):
 
     # Scrape and load content urls to Weaviate Library
     #content_urls = ecs_job_json['content_urls'].split('\n')
-    for content_url in spoke_urls:
+    for i, content_url in enumerate(spoke_urls):
         out_body = {
             'email': email,
             'name': ec_lib_name,
@@ -504,6 +504,12 @@ def main(task_args):
             Payload=json.dumps({"body": out_body})
         )
         time.sleep(0.2)
+        # Update Job Status
+        job_body = {
+            'library_progress': i+1
+        }
+        res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
     time.sleep(180)
 
 
