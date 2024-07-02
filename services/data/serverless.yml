@@ -228,7 +228,7 @@ functions:
     image:
       name: data_image
       command:
-        - ecs_api.sample_keyword_planner
+        - run_task_keyword_planner.sample_keyword_planner
       entryPoint:
         - '/lambda-entrypoint.sh'
     memorySize: 1024
