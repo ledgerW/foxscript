@@ -106,6 +106,9 @@ def handler(event, context):
     except:
         input = event['body']
 
+    print('Input:')
+    print(input)
+
     task_name = input['task']
     is_sample = input['sample']
     task_args = input['task_args']
@@ -116,7 +119,7 @@ def handler(event, context):
 
     task_script = f'run_task_{task_name}'
 
-    if is_sample is 'yes':
+    if is_sample == 'yes':
         _ = lambda_client.invoke(
             FunctionName=f'foxscript-data-{STAGE}-sample_{task_name}',
             InvocationType='Event',
