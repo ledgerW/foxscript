@@ -38,12 +38,11 @@ BUCKET = os.getenv('BUCKET')
 if os.getenv('IS_OFFLINE'):
    lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
    LAMBDA_DATA_DIR = '.'
-
-if os.getenv(''):
+elif os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
    lambda_client = boto3.client('lambda')
    LAMBDA_DATA_DIR = '/tmp'
-
-LAMBDA_DATA_DIR = '.'
+else:
+    LAMBDA_DATA_DIR = '.'
 
 
 def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
