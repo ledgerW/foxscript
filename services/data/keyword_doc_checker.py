@@ -46,7 +46,7 @@ def keywords_to_cost(n_keywords, job_type):
             cost = 1000
 
     if job_type == 'keyword_planner':
-        if n_keywords <= 100:
+        if n_keywords <= 50:
             cost = 0
 
         if (n_keywords > 100) and (n_keywords <= 1000):
@@ -56,7 +56,7 @@ def keywords_to_cost(n_keywords, job_type):
             cost = 1000
 
         if n_keywords > 5000:
-            cost = 2500
+            cost = 2000
 
     return cost
 
