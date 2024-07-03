@@ -640,8 +640,10 @@ class cluster_keywords():
 
             # Update Job Status
             if track_progress_id:
+                progress = (i+1)*len(keyword_batch)
                 job_body = {
-                    'clustering_progress': (i+1)*len(keyword_batch)
+                    'clustering_progress': progress,
+                    'clustering_progress_pct': int(progress/all_keywords_df.shape[0])
                 }
                 res = update_bubble_object('ecs-job', track_progress_id, job_body)
 
@@ -649,7 +651,8 @@ class cluster_keywords():
         # Update Job Status
         if track_progress_id:
             job_body = {
-                'clustering_progress': all_keywords_df.shape[0]
+                'clustering_progress': all_keywords_df.shape[0],
+                'clustering_progress_pct': 100
             }
             res = update_bubble_object('ecs-job', track_progress_id, job_body)
         

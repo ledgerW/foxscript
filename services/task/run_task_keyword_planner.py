@@ -367,13 +367,15 @@ def main(task_args):
         
         # Update Job Status
         job_body = {
-            'serp_progress': i
+            'serp_progress': i,
+            'serp_progress_pct': int(i/len(topics)*100)
         }
         res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
     # Update Job Status
     job_body = {
-        'serp_progress': len(topics)
+        'serp_progress': len(topics),
+        'serp_progress_pct': 100
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     
@@ -505,7 +507,8 @@ def main(task_args):
         time.sleep(0.2)
         # Update Job Status
         job_body = {
-            'library_progress': i+1
+            'library_progress': i+1,
+            'library_progress_pct': int((i+1)/len(spoke_urls)*100)
         }
         res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
@@ -532,13 +535,15 @@ def main(task_args):
         
         # Update Job Status
         job_body = {
-            'ecs_progress': i
+            'ecs_progress': i,
+            'ecs_progress_pct': int(i/len(topics)*100)
         }
         res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
     # Update Job Status
     job_body = {
-        'ecs_progress': len(topics)
+        'ecs_progress': len(topics),
+        'ecs_progress_pct': 100
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     
