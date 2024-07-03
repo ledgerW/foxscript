@@ -38,10 +38,11 @@ BUCKET = os.getenv('BUCKET')
 if os.getenv('IS_OFFLINE'):
    lambda_client = boto3.client('lambda', endpoint_url=os.getenv('LOCAL_INVOKE_ENDPOINT'))
    LAMBDA_DATA_DIR = '.'
-else:
+elif os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
    lambda_client = boto3.client('lambda')
-
-LAMBDA_DATA_DIR = '.'
+   LAMBDA_DATA_DIR = '/tmp'
+else:
+    LAMBDA_DATA_DIR = '.'
 
 
 def make_final_doc(topics_path, ecs_path, clusters_path, domain_name):
@@ -313,7 +314,7 @@ def main(task_args):
 
     # Get Compnay Domain
     domain = ecs_job_json['company_domain']
-    domain_name = domain.split('.')[0]
+    domain_name = domain.replace('www.','').replace('http://','').replace('https//','').split('.')[0]
 
     # Make HUB Content Library
     job_name = ecs_job_json['name']
@@ -366,13 +367,15 @@ def main(task_args):
         
         # Update Job Status
         job_body = {
-            'serp_progress': i
+            'serp_progress': i,
+            'serp_progress_pct': int(i/len(topics)*100)
         }
         res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
     # Update Job Status
     job_body = {
-        'serp_progress': len(topics)
+        'serp_progress': len(topics),
+        'serp_progress_pct': 100
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     
@@ -413,7 +416,7 @@ def main(task_args):
 
     cluster = cluster_keywords(thresh=0.4)
     input = {'input': local_serp_results_path}
-    cluster_path = cluster(input, keyword_col='topic', to_bubble=False)
+    cluster_path = cluster(input, keyword_col='topic', track_progress_id=ecs_job_id, to_bubble=False)
     print(cluster_path)
 
     # Save to ECS-Doc Object
@@ -489,7 +492,7 @@ def main(task_args):
 
     # Scrape and load content urls to Weaviate Library
     #content_urls = ecs_job_json['content_urls'].split('\n')
-    for content_url in spoke_urls:
+    for i, content_url in enumerate(spoke_urls):
         out_body = {
             'email': email,
             'name': ec_lib_name,
@@ -502,6 +505,13 @@ def main(task_args):
             Payload=json.dumps({"body": out_body})
         )
         time.sleep(0.2)
+        # Update Job Status
+        job_body = {
+            'library_progress': i+1,
+            'library_progress_pct': int((i+1)/len(spoke_urls)*100)
+        }
+        res = update_bubble_object('ecs-job', ecs_job_id, job_body)
+
     time.sleep(180)
 
 
@@ -525,13 +535,15 @@ def main(task_args):
         
         # Update Job Status
         job_body = {
-            'ecs_progress': i
+            'ecs_progress': i,
+            'ecs_progress_pct': int(i/len(topics)*100)
         }
         res = update_bubble_object('ecs-job', ecs_job_id, job_body)
 
     # Update Job Status
     job_body = {
-        'ecs_progress': len(topics)
+        'ecs_progress': len(topics),
+        'ecs_progress_pct': 100
     }
     res = update_bubble_object('ecs-job', ecs_job_id, job_body)
     
@@ -685,6 +697,25 @@ def main(task_args):
     #    project_docs = []
 
     #_ = update_bubble_object('project', project_id, {'documents': project_docs+[new_doc_id]})
+
+
+def sample_keyword_planner(event, context):
+    print(event)
+    try:
+        task_args = json.loads(event['body'])
+    except:
+        task_args = event['body']
+
+    print(task_args)
+
+    #task_args = json.loads(args.task_args)
+
+    start = datetime.now()
+    print(start)
+    
+    main(task_args)
+    
+    print(datetime.now() - start)
 
 
 

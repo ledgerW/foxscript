@@ -41,6 +41,7 @@ COPY services/data/researcher.py ./
 COPY services/data/keyword_doc_checker.py ./
 COPY services/data/news_sources.txt ./
 COPY services/task/ecs_api.py ./
+COPY services/task/run_task_keyword_planner.py ./
 
 # Set the CMD to your handler
 CMD ["data.master"]

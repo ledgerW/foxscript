@@ -224,6 +224,23 @@ functions:
           method: post
           cors: true
 
+  sample_keyword_planner:
+    image:
+      name: data_image
+      command:
+        - run_task_keyword_planner.sample_keyword_planner
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    memorySize: 1024
+    ephemeralStorageSize: 1024
+    timeout: 900
+    maximumRetryAttempts: 0
+    events:
+      - http:
+          path: sample_keyword_planner
+          method: post
+          cors: true
+
   keyword_doc_checker:
     image:
       name: data_image
