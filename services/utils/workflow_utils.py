@@ -166,7 +166,7 @@ def serper_search(query, n):
     return search_results
   
 
-def get_top_n_search(query, n=50, sqs=None, serper=False):
+def get_top_n_search(query, n=50, sqs=None, serper=True):
     """
     When NOT SQS:
     Returns: {q:str, links:[str]}
