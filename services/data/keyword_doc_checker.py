@@ -97,6 +97,9 @@ def handler(event, context):
     has_keyword_col = 'Keyword' in keywords_df.columns
     has_volume_col = ('Search Volume' in keywords_df.columns) or ('Volume' in keywords_df.columns)
 
+    if has_keyword_col:
+        n_topics = keywords_df.drop_duplicates(subset=['Keyword'], inplace=True).shape[0]
+
     # Update ECS Doc Object in Bubble
     object_body = {
         'n_topics': n_topics,
