@@ -339,7 +339,7 @@ def main(task_args):
 
 
     # Get Topics DF
-    topics_df = pd.read_csv(local_keyword_doc_path).drop_duplicates(subset=['Keyword'], inplace=True)
+    topics_df = pd.read_csv(local_keyword_doc_path).drop_duplicates(subset=['Keyword'])
     if 'Search Volume' in topics_df.columns:
         topics_df.rename(columns={'Search Volume': 'Volume'}, inplace=True)
 
