@@ -42,6 +42,7 @@ elif os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
    lambda_client = boto3.client('lambda')
    LAMBDA_DATA_DIR = '/tmp'
 else:
+    lambda_client = boto3.client('lambda')
     LAMBDA_DATA_DIR = '.'
 
 
@@ -504,7 +505,7 @@ def main(task_args):
             InvocationType='Event',
             Payload=json.dumps({"body": out_body})
         )
-        time.sleep(0.2)
+        time.sleep(1)
         # Update Job Status
         job_body = {
             'library_progress': i+1,
