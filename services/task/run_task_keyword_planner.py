@@ -533,6 +533,16 @@ def main(task_args):
         print(f"Waiting for items {i} through {(i + len(topic_batch))}")
         ecs_batch = queue.collect(len(topic_batch), max_wait=600, self_destruct=False)
         all_ecs = all_ecs + ecs_batch
+
+        # Save as we go, just in case
+        tmp_ecs_df = pd.DataFrame(all_ecs)
+        print(f'TMP ECS DF SHAPE: {tmp_ecs_df.shape}')
+
+        # Save Full ECS CSV
+        ecs_file_name = f'{domain_name}_tmp_ecs.csv'
+        local_ecs_path = f'{LAMBDA_DATA_DIR}/{ecs_file_name}'
+        print(local_ecs_path)
+        tmp_ecs_df.to_csv(local_ecs_path, index=False)
         
         # Update Job Status
         job_body = {

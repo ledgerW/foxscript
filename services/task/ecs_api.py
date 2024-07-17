@@ -355,7 +355,7 @@ def topic_ecs(
 
     return {
         'topic': topic,
-        'topic_vector': topic_vector,
+        'topic_vector': [],
         'url': url,
         'distance': distance,
         'score': score,
