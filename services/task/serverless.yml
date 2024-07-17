@@ -231,8 +231,8 @@ fargate:
     run_task:
       name: 'run_task-${self:custom.stage}'
       image: task_image
-      memory: '4GB'
-      cpu: 1024
+      memory: '8GB'
+      cpu: 2048
       command:
         - run_task_ecs.py
       environment:
